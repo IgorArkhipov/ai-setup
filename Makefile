@@ -112,6 +112,7 @@ CLAUDE_PLUGINS_MARKETPLACES = lackeyjb/playwright-skill dapi/claude-code-marketp
 
 CLAUDE_PLUGINS = \
 	playwright-skill@playwright-skill \
+	himalaya@dapi \
 	pr-review-fix-loop@dapi \
 	spec-reviewer@dapi \
 	zellij-workflow@dapi \
