@@ -69,7 +69,6 @@ agents:
 agents-cli:
 	@$(NPM) install -g @playwright/cli@latest
 	@$(NPM) install -g @dapi/tgcli
-	@$(NPM) install -g @dapi/docmost-cli
 	@$(NPM) install -g @googleworkspace/cli
 
 # --- Skills for agents ---
@@ -83,8 +82,6 @@ agents-skills-install: agents-skills-check-npx
 	@echo "$(BLUE)📦 Installing curated skills...$(NC)"
 	@echo "  📥 Installing tgcli from dapi/tgcli"
 	@$(SKILLS) add dapi/tgcli --skill tgcli -g $(AGENTS_SKILLS_AGENT_FLAGS) -y
-	@echo "  📥 Installing docmost from dapi/docmost-cli"
-	@$(SKILLS) add dapi/docmost-cli --skill docmost -g $(AGENTS_SKILLS_AGENT_FLAGS) -y
 	@echo "  📥 Installing playwright-cli from microsoft/playwright-cli"
 	@$(SKILLS) add microsoft/playwright-cli --skill playwright-cli -g $(AGENTS_SKILLS_AGENT_FLAGS) -y
 	@echo "  📥 Installing fpf-simple from CodeAlive-AI/fpf-simple-skill"
@@ -116,7 +113,6 @@ CLAUDE_PLUGINS = \
 	pr-review-fix-loop@dapi \
 	spec-reviewer@dapi \
 	zellij-workflow@dapi \
-	himalaya@dapi \
 
 agents-claude-plugins:
 	@for mp in $(CLAUDE_PLUGINS_MARKETPLACES); do \
