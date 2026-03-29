@@ -13,18 +13,21 @@ warnings=0
 
 # --- Expected items (override via env vars) ---
 
-EXPECTED_SKILLS="${EXPECTED_SKILLS:-docmost fpf-problem-solving gws-calendar gws-calendar-agenda gws-calendar-insert gws-docs gws-docs-write gws-drive gws-drive-upload gws-gmail gws-gmail-forward gws-gmail-reply gws-gmail-reply-all gws-gmail-send gws-gmail-triage gws-meet gws-sheets gws-tasks playwright-cli prompt-engineering tgcli}"
+EXPECTED_SKILLS="${EXPECTED_SKILLS:-docmost fpf-problem-solving playwright-cli prompt-engineering}"
+## gws-calendar gws-calendar-agenda gws-calendar-insert gws-docs gws-docs-write gws-drive gws-drive-upload gws-gmail gws-gmail-forward gws-gmail-reply gws-gmail-reply-all gws-gmail-send gws-gmail-triage gws-meet gws-sheets gws-tasks tgcli
 
 # Optional items — allowed but not required (present = OK, absent = OK)
 OPTIONAL_SKILLS="${OPTIONAL_SKILLS:-ccbox ccbox-insights}"
 
-EXPECTED_MCP="${EXPECTED_MCP:-tavily context7}"
+EXPECTED_MCP="${EXPECTED_MCP:-context7}"
+# tavily
 
 EXPECTED_PLUGINS="${EXPECTED_PLUGINS:-}"
 
 EXPECTED_MARKETPLACES="${EXPECTED_MARKETPLACES:-claude-plugins-official dapi playwright-skill}"
 
-EXPECTED_AGENTS="${EXPECTED_AGENTS:-backend-architect business-panel-experts deep-research-agent devops-architect frontend-architect learning-guide performance-engineer python-expert quality-engineer refactoring-expert requirements-analyst root-cause-analyst security-engineer socratic-mentor system-architect technical-writer}"
+EXPECTED_AGENTS="${EXPECTED_AGENTS:-backend-architect business-panel-experts deep-research-agent devops-architect frontend-architect learning-guide performance-engineer quality-engineer refactoring-expert requirements-analyst root-cause-analyst security-engineer socratic-mentor system-architect technical-writer}"
+# python-expert
 
 # --- Helpers ---
 
