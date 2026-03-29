@@ -8,13 +8,13 @@ export PATH
 warnings=0
 
 REQUIRED_SKILLS=(
-	"tgcli"
+	# "tgcli"
 	"playwright-cli"
 	"prompt-engineering"
-	"gws-docs"
-	"gws-docs-write"
-	"gws-drive"
-	"gws-sheets"
+	# "gws-docs"
+	# "gws-docs-write"
+	# "gws-drive"
+	# "gws-sheets"
 )
 
 DEFAULT_CLAUDE_MARKETPLACE_NAMES="${CLAUDE_MARKETPLACE_NAMES:-dapi}"
