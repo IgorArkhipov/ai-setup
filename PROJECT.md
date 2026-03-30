@@ -1,3 +1,3 @@
-This project is a payment processing service: a simplified API to keep track of users and Stripe payouts.
-Its goal is to expose Stripe account setup including payout methods, earnings creation and earning aggregation into payouts.
-Project features also include RBAC and background processing.
+PayoutService is a payment processing API for managing Stripe-based payouts. It handles connected account onboarding, payout method configuration, and earnings tracking - aggregating individual earnings into scheduled payouts via Stripe Global Payouts.
+
+The service includes role-based access control (RBAC) to separate admin and user-level operations, and uses background processing (Sidekiq) for reliable payout execution and Stripe webhook handling.
