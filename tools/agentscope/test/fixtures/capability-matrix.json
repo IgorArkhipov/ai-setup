@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "providers": {
+    "claude": {
+      "skills": "not-yet-sampled",
+      "configuredMcps": "observed-shape",
+      "tools": "observed-shape"
+    },
+    "codex": {
+      "skills": "observed-shape",
+      "configuredMcps": "observed-shape",
+      "tools": "observed-shape"
+    },
+    "cursor": {
+      "skills": "not-yet-sampled",
+      "configuredMcps": "shell-only",
+      "tools": "shell-only"
+    }
+  },
+  "notes": {
+    "claude": "Global plugin flags plus project MCP approval files are fixture-backed; skills still need live sampling.",
+    "codex": "TOML plugin and mcp_servers sections plus global/project SKILL.md roots are fixture-backed.",
+    "cursor": "Only JSON object shells for settings.json and globalStorage/storage.json are locked so far."
+  }
+}

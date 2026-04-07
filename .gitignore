@@ -1,4 +1,6 @@
 .obsidian/
-tools/
+tools/*
+!tools/agentscope/
+!tools/agentscope/**
 .DS_Store
 tmp

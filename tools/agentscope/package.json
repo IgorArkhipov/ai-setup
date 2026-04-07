@@ -1,0 +1,22 @@
+{
+  "name": "agentscope",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Fixture-backed AgentScope bootstrap CLI",
+  "type": "module",
+  "bin": {
+    "agentscope": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "cac": "6.7.14"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.15",
+    "typescript": "5.9.3",
+    "vitest": "3.2.4"
+  }
+}

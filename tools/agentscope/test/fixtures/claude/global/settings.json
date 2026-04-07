@@ -1,0 +1,6 @@
+{
+  "enabledPlugins": {
+    "safe-shell": true,
+    "demo-formatter": false
+  }
+}
