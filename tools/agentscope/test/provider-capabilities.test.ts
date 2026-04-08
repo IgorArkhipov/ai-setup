@@ -21,13 +21,17 @@ describe("provider-capabilities", () => {
 
     expect(report.checkedFiles).toEqual([
       "claude/global/settings.json",
+      "claude/global/settings.local.json",
+      "claude/project/.claude/settings.json",
       "claude/project/.claude/settings.local.json",
+      "claude/project/.claude/skills/example-claude-skill/SKILL.md",
       "claude/project/.mcp.json",
       "codex/global/config.toml",
       "codex/global/skills/.system/example-skill/SKILL.md",
       "codex/project/.codex/skills/example-project-skill/SKILL.md",
-      "cursor/global/settings.json",
-      "cursor/global/storage.json",
+      "cursor/global/skills-cursor/example-cursor-skill/SKILL.md",
+      "cursor/global/mcp.json",
+      "cursor/root/profiles/default/extensions.json",
     ]);
     expect(report.issues).toEqual([]);
   });

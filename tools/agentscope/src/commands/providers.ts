@@ -5,7 +5,7 @@ import {
 
 export function renderProviders(fixturesRoot: string): string {
   const matrix = loadCapabilityMatrix(fixturesRoot);
-  const lines = ["Provider capability matrix (fixture-backed baseline)", ""];
+  const lines = ["Supported providers", ""];
 
   for (const provider of listProviders()) {
     const capabilities = matrix.providers[provider.id];

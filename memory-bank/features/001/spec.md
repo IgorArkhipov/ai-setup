@@ -1,5 +1,5 @@
 ---
-status: ready
+status: implemented-verified
 ---
 
 # Spec: Trusted Multi-Provider Discovery Foundation
@@ -61,6 +61,8 @@ Path helpers must support:
 - app-state root resolution
 - Cursor root overrides, with macOS default `~/Library/Application Support/Cursor/User/`
 
+In this feature, `appStateRoot` is resolved for AgentScope-managed config and state concerns only. Provider discovery continues to read provider-specific inputs from the provider roots listed in this spec, not from `appStateRoot`.
+
 ### 3. Normalized discovery model
 
 Every discovered item must expose:
@@ -116,7 +118,7 @@ If a provider does not expose a project layer for an item category, discovery mu
 
 `agentscope providers` must print the supported provider list and capability-matrix summary.
 
-`agentscope doctor` must print `OK` when all required discovery inputs are readable and structurally valid. It must print provider-scoped issues and exit non-zero when a required discovery assumption fails.
+`agentscope doctor` must print `OK` when all required discovery inputs are readable and structurally valid. It must print provider-scoped issues and exit non-zero when a required fixture assumption or required live discovery input fails.
 
 `agentscope list` must support:
 - human-readable output
@@ -142,10 +144,12 @@ Empty state:
 Partial-success state:
 - one or more providers return items or an empty slice
 - one or more providers also emit warnings
+- a provider may still contribute healthy items from one slice while also emitting warnings for another slice
 - `list` still exits `0`
 
 Fatal-error state:
-- CLI arguments are invalid, or config schema version is unsupported
+- CLI usage is invalid, including missing command, unknown command, or invalid flags
+- config schema version is unsupported
 - command exits non-zero and does not print partial results
 
 Provider warnings must be emitted for:
@@ -158,7 +162,7 @@ Condition handling by command:
 - `list`: provider file read or parse failures are warnings only; discovery must continue for other providers and exit `0`.
 - `list`: a missing optional provider slice, such as an absent project layer or absent Cursor extensions metadata, is not a warning.
 - `doctor`: missing required fixture files or fixture-shape mismatches are fatal and must make the command exit non-zero.
-- `doctor`: a missing real local provider file outside the committed fixture set is not a fatal fixture failure; it must be reported as a provider issue in the command output.
+- `doctor`: a missing or malformed real local provider input outside the committed fixture set is not a fatal fixture failure, but it must be reported as a provider issue in the command output and still exit non-zero when it leaves required live discovery inputs unreadable or structurally invalid.
 
 Each warning must include:
 - `provider`
@@ -186,9 +190,10 @@ Each warning must include:
 
 1. A fixture-backed integration test fails when a required provider fixture path or required file shape changes.
 2. Config tests prove the precedence order `defaults < user config < project config < CLI flags`.
-3. Path tests cover `~` expansion, project-root resolution, and Cursor default-root resolution on macOS.
+3. Path tests cover `~` expansion, project-root resolution, app-state root resolution, and Cursor default-root resolution on macOS.
 4. `agentscope list --json` returns normalized items with all required fields and a separate `warnings` array.
-5. A malformed provider file produces a provider-scoped warning, while healthy providers still appear in `list` output.
+5. A malformed or unreadable provider slice produces a provider-scoped warning, while healthy providers and healthy slices still appear in `list` output.
 6. `agentscope doctor` exits non-zero when a required discovery assumption fails.
 7. `agentscope providers` prints Claude Code, Codex, and Cursor in a deterministic order.
 8. When no discoverable items exist for the selected scope, `agentscope list` prints an explicit empty result and exits `0`.
+9. Invalid CLI usage, including missing command, unknown command, and invalid flags, exits non-zero without partial output.

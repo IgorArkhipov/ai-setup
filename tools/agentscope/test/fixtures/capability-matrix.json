@@ -2,24 +2,24 @@
   "version": 1,
   "providers": {
     "claude": {
-      "skills": "not-yet-sampled",
-      "configuredMcps": "observed-shape",
-      "tools": "observed-shape"
+      "skills": "read-only",
+      "configuredMcps": "read-only",
+      "tools": "read-only"
     },
     "codex": {
-      "skills": "observed-shape",
-      "configuredMcps": "observed-shape",
-      "tools": "observed-shape"
+      "skills": "read-only",
+      "configuredMcps": "read-only",
+      "tools": "read-only"
     },
     "cursor": {
-      "skills": "not-yet-sampled",
-      "configuredMcps": "shell-only",
-      "tools": "shell-only"
+      "skills": "read-only",
+      "configuredMcps": "read-only",
+      "tools": "read-only"
     }
   },
   "notes": {
-    "claude": "Global plugin flags plus project MCP approval files are fixture-backed; skills still need live sampling.",
-    "codex": "TOML plugin and mcp_servers sections plus global/project SKILL.md roots are fixture-backed.",
-    "cursor": "Only JSON object shells for settings.json and globalStorage/storage.json are locked so far."
+    "claude": "Fixture baseline covers Claude settings JSON, project .mcp.json, and project skill roots.",
+    "codex": "Fixture baseline covers config.toml sections plus global and project skill roots.",
+    "cursor": "Fixture baseline covers global skills, global mcp.json, and profile extension metadata."
   }
 }

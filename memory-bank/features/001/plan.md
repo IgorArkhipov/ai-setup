@@ -1,5 +1,5 @@
 ---
-status: ready
+status: implemented-verified
 ---
 
 # Trusted Multi-Provider Discovery Foundation Implementation Plan
@@ -468,7 +468,7 @@ Update `src/commands/doctor.ts` so it:
 - supports the same `--project-root`, `--app-state-root`, and `--cursor-root` overrides used by `list`, while command tests can set `HOME` to isolate global provider roots from the real machine
 - prints `OK` only when required discovery inputs are readable and structurally valid
 
-Local provider file problems should appear in output, but only committed fixture failures should be treated as fatal fixture-assumption failures.
+Local provider file problems should appear in output as provider issues. They are not fixture-assumption failures, but `doctor` should still exit non-zero when a required live discovery input is missing, unreadable, or malformed.
 
 - [ ] **Step 5: Update README command docs**
 
@@ -514,6 +514,7 @@ Confirm the test suite covers:
 - `doctor` non-zero exit on failed discovery assumptions
 - deterministic `providers` order
 - explicit empty result with exit `0`
+- invalid CLI usage exiting non-zero without partial output
 
 - [ ] **Step 2: Fill any remaining coverage gaps**
 
@@ -545,7 +546,7 @@ git commit -m "test: verify discovery foundation acceptance criteria"
 - Requirement 4, provider discovery scope: Tasks 4, 5, 6
 - Requirement 5, command behavior: Task 7
 - Error handling and invariants: Tasks 3, 4, 5, 6, 7, 8
-- Acceptance criteria 1-8: Tasks 1, 2, 7, 8
+- Acceptance criteria 1-9: Tasks 1, 2, 7, 8
 
 ## Grounding Review
 
@@ -555,4 +556,13 @@ git commit -m "test: verify discovery foundation acceptance criteria"
 - `tools/agentscope/test/provider-capabilities.test.ts` is the current baseline lock, so expanding it first prevents silent fixture drift while new behavior lands.
 - `tools/agentscope/test/fixtures/cursor/global/settings.json` and `tools/agentscope/test/fixtures/cursor/global/storage.json` reflect bootstrap assumptions, so replacing or retiring them is necessary to match the feature spec's Cursor roots.
 
-0 issues, the plan is ready for implementation.
+0 issues, the original plan was ready for implementation and the resulting implementation is now verified.
+
+## Verified Implementation Alignment
+
+- The implementation has been verified with the full `tools/agentscope` test suite and `npm run build`.
+- `doctor` behavior is intentionally stricter than the original Task 7 wording implied: provider-scoped local input problems are reported separately from fixture failures, but still exit non-zero when they break required live discovery assumptions.
+- CLI invalid-usage handling is now explicit and verified: missing command, unknown command, and invalid flags all exit non-zero without partial output.
+- Partial-success behavior is verified at the provider-slice level, not only at the whole-provider level: a provider can emit warnings for one unreadable or malformed slice while still contributing healthy items from another slice.
+- `appStateRoot` is resolved and overrideable in config/path handling for AgentScope-managed state concerns in this feature, but provider discovery does not treat it as a provider discovery root.
+- Review-driven coverage additions now lock the clarified behavior in tests, including CLI misuse cases, JSON empty/partial-success output, path helper coverage for app-state resolution, and provider scan-failure preservation.
