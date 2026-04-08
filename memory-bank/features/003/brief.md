@@ -15,7 +15,7 @@ AgentScope's shared discovery and mutation concepts are still unproven until the
 
 ## Where did this task come from?
 
-This brief is derived from Task 5 in the AgentScope example implementation plan. In the feature-based memory bank, it turns the next milestone into a concrete user-facing problem: proving the product on one real provider before broadening support further.
+In the feature-based memory bank, it turns the next milestone into a concrete user-facing problem: proving the product on one real provider before broadening support further.
 
 ## What outcome do we want?
 

@@ -1,5 +1,5 @@
 ---
-status: draft
+status: ready
 ---
 
 # Feature 002: Safe And Reversible Configuration Changes
@@ -15,7 +15,7 @@ After discovery is in place, AgentScope still cannot help users make changes saf
 
 ## Where did this task come from?
 
-This brief is derived from Task 4 in the AgentScope example implementation plan. In the feature-based memory bank, it follows the discovery foundation and frames the next capability as safe change management rather than as a set of internal implementation details.
+In the feature-based memory bank, it follows the discovery foundation and frames the next capability as safe change management rather than as a set of internal implementation details.
 
 ## What outcome do we want?
 
