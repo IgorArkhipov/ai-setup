@@ -7,6 +7,11 @@ import type {
   DiscoveryResult,
   DiscoveryWarning,
 } from "../core/models.js";
+import {
+  toSelectedItemIdentity,
+  type TogglePlanDecision,
+  type TogglePlanInput,
+} from "../core/mutation-models.js";
 
 interface ClaudeSettings {
   enabledPlugins?: Record<string, boolean>;
@@ -423,5 +428,18 @@ export const claudeProvider: ProviderModule = {
     );
 
     return { items, warnings };
+  },
+  planToggle(input: TogglePlanInput): TogglePlanDecision {
+    return {
+      status: "blocked",
+      selection: toSelectedItemIdentity(input.item),
+      targetEnabled: input.targetEnabled,
+      operations: [],
+      affectedTargets: [],
+      reason:
+        input.item.mutability === "unsupported"
+          ? `unsupported: ${input.item.id} uses a provider lifecycle that is not writable yet`
+          : `read-only: ${input.item.id} was discovered successfully, but Claude write planning is not implemented yet`,
+    };
   },
 };

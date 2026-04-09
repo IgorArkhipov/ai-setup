@@ -1,5 +1,5 @@
 ---
-status: ready
+status: implemented-verified
 ---
 
 # Spec: Safe And Reversible Configuration Changes
@@ -54,7 +54,7 @@ Provider modules may decide whether an item is writable and may produce a toggle
 
 ### 2. Dry-run toggle behavior
 
-`agentscope toggle ...` without `--apply` must be a pure dry run.
+`agentscope toggle ...` without `--apply` must be a provider-state dry run.
 
 Dry-run output must include:
 - the selected item identity
@@ -64,7 +64,7 @@ Dry-run output must include:
 - one explicit status line stating that no writes were performed
 
 Dry run must not:
-- modify provider-managed files
+- modify provider-managed files or stores
 - create a backup entry
 - append an audit-log entry
 
@@ -74,16 +74,20 @@ If the selected item is `read-only` or `unsupported`, the command must refuse to
 
 `agentscope toggle ... --apply` must route through one shared guarded workflow.
 
-Before writing, the engine must:
+Before mutating live provider state, the engine must:
 - acquire the AgentScope advisory lock
 - verify that the current file or store fingerprint still matches the fingerprint captured when the plan was built
 - create a persistent backup entry for every affected path or store value
-- append an audit-log entry describing the requested mutation
 
 During write, the engine must:
 - apply the planned operations through atomic write behavior
 - preserve binary data exactly when backing up or restoring non-UTF-8 content
 - abort the mutation if any guard check fails
+
+After a successful write, the engine must:
+- append an audit-log entry describing the completed mutation
+
+If a guarded apply fails after the shared engine has started the guarded workflow, it must return a structured failure, append a `failed-apply` audit entry, and leave live provider-managed state fully rolled back or untouched.
 
 The engine must never leave live provider-managed files partially updated after a failed apply attempt.
 
@@ -101,9 +105,9 @@ Each backup entry must capture enough metadata to support later restore, includi
 Backup entries must remain restorable across process restarts until they are explicitly removed by a later retention or cleanup mechanism.
 
 AgentScope must also keep an append-only audit trail for:
-- successful apply requests
+- successful apply completions
 - restore requests
-- failed guarded apply attempts when a failure occurs after the mutation flow has started
+- failed guarded apply attempts when a failure occurs after the guarded workflow has started, including setup failures after lock acquisition and fingerprint recheck
 
 Backup storage must be safe for:
 - regular UTF-8 config files
@@ -111,6 +115,7 @@ Backup storage must be safe for:
 - binary-safe content such as SQLite-backed provider state
 
 For binary files or store payload snapshots, backup and restore must preserve byte-for-byte equality.
+Restore must reject invalid blob references instead of reading arbitrary paths from a backup manifest, and SQLite-backed mutation plans must validate identifiers before executing dynamic SQL.
 
 ### 5. Restore behavior
 
@@ -120,6 +125,7 @@ Restore must:
 - validate that the backup manifest entry exists and includes `backupId`, `createdAt`, the affected paths or stores, and the saved original content or a pointer to it
 - reacquire the advisory lock before mutating live files
 - restore the saved content or paths atomically
+- roll back any already-restored targets to their pre-restore live state if restore fails mid-flight
 - append a restore audit-log entry
 
 Restore output must include:
@@ -141,7 +147,7 @@ This feature must add two user-facing commands:
 `restore` must support:
 - restoring one prior backup by ID
 
-Both commands must emit deterministic output. Command output must include status, the selected item or backup ID, the planned or restored operations, and the affected paths or stores. They may also expose structured output for tests.
+Both commands must emit deterministic output. Command output must include status, the selected item or backup ID, the planned or restored operations, and the affected paths or stores. When `--json` is requested, they must also emit deterministic structured output for early validation failures such as missing selectors or a missing backup ID.
 
 ## States and error handling
 
@@ -150,7 +156,7 @@ This feature has no interactive loading state.
 Dry-run success state:
 - a supported selection resolves to a toggle plan
 - planned operations and affected paths are shown
-- no provider-managed files are written
+- no provider-managed files or stores are written
 
 Apply success state:
 - the advisory lock is acquired
@@ -182,6 +188,7 @@ Blocked state:
 Fatal-error state:
 - CLI usage is invalid, including missing required arguments, unknown flags, or unsupported combinations
 - the command exits non-zero without partial results
+- when `--json` is requested, the command still emits structured failed output
 
 Condition handling by command:
 - `toggle` without `--apply`: plan-only; never writes; exits `0` for a dry-run plan or explicit `no-op`, and exits non-zero when the selection is blocked or no valid writable plan can be produced.
@@ -190,7 +197,7 @@ Condition handling by command:
 
 ## Invariants
 
-- Dry run is strictly read-only.
+- Dry run is strictly read-only for provider-managed state and creates no backup or audit entries.
 - Apply and restore both pass through the same shared mutation engine.
 - No live mutation occurs without a prior backup record and advisory lock.
 - Fingerprint drift blocks apply instead of guessing over concurrent user changes.

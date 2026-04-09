@@ -1,4 +1,4 @@
-# AgentScope Discovery Foundation
+# AgentScope Discovery And Safe Mutation Foundation
 
 This directory is an isolated TypeScript sub-project.
 
@@ -19,10 +19,34 @@ Sanitized examples live under `test/fixtures/` and are intentionally narrow. The
 - `node dist/cli.js providers`
 - `node dist/cli.js doctor --project-root <path> --app-state-root <path> --cursor-root <path>`
 - `node dist/cli.js list [--json] --project-root <path> --app-state-root <path> --cursor-root <path>`
+- `node dist/cli.js toggle --provider <id> --kind <kind> --id <id> --layer <layer> [--json] [--apply] --project-root <path> --app-state-root <path> --cursor-root <path>`
+- `node dist/cli.js restore <backup-id> [--json] --project-root <path> --app-state-root <path> --cursor-root <path>`
 
 `doctor` treats committed fixture drift as fatal. Provider-local read and parse problems are reported separately so discovery can stay visible in `list`.
 
+`toggle` is dry-run by default. It prints the selected item, target enabled state, planned operations, affected paths or stores, and an explicit line stating that no writes were performed. Add `--apply` to route the plan through the guarded mutation engine.
+
+`restore` replays one saved backup by id through the same lock and low-level IO layer used by apply.
+
+## Mutation State
+
+AgentScope persists guarded mutation state under `appStateRoot`:
+
+- `locks/mutation.lock`
+- `backups/<backup-id>/manifest.json`
+- `backups/<backup-id>/blobs/*.bin`
+- `audit/log.jsonl`
+
+Successful apply writes create a backup manifest and append an audit event. Restore keeps the backup in place and appends a restore event. Dry runs and explicit no-ops do not create backups or audit entries.
+
+## Runtime
+
+- Minimum supported Node runtime: `>=25.9.0`
+- SQLite-backed mutations use the built-in `node:sqlite` module
+
+The shared mutation engine is ready for dry-run, apply, and restore flows, but Claude, Codex, and Cursor still return deterministic blocked decisions for real items until provider-specific write planning lands in a later feature.
+
 ## Baseline Verification
 
-- `npm test -- test/provider-capabilities.test.ts`
+- `npm test`
 - `npm run build`

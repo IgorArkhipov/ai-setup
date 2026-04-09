@@ -1,5 +1,5 @@
 ---
-status: ready
+status: implemented-verified
 ---
 
 # Safe And Reversible Configuration Changes Implementation Plan
@@ -14,6 +14,17 @@ status: ready
 
 ---
 
+## Verified Outcome
+
+- Feature 002 is implemented and verified in `tools/agentscope` with `npm test` and `npm run build`.
+- The final implementation writes successful `apply` audit entries only after all planned mutations succeed; `failed-apply` audit entries cover guarded setup failures after lock acquisition and fingerprint recheck as well as post-mutation failures.
+- Apply rollback replays only the completed operations in reverse execution order. Restore captures an ephemeral rollback snapshot and reapplies that snapshot in reverse order if restore fails mid-flight.
+- Dry-run and no-op stay read-only for provider-managed state and create no backup or audit entries, but the engine may still initialize state directories under `appStateRoot`.
+- `toggle` and `restore` honor `--json` for early validation failures in addition to success and blocked paths.
+- SQLite table and column identifiers plus backup blob IDs are validated before use.
+- The Node runtime contract is pinned to `>=25.9.0`, and `@types/node` is aligned to the documented runtime baseline.
+- The checkbox steps below are preserved as the original execution script; this section records the verified end state after review-driven adjustments.
+
 ## Orchestration And Dependencies
 
 **Recommended pattern:** single agent, strictly sequential across Tasks 1-7.
@@ -24,9 +35,9 @@ status: ready
 - Task 6 depends on persisted backups and restore helpers already working.
 - Task 7 should run only after both commands and the shared engine are in place so the acceptance criteria can be verified end-to-end.
 
-## Grounding
+## Original Grounding
 
-Current project state in `tools/agentscope`:
+Historical pre-implementation project state in `tools/agentscope`:
 - `src/cli.ts` currently wires only `providers`, `doctor`, and `list`.
 - `src/core/config.ts` already resolves `appStateRoot`, but no code currently writes any AgentScope-managed state there.
 - `src/core/discovery.ts` exposes a discovery-only `ProviderModule` contract with no toggle-planning hook.
@@ -35,7 +46,7 @@ Current project state in `tools/agentscope`:
 - The existing tests cover CLI parsing, config/path helpers, provider discovery, list rendering, doctor behavior, and provider capability fixtures.
 - There is no backup manifest schema, no audit log, no advisory lock, no fingerprint check, no atomic mutation helper, and no restore flow yet.
 
-Grounding conclusions:
+Grounding conclusions at planning time:
 - The feature fits the existing thin-command plus focused-core architecture well; no new top-level subsystem is needed.
 - `appStateRoot` already exists in config, so backups, lock files, and audit logs should live there instead of introducing another state root.
 - Real provider-specific write coverage is explicitly out of scope for this feature, so happy-path apply and restore coverage should come from a fake writable provider in tests, not from making Claude, Codex, or Cursor writable yet.
@@ -239,7 +250,8 @@ Create `test/mutation-state.test.ts` covering:
 - append-only audit log entries
 - manifest reload across a fresh process boundary
 - invalid or incomplete manifest rejection during restore lookup
-- advisory lock acquisition success and lock-contention failure
+- invalid blob-id rejection during blob reads
+- advisory lock acquisition success, stale-lock reclaim, and lock-contention failure
 
 - [ ] **Step 2: Define the AgentScope state layout**
 
@@ -267,9 +279,10 @@ In `src/core/mutation-lock.ts`, acquire the mutation lock through one exclusive 
 Back in `src/core/mutation-state.ts`, add helpers to:
 - persist a backup manifest and payload blobs before mutation
 - load and validate a backup manifest by ID
+- validate blob IDs before reading manifest-backed blob payloads
 - append JSON lines to the audit log for apply, restore, and post-start failures
 
-The audit entry for failed apply attempts must only be written when the failure happens after the guarded flow has actually started.
+The audit entry for failed apply attempts must only be written when the failure happens after the guarded flow has actually started. In the verified implementation, that includes guarded setup failures after lock acquisition and fingerprint recheck, even if no live mutation operation has completed yet.
 
 - [ ] **Step 5: Verify persistence and locking**
 
@@ -305,9 +318,12 @@ Create `test/mutation-engine.test.ts` with fake-provider plans covering:
 - blocked apply for fingerprint drift
 - blocked apply for lock contention
 - successful apply with backup creation and returned backup ID
-- failed apply after the audit flow starts
+- failed apply during guarded setup before live mutations begin
+- failed apply after mutations begin with rollback
+- failed apply with rollback failure
 - successful restore from a saved backup
 - failed restore for missing or invalid backup manifests
+- failed restore after partially restoring targets, with rollback to the pre-restore live snapshot
 
 - [ ] **Step 2: Implement the dry-run and no-op flow**
 
@@ -324,11 +340,12 @@ Still in `src/core/mutation-engine.ts`, implement apply in this order:
 1. acquire the advisory lock
 2. re-fingerprint every live target and compare it against the source fingerprints embedded in the plan by `planToggle(...)`
 3. persist the backup manifest and blobs
-4. append the apply audit entry
-5. execute the planned operations through the low-level mutation helpers
+4. execute the planned operations through the low-level mutation helpers
+5. append the successful apply audit entry only after step 4 completes without error
 6. if any operation fails after mutations begin, walk the already-completed operations in reverse order and restore their original state from the backup blobs created in step 3 by calling the raw `mutation-io` primitives directly, not the user-facing `restore` command flow; if rollback itself fails, record both failures in the audit trail and surface both in command output
 7. if rollback succeeds, delete the just-created backup manifest and its blobs before returning failure, so later `restore` runs do not try to restore an apply that was already undone; failed-apply audit entries for this path should omit `backupId` and record cleanup metadata instead, so the audit log never points at a deleted backup
-8. return the backup ID and affected targets
+8. if a guarded setup step fails after lock acquisition and fingerprint verification but before any live mutation completes, append a `failed-apply` audit entry, delete the persisted backup if one was created and no mutations completed, and return a structured failed result
+9. return the backup ID and affected targets
 
 If any step fails after the guarded flow begins, append a failed-apply audit entry and leave live provider state fully rolled back or untouched.
 
@@ -397,9 +414,9 @@ Cover:
 - ambiguous selection
 - blocked `read-only` or `unsupported` production selection
 - dry-run success through the fake writable provider injected through the command helper
-- explicit `no-op` with exit code `0` and no backup or audit entries
+- explicit `no-op` with and without `--apply`, both with exit code `0` and no backup or audit entries
 - `--apply` success returning a backup ID
-- deterministic JSON output when `--json` is used
+- deterministic JSON output when `--json` is used, including early validation failures
 
 - [ ] **Step 2: Implement selection resolution**
 
@@ -471,7 +488,8 @@ Create `test/restore.test.ts` covering:
 - missing backup manifest
 - invalid backup manifest
 - advisory lock contention during restore
-- deterministic JSON output when `--json` is used
+- deterministic JSON output when `--json` is used, including missing backup ID
+- persisted backup reload across separate command-helper invocations before restore
 
 - [ ] **Step 2: Implement the restore command**
 
@@ -525,12 +543,16 @@ Confirm the final suite directly covers:
 - the full supported mutation vocabulary
 - dry-run output and no-write guarantees
 - guarded apply success with lock, backup, and audit persistence
+- guarded apply failure during setup with structured failure and `failed-apply` audit output
 - fingerprint drift failure without live-state mutation
 - lock-contention failure for both apply and restore
+- stale-lock reclaim before apply or restore proceeds
 - successful restore from a persisted backup
+- restore rollback back to the pre-restore live snapshot when restore fails mid-flight
 - byte-for-byte equality for non-UTF-8 and SQLite-backed snapshots
 - blocked `read-only`, `unsupported`, unknown, and ambiguous selections
 - backups surviving across separate command invocations
+- deterministic JSON validation output for early `toggle` and `restore` failures
 - no new writable provider coverage for Claude, Codex, or Cursor
 
 - [ ] **Step 2: Fill any remaining coverage gaps**
@@ -584,4 +606,4 @@ git commit -m "test: verify safe mutation engine acceptance criteria"
 - The current test suite already uses inline sandbox and command-helper patterns, so introducing shared helpers in `test/support/mutation-sandbox.ts` and `test/support/fake-toggle-provider.ts` is a focused extension rather than a structural mismatch.
 - No existing `appStateRoot` directory layout is committed yet, so introducing `locks/`, `backups/`, and `audit/` does not conflict with an established persisted-state schema.
 
-0 issues, the plan is ready for implementation. Re-run grounding if the codebase changes before implementation starts.
+0 outstanding implementation issues against the revised plan. The feature is implemented and verified; re-ground only if later features change the mutation engine behavior or command contract.

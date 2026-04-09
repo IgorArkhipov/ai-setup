@@ -8,6 +8,7 @@ import {
 } from "./models.js";
 import type { AgentScopeConfig } from "./config.js";
 import type { ProviderId } from "../providers/registry.js";
+import type { TogglePlanDecision, TogglePlanInput } from "./mutation-models.js";
 
 export interface ProviderDiscoveryInput {
   config: AgentScopeConfig;
@@ -17,6 +18,7 @@ export interface ProviderDiscoveryInput {
 export interface ProviderModule {
   id: ProviderId;
   discover(input: ProviderDiscoveryInput): DiscoveryResult;
+  planToggle?(input: TogglePlanInput): TogglePlanDecision;
 }
 
 function compareByOrder<T extends string>(value: T, order: readonly T[]): number {

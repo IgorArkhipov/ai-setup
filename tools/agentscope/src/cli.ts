@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url";
 import { cac } from "cac";
 import { runDoctor } from "./commands/doctor.js";
 import { runList } from "./commands/list.js";
+import { runRestore } from "./commands/restore.js";
+import { runToggle } from "./commands/toggle.js";
 import { renderProviders } from "./commands/providers.js";
 
 interface CliIo {
@@ -103,6 +105,51 @@ function createCli(packageRoot: string, io: CliIo) {
     .action((options) => {
       runHandled(() =>
         runList({
+          json: options.json,
+          projectRoot: options.projectRoot,
+          appStateRoot: options.appStateRoot,
+          cursorRoot: options.cursorRoot,
+        }),
+      );
+    });
+
+  cli
+    .command("toggle", "Plan or apply a toggle for one discovered item")
+    .option("--provider <id>", "Provider id")
+    .option("--kind <kind>", "Discovery kind")
+    .option("--id <id>", "Normalized discovery id")
+    .option("--layer <layer>", "Discovery layer")
+    .option("--apply", "Apply writes instead of dry-run")
+    .option("--json", "Render JSON output")
+    .option("--project-root <path>", "Override the project root")
+    .option("--app-state-root <path>", "Override the app state root")
+    .option("--cursor-root <path>", "Override the Cursor root")
+    .action((options) => {
+      runHandled(() =>
+        runToggle({
+          provider: options.provider,
+          kind: options.kind,
+          id: options.id,
+          layer: options.layer,
+          apply: options.apply,
+          json: options.json,
+          projectRoot: options.projectRoot,
+          appStateRoot: options.appStateRoot,
+          cursorRoot: options.cursorRoot,
+        }),
+      );
+    });
+
+  cli
+    .command("restore <backupId>", "Restore one previously saved backup")
+    .option("--json", "Render JSON output")
+    .option("--project-root <path>", "Override the project root")
+    .option("--app-state-root <path>", "Override the app state root")
+    .option("--cursor-root <path>", "Override the Cursor root")
+    .action((backupId, options) => {
+      runHandled(() =>
+        runRestore({
+          backupId,
           json: options.json,
           projectRoot: options.projectRoot,
           appStateRoot: options.appStateRoot,

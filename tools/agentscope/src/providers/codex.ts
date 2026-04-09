@@ -6,6 +6,11 @@ import type {
   DiscoveryResult,
   DiscoveryWarning,
 } from "../core/models.js";
+import {
+  toSelectedItemIdentity,
+  type TogglePlanDecision,
+  type TogglePlanInput,
+} from "../core/mutation-models.js";
 
 interface ParsedCodexEntry {
   id: string;
@@ -293,5 +298,18 @@ export const codexProvider: ProviderModule = {
     );
 
     return { items, warnings };
+  },
+  planToggle(input: TogglePlanInput): TogglePlanDecision {
+    return {
+      status: "blocked",
+      selection: toSelectedItemIdentity(input.item),
+      targetEnabled: input.targetEnabled,
+      operations: [],
+      affectedTargets: [],
+      reason:
+        input.item.mutability === "unsupported"
+          ? `unsupported: ${input.item.id} uses a provider lifecycle that is not writable in the current architecture`
+          : `read-only: ${input.item.id} was discovered successfully, but Codex write planning is not implemented yet`,
+    };
   },
 };

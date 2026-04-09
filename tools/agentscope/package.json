@@ -4,6 +4,9 @@
   "version": "0.1.0",
   "description": "Fixture-backed AgentScope bootstrap CLI",
   "type": "module",
+  "engines": {
+    "node": ">=25.9.0"
+  },
   "bin": {
     "agentscope": "./dist/cli.js"
   },
@@ -15,7 +18,7 @@
     "cac": "6.7.14"
   },
   "devDependencies": {
-    "@types/node": "22.19.15",
+    "@types/node": "^25.5.2",
     "typescript": "5.9.3",
     "vitest": "3.2.4"
   }
