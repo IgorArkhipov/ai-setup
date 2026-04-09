@@ -566,3 +566,8 @@ git commit -m "test: verify discovery foundation acceptance criteria"
 - Partial-success behavior is verified at the provider-slice level, not only at the whole-provider level: a provider can emit warnings for one unreadable or malformed slice while still contributing healthy items from another slice.
 - `appStateRoot` is resolved and overrideable in config/path handling for AgentScope-managed state concerns in this feature, but provider discovery does not treat it as a provider discovery root.
 - Review-driven coverage additions now lock the clarified behavior in tests, including CLI misuse cases, JSON empty/partial-success output, path helper coverage for app-state resolution, and provider scan-failure preservation.
+
+## Revision After Feature 003 Planning
+
+- **Task 1 compatibility revision:** if the Claude fixture baseline is regenerated or tightened again, `enabledMcpjsonServers` and `disabledMcpjsonServers` should be treated as object-valued maps keyed by server ID rather than array-oriented approval lists. Feature 003's writable Claude MCP planning depends on keyed JSON object-entry mutations, so the older fixture-shape assumption should not be carried forward unchanged.
+- **Task 3 follow-on note:** the normalized discovery model, warning model, and slice-level orchestration from feature 001 remain valid. The later conflict was not in the shared-model code that shipped; it was in the initial plan's assumption that future Claude writable work could reuse the discovery-era fixture contract without revisiting the provider-native approval-key shape.

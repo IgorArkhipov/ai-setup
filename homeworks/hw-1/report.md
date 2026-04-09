@@ -114,6 +114,21 @@ Most of the review issues came from missing or implicit information in `plan.md`
 
 The biggest source of churn was not broad scope confusion. It was small but important pieces of implicit information that became obvious only after implementation and review: exact CLI flags, exact fixture roots, concrete verification environments, safe task sequencing, explicit provider-to-shared-model mappings, command failure semantics, partial-success granularity, and the difference between active discovery roots and support-only paths. Tightening the generation and review prompts around those details should reduce follow-up iterations for future features.
 
+### Appended revision after Feature 003 planning
+
+Feature 003 planning exposed one follow-on compatibility gap in Feature 001 that was not visible during the original read-only discovery work.
+
+Task 1 revision:
+
+- The original Claude fixture contract was good enough for read-only discovery, but later writable Claude MCP planning depends on keyed JSON object-entry mutations.
+- Because of that, `enabledMcpjsonServers` and `disabledMcpjsonServers` should no longer be treated as array-oriented approval lists when the Claude fixture baseline is revised again. They should be modeled as object-valued maps keyed by server ID.
+
+Task 3 plan/code conflict:
+
+- The shared normalized discovery model and warning/orchestration code from Task 3 were not the problem; they stayed compatible with later work.
+- The conflict was between the initial plan assumption and the later code reality: the first plan implicitly assumed future Claude writable features could reuse the discovery-era provider fixture shape unchanged, while the existing mutation engine in Feature 002 expresses these Claude MCP toggles through object-entry JSON mutations.
+- That made the original planning assumption too loose. The fix is an appended revision to Feature 001, not a rewrite of the shipped discovery behavior: keep the Task 3 shared-model work as-is, but update the Task 1 Claude fixture-shape expectation so later writable Claude planning fits the real mutation primitives already present in the codebase.
+
 ## Feature 002
 
 ### Time spent
@@ -241,3 +256,81 @@ Most review churn came from missing or implicit information in `spec.md` and the
 ### Main takeaway
 
 For Feature 002, the biggest source of churn was not unclear product scope. It was missing execution-detail in safety-critical parts of the design: who owns captured state, when audits are written, how guarded setup failures are classified, how rollback works for both apply and restore, what runtime baseline the feature assumes, how fake test infrastructure fits the real type system, and how command tests override production dependencies and structured output behavior. Tightening the prompts around those points should reduce review rounds for future mutation-oriented features.
+
+## Feature 003
+
+### Time spent
+
+- Brief preparation and refinement: about 5 minutes
+- Spec preparation and refinement: about 15 minutes
+- Plan drafting: about 35 minutes
+- Plan review, fixes, and re-verification: about 30 minutes
+- Total for Brief + Spec + Plan: about 85 minutes
+
+These numbers are approximate and based on the observed feature-003 planning and review loop around `memory-bank/features/003/brief.md`, `spec.md`, and `plan.md`.
+
+### Prompt changes needed in `docs/`
+
+#### `docs/brief.md`
+
+What to change in the generation prompt:
+
+- Require one explicit `current baseline vs target capability` sentence when the feature extends an existing system, for example read-only provider discovery today versus the first writable provider path next.
+- Require one short `provider or artifact scope hint` when the problem is provider-specific, such as skills, settings JSON, or local config roots, while still keeping the brief solution-free.
+- Require one `why this provider first` sentence when the feature chooses one integration as the reference implementation for later work.
+
+What to change in the review prompt:
+
+- Add a check for hidden scope expansion, especially when the brief names one provider but the outcome language could be read as platform-wide support.
+- Add a check that the outcome is concrete enough to distinguish inventory-only visibility from real management/toggle capability.
+- Add a check for missing scope qualifiers like project-only versus global-plus-project when the brief hints at provider configuration management.
+
+#### `docs/spec.md`
+
+What to change in the generation prompt:
+
+- Require provider-native data shapes to be stated explicitly whenever later mutations depend on them, for example whether approval keys are arrays or object-valued maps keyed by ID.
+- Require canonical identity rules when one conceptual item is derived from more than one source, for example `.mcp.json` plus settings approval state.
+- Require lifecycle semantics for disabled items: whether they become absent, remain discoverable as disabled, or move to a separate recovery path.
+- Require every scope sentence that mentions multiple layers to be grounded to actual discovery roots, so language like "global and project" cannot survive when only one live root exists.
+- Require mutability semantics to be tied to verified planning support, not just to discovery intent.
+
+What to change in the review prompt:
+
+- Add a check for contradictions between requirements and acceptance criteria, especially around post-toggle discovery state.
+- Add a check for provider-layer claims that have no corresponding discovery root in the same spec.
+- Add a check for canonical-source ambiguity when the same item may appear in both provider-owned config and AgentScope-managed state.
+- Add a check that every mutation-oriented requirement names the preconditions needed for the planned operation shape to succeed, such as missing object containers or missing target files.
+
+#### `docs/plan.md`
+
+What to change in the generation prompt:
+
+- Require mutability changes to land only in the same task that introduces real planning or apply support for that item kind; do not mark items writable earlier as a discovery cleanup step.
+- Require mutation preconditions to be made explicit in the plan, including bootstrap steps for missing directories, missing JSON object containers, or missing target files.
+- Require runtime acceptance fixtures to be listed separately from provider fixtures whenever CLI tests depend on both.
+- Require any spec contradiction discovered during planning to be converted into an explicit resolution step or a required spec revision, not just a note at the bottom.
+- Require plans for provider-specific toggles to state whether disabled items remain discoverable and how they are addressed for re-enable after restart.
+
+What to change in the review prompt:
+
+- Add a check for `writable before writable logic exists` plan steps, where discovery mutability changes arrive before real planning support.
+- Add a check for hidden mutation prerequisites, especially entry-level JSON mutations that assume parent objects already exist.
+- Add a check that every runtime fixture touched by acceptance tests appears in the task file lists, not only the provider fixture tree.
+- Add a check that review notes have been resolved into executable steps rather than left as commentary that implementers must interpret themselves.
+
+### Missing information in `memory-bank/features/003`
+
+Most of the review churn came from missing or implicit information in the first draft of `spec.md` and `plan.md`. `brief.md` was mostly fine as a problem statement, but it did not force some of the provider-specific lifecycle and data-shape decisions that later had to become explicit.
+
+- The disabled-skill lifecycle was under-specified. The spec originally said the skill should be absent after disable, while the plan needed it to remain discoverable as `enabled: false` so `toggle` could re-enable it by ID.
+- The spec mentioned global and project skill toggle semantics even though Claude discovery in this feature only defines a project-local skill root.
+- The provider-native shape of `enabledMcpjsonServers` and `disabledMcpjsonServers` was implicit. Earlier discovery assumptions allowed array-oriented approval lists, but writable MCP planning required object-valued maps keyed by server ID.
+- The first plan draft changed Claude item `mutability` to `read-write` too early, before `planToggle(...)` actually supported skills, configured MCPs, or tools.
+- The first plan draft did not make JSON mutation preconditions explicit, especially the need to bootstrap missing approval objects before `removeJsonObjectEntry` or `updateJsonObjectEntry` can work.
+- The runtime acceptance fixture `tools/agentscope/test/fixtures/runtime/project/.mcp.json` was initially missing from the task file inventory even though configured-MCP discovery and CLI verification depend on it.
+- The first Task 5 draft did not explicitly carry `test/restore.test.ts` forward even though tool-toggle restore coverage is part of the end-to-end acceptance story.
+
+### Main takeaway
+
+For Feature 003, the biggest source of churn was not deciding what Claude support should do at a high level. It was turning provider-specific details into explicit, testable contracts: whether disabled items stay addressable, which layers really exist, what shape provider approval keys take on disk, when an item is truly writable, what runtime fixtures the CLI path actually touches, and which mutation preconditions must be satisfied before a generic engine can execute a provider plan safely. Tightening the prompts around provider-native data shapes, disabled-item lifecycle, mutability timing, and runtime-fixture grounding should reduce review rounds for future provider-validation features.

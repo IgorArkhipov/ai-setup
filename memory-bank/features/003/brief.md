@@ -1,5 +1,5 @@
 ---
-status: draft
+status: ready
 ---
 
 # Feature 003: First End-To-End Provider Validation With Claude

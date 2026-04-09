@@ -197,3 +197,9 @@ Each warning must include:
 7. `agentscope providers` prints Claude Code, Codex, and Cursor in a deterministic order.
 8. When no discoverable items exist for the selected scope, `agentscope list` prints an explicit empty result and exits `0`.
 9. Invalid CLI usage, including missing command, unknown command, and invalid flags, exits non-zero without partial output.
+
+## Revision After Feature 003 Planning
+
+- Feature 001 remains a verified read-only discovery foundation.
+- Later Claude writable-toggle planning in feature 003 exposed one compatibility revision to the Claude fixture contract from Requirement 1: `enabledMcpjsonServers` and `disabledMcpjsonServers` should be treated as object-valued maps keyed by server ID when the Claude fixture baseline is next regenerated, rather than as array-oriented approval lists.
+- This revision does not change feature 001's normalized item model, warning model, command behavior, or read-only scope. It only narrows the Claude fixture-shape expectation so future writable Claude planning can use keyed JSON object-entry mutations without conflicting with the earlier fixture contract.
