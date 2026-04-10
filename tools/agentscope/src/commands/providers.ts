@@ -1,7 +1,4 @@
-import {
-  listProviders,
-  loadCapabilityMatrix,
-} from "../providers/registry.js";
+import { listProviders, loadCapabilityMatrix } from "../providers/registry.js";
 
 export function renderProviders(fixturesRoot: string): string {
   const matrix = loadCapabilityMatrix(fixturesRoot);

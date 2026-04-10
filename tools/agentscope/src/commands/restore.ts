@@ -1,10 +1,7 @@
 import os from "node:os";
-import { loadConfig, type AgentScopeConfigOverrides } from "../core/config.js";
+import { type AgentScopeConfigOverrides, loadConfig } from "../core/config.js";
 import { restoreBackupById } from "../core/mutation-engine.js";
-import {
-  renderRestoreResultHuman,
-  renderRestoreResultJson,
-} from "../core/mutation-output.js";
+import { renderRestoreResultHuman, renderRestoreResultJson } from "../core/mutation-output.js";
 
 export interface RestoreCommandOptions extends AgentScopeConfigOverrides {
   cwd?: string;
@@ -38,21 +35,12 @@ function commandErrorOutput(json: boolean | undefined, reason: string): string {
 }
 
 function definedOverrides(
-  options: Pick<
-    AgentScopeConfigOverrides,
-    "projectRoot" | "appStateRoot" | "cursorRoot"
-  >,
+  options: Pick<AgentScopeConfigOverrides, "projectRoot" | "appStateRoot" | "cursorRoot">,
 ): AgentScopeConfigOverrides {
   return {
-    ...(options.projectRoot === undefined
-      ? {}
-      : { projectRoot: options.projectRoot }),
-    ...(options.appStateRoot === undefined
-      ? {}
-      : { appStateRoot: options.appStateRoot }),
-    ...(options.cursorRoot === undefined
-      ? {}
-      : { cursorRoot: options.cursorRoot }),
+    ...(options.projectRoot === undefined ? {} : { projectRoot: options.projectRoot }),
+    ...(options.appStateRoot === undefined ? {} : { appStateRoot: options.appStateRoot }),
+    ...(options.cursorRoot === undefined ? {} : { cursorRoot: options.cursorRoot }),
   };
 }
 
@@ -79,15 +67,11 @@ export function runRestore(options: RestoreCommandOptions): RestoreCommandResult
       ? {}
       : { generateBackupId: options.generateBackupId }),
     ...(options.pid === undefined ? {} : { pid: options.pid }),
-    ...(options.isProcessAlive === undefined
-      ? {}
-      : { isProcessAlive: options.isProcessAlive }),
+    ...(options.isProcessAlive === undefined ? {} : { isProcessAlive: options.isProcessAlive }),
   });
 
   return {
     exitCode: result.status === "restored" ? 0 : 1,
-    output: options.json
-      ? renderRestoreResultJson(result)
-      : renderRestoreResultHuman(result),
+    output: options.json ? renderRestoreResultJson(result) : renderRestoreResultHuman(result),
   };
 }

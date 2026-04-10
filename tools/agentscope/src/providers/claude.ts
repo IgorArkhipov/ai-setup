@@ -1,29 +1,26 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { ProviderModule } from "../core/discovery.js";
-import {
-  captureSourceFingerprints,
-  dedupeMutationTargets,
-} from "../core/mutation-io.js";
 import type {
   DiscoveryItem,
   DiscoveryLayer,
   DiscoveryResult,
   DiscoveryWarning,
 } from "../core/models.js";
+import { captureSourceFingerprints, dedupeMutationTargets } from "../core/mutation-io.js";
 import {
-  toSelectedItemIdentity,
   type MutationOperation,
   type MutationTarget,
   type TogglePlanDecision,
   type TogglePlanInput,
+  toSelectedItemIdentity,
 } from "../core/mutation-models.js";
 import {
+  type LoadedVaultEntry,
   loadVaultEntries,
   serializeVaultEntry,
-  vaultDescriptor,
-  type LoadedVaultEntry,
   type VaultEntry,
+  vaultDescriptor,
 } from "../core/mutation-vault.js";
 
 interface ClaudeSettings {
@@ -47,10 +44,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function hasOwnRecordEntry(
-  value: Record<string, unknown> | undefined,
-  key: string,
-): boolean {
+function hasOwnRecordEntry(value: Record<string, unknown> | undefined, key: string): boolean {
   return value !== undefined && Object.hasOwn(value, key);
 }
 
@@ -154,12 +148,7 @@ function parseClaudeSettings(
     parsed = JSON.parse(raw);
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    pushWarning(
-      warnings,
-      layer,
-      "json-parse-error",
-      `${filePath} is not valid JSON: ${detail}`,
-    );
+    pushWarning(warnings, layer, "json-parse-error", `${filePath} is not valid JSON: ${detail}`);
     return null;
   }
 
@@ -230,18 +219,12 @@ function readSettingsSource(
       filePath,
       exists: raw !== null,
       layer,
-      settings:
-        raw === null ? null : parseClaudeSettings(raw, filePath, layer, warnings),
+      settings: raw === null ? null : parseClaudeSettings(raw, filePath, layer, warnings),
       sourceLabel,
     };
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    pushWarning(
-      warnings,
-      layer,
-      "file-unreadable",
-      `${filePath} could not be read: ${detail}`,
-    );
+    pushWarning(warnings, layer, "file-unreadable", `${filePath} could not be read: ${detail}`);
     return {
       filePath,
       exists: true,
@@ -315,15 +298,9 @@ function effectiveProjectServerEnabled(
   localSource: SettingsSource,
   settingsSource: SettingsSource,
 ): boolean {
-  const statePath = effectiveProjectServerStatePath(
-    serverId,
-    localSource,
-    settingsSource,
-  );
+  const statePath = effectiveProjectServerStatePath(serverId, localSource, settingsSource);
   const settings =
-    statePath === localSource.filePath
-      ? localSource.settings
-      : settingsSource.settings;
+    statePath === localSource.filePath ? localSource.settings : settingsSource.settings;
 
   return hasOwnRecordEntry(settings?.enabledMcpjsonServers, serverId);
 }
@@ -452,12 +429,7 @@ function discoverProjectMcpRegistry(
     parsed = JSON.parse(raw);
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    pushWarning(
-      warnings,
-      "project",
-      "json-parse-error",
-      `${mcpPath} is not valid JSON: ${detail}`,
-    );
+    pushWarning(warnings, "project", "json-parse-error", `${mcpPath} is not valid JSON: ${detail}`);
     return null;
   }
 
@@ -495,11 +467,7 @@ function discoverProjectConfiguredMcpItems(
         enabled: effectiveProjectServerEnabled(serverId, localSource, settingsSource),
         mutability: "read-write",
         sourcePath: mcpPath,
-        statePath: effectiveProjectServerStatePath(
-          serverId,
-          localSource,
-          settingsSource,
-        ),
+        statePath: effectiveProjectServerStatePath(serverId, localSource, settingsSource),
       });
     }
   }
@@ -568,7 +536,10 @@ function plannedDecision(
 
 function loadJsonObjectForPlanning(
   filePath: string,
-): { exists: false } | { exists: true; document: Record<string, unknown> } | { exists: true; error: string } {
+):
+  | { exists: false }
+  | { exists: true; document: Record<string, unknown> }
+  | { exists: true; error: string } {
   if (!existsSync(filePath)) {
     return { exists: false };
   }
@@ -651,10 +622,7 @@ function loadProjectRegistryPayload(
   return { payload: parsed.mcpServers[serverId] };
 }
 
-function loadDisabledSkillEntry(
-  appStateRoot: string,
-  itemId: string,
-): LoadedVaultEntry | null {
+function loadDisabledSkillEntry(appStateRoot: string, itemId: string): LoadedVaultEntry | null {
   return (
     loadVaultEntries({
       appStateRoot,
@@ -681,10 +649,7 @@ function planSkillToggle(input: TogglePlanInput): TogglePlanDecision {
     });
 
     if (existsSync(descriptor.entryPath) || existsSync(descriptor.vaultedPath)) {
-      return blockedDecision(
-        input,
-        `vault-conflict: ${descriptor.rootPath} already exists`,
-      );
+      return blockedDecision(input, `vault-conflict: ${descriptor.rootPath} already exists`);
     }
 
     const entry: VaultEntry = {
@@ -723,10 +688,7 @@ function planSkillToggle(input: TogglePlanInput): TogglePlanDecision {
   }
 
   if (!existsSync(input.item.statePath)) {
-    return blockedDecision(
-      input,
-      `missing-vault-manifest: ${input.item.statePath} does not exist`,
-    );
+    return blockedDecision(input, `missing-vault-manifest: ${input.item.statePath} does not exist`);
   }
 
   const entry = loadDisabledSkillEntry(input.config.appStateRoot, input.item.id);
@@ -738,17 +700,11 @@ function planSkillToggle(input: TogglePlanInput): TogglePlanDecision {
   }
 
   if (!existsSync(entry.vaultedPath)) {
-    return blockedDecision(
-      input,
-      `missing-vault-payload: ${entry.vaultedPath} does not exist`,
-    );
+    return blockedDecision(input, `missing-vault-payload: ${entry.vaultedPath} does not exist`);
   }
 
   if (existsSync(entry.originalPath)) {
-    return blockedDecision(
-      input,
-      `live-path-conflict: ${entry.originalPath} already exists`,
-    );
+    return blockedDecision(input, `live-path-conflict: ${entry.originalPath} already exists`);
   }
 
   const affectedTargets = dedupeMutationTargets([
@@ -974,11 +930,7 @@ function planToolToggle(input: TogglePlanInput): TogglePlanDecision {
     );
   }
 
-  const ensured = ensureObjectOperations(
-    state.document,
-    input.item.statePath,
-    "enabledPlugins",
-  );
+  const ensured = ensureObjectOperations(state.document, input.item.statePath, "enabledPlugins");
   if (typeof ensured === "string") {
     return blockedDecision(input, ensured, [], affectedTargets);
   }

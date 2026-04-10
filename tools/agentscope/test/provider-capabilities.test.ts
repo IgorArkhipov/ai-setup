@@ -50,9 +50,7 @@ describe("provider-capabilities", () => {
 
   it("keeps the capability matrix aligned with the provider registry", () => {
     const providerIds = listProviders().map((provider) => provider.id);
-    const matrixProviderIds = Object.keys(
-      loadCapabilityMatrix(fixturesRoot).providers,
-    );
+    const matrixProviderIds = Object.keys(loadCapabilityMatrix(fixturesRoot).providers);
 
     expect(matrixProviderIds).toEqual(providerIds);
   });

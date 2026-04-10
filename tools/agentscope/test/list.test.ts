@@ -4,11 +4,9 @@ import { runList } from "../src/commands/list.js";
 
 const runtimeRoot = path.resolve(import.meta.dirname, "fixtures", "runtime");
 
-function runtimeOptions(overrides: {
-  cursorRoot?: string;
-  homeDir?: string;
-  projectRoot?: string;
-} = {}) {
+function runtimeOptions(
+  overrides: { cursorRoot?: string; homeDir?: string; projectRoot?: string } = {},
+) {
   return {
     cwd: runtimeRoot,
     homeDir: overrides.homeDir ?? path.join(runtimeRoot, "home"),
@@ -56,9 +54,7 @@ describe("runList", () => {
       sourcePath: expect.stringContaining(".claude/settings.local.json"),
       statePath: expect.stringContaining(".claude/settings.local.json"),
     });
-    expect(parsed.items.at(-1)?.id).toBe(
-      "cursor:global:tool:extension:cursor.example-extension",
-    );
+    expect(parsed.items.at(-1)?.id).toBe("cursor:global:tool:extension:cursor.example-extension");
   });
 
   it("prints an explicit empty result when no items exist", () => {
@@ -120,9 +116,7 @@ describe("runList", () => {
     expect(parsed.items.some((item) => item.provider === "claude")).toBe(true);
     expect(parsed.items.some((item) => item.provider === "codex")).toBe(true);
     expect(
-      parsed.items.some(
-        (item) => item.id === "cursor:global:configured-mcp:mcp-json:filesystem",
-      ),
+      parsed.items.some((item) => item.id === "cursor:global:configured-mcp:mcp-json:filesystem"),
     ).toBe(true);
     expect(
       parsed.items.some(
@@ -155,9 +149,7 @@ describe("runList", () => {
     expect(parsed.items).not.toHaveLength(0);
     expect(parsed.items.every((item) => item.provider === "claude")).toBe(true);
     expect(parsed.items.every((item) => item.layer === "project")).toBe(true);
-    expect(parsed.items.map((item) => item.id)).toContain(
-      "claude:project:configured-mcp:github",
-    );
+    expect(parsed.items.map((item) => item.id)).toContain("claude:project:configured-mcp:github");
     expect(parsed.items.map((item) => item.id)).not.toContain(
       "claude:global:tool:settings-local:project-auditor",
     );
@@ -182,9 +174,7 @@ describe("runList", () => {
     expect(parsed.items.map((item) => item.id)).toContain(
       "claude:global:tool:settings-local:project-auditor",
     );
-    expect(parsed.items.map((item) => item.id)).toContain(
-      "claude:project:configured-mcp:github",
-    );
+    expect(parsed.items.map((item) => item.id)).toContain("claude:project:configured-mcp:github");
     expect(parsed.warnings).toEqual([]);
   });
 

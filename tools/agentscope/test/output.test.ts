@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { renderListHuman, renderListJson } from "../src/core/output.js";
 import type { DiscoveryResult } from "../src/core/models.js";
+import { renderListHuman, renderListJson } from "../src/core/output.js";
 
 const result: DiscoveryResult = {
   items: [

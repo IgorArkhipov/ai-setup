@@ -1,11 +1,6 @@
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import type { CapturedBackupEntry } from "./mutation-io.js";
 import type {
   AuditEntry,
   BackupEntry,
@@ -13,7 +8,6 @@ import type {
   MutationTarget,
   SelectedItemIdentity,
 } from "./mutation-models.js";
-import type { CapturedBackupEntry } from "./mutation-io.js";
 
 export interface MutationStateOptions {
   appStateRoot: string;
@@ -217,8 +211,7 @@ function validateManifest(raw: string): BackupManifest {
     backupId: parsed.backupId,
     createdAt: parsed.createdAt,
     selection: validateSelection(parsed.selection ?? null),
-    targetEnabled:
-      typeof parsed.targetEnabled === "boolean" ? parsed.targetEnabled : null,
+    targetEnabled: typeof parsed.targetEnabled === "boolean" ? parsed.targetEnabled : null,
     affectedTargets: parsed.affectedTargets.map((target) => validateTarget(target)),
     entries: parsed.entries.map((entry) => validateEntry(entry)),
   };
@@ -234,14 +227,11 @@ export function initializeMutationState(appStateRoot: string): void {
   ensureStateDirectories(appStateRoot);
 }
 
-export function persistBackup(
-  input: PersistBackupInput,
-): BackupManifest {
+export function persistBackup(input: PersistBackupInput): BackupManifest {
   ensureStateDirectories(input.appStateRoot);
   const now = input.now ?? (() => new Date());
   const generateBackupId =
-    input.generateBackupId ??
-    (() => `backup-${now().toISOString().replaceAll(/[:.]/g, "-")}`);
+    input.generateBackupId ?? (() => `backup-${now().toISOString().replaceAll(/[:.]/g, "-")}`);
   const backupId = generateBackupId();
   const backupRoot = path.join(input.appStateRoot, "backups", backupId);
   const blobsRoot = path.join(backupRoot, "blobs");
@@ -268,11 +258,9 @@ export function persistBackup(
     }
   }
 
-  writeFileSync(
-    path.join(backupRoot, "manifest.json"),
-    JSON.stringify(manifest, null, 2),
-    { encoding: "utf8" },
-  );
+  writeFileSync(path.join(backupRoot, "manifest.json"), JSON.stringify(manifest, null, 2), {
+    encoding: "utf8",
+  });
 
   return manifest;
 }
@@ -308,10 +296,7 @@ export function loadBackup(appStateRoot: string, backupId: string): LoadedBackup
   };
 }
 
-export function appendAuditEntry(
-  appStateRoot: string,
-  entry: AuditEntry,
-): void {
+export function appendAuditEntry(appStateRoot: string, entry: AuditEntry): void {
   ensureStateDirectories(appStateRoot);
   const auditPath = path.join(appStateRoot, "audit", "log.jsonl");
   writeFileSync(auditPath, `${JSON.stringify(entry)}\n`, {

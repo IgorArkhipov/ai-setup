@@ -62,7 +62,10 @@ describe("provider discovery", () => {
   it("discovers Claude settings, skills, configured MCPs, and tools", () => {
     const sandbox = createSandbox();
 
-    copyFixture("claude/global/settings.json", path.join(sandbox.homeDir, ".claude", "settings.json"));
+    copyFixture(
+      "claude/global/settings.json",
+      path.join(sandbox.homeDir, ".claude", "settings.json"),
+    );
     copyFixture(
       "claude/global/settings.local.json",
       path.join(sandbox.homeDir, ".claude", "settings.local.json"),
@@ -79,33 +82,23 @@ describe("provider discovery", () => {
       "claude/project/.claude/skills/example-claude-skill",
       path.join(sandbox.projectRoot, ".claude", "skills", "example-claude-skill"),
     );
-    copyFixture(
-      "claude/project/.mcp.json",
-      path.join(sandbox.projectRoot, ".mcp.json"),
-    );
+    copyFixture("claude/project/.mcp.json", path.join(sandbox.projectRoot, ".mcp.json"));
 
     mkdirSync(path.join(sandbox.homeDir, ".agents", "skills", "ignored-skill"), {
       recursive: true,
     });
     writeFileSync(
-      path.join(
-        sandbox.homeDir,
-        ".agents",
-        "skills",
-        "ignored-skill",
-        "SKILL.md",
-      ),
+      path.join(sandbox.homeDir, ".agents", "skills", "ignored-skill", "SKILL.md"),
       "# Ignored Skill\n",
       { encoding: "utf8", flag: "w" },
     );
     mkdirSync(path.join(sandbox.homeDir, ".claude", "plugins"), {
       recursive: true,
     });
-    writeFileSync(
-      path.join(sandbox.homeDir, ".claude", "plugins", "ignored.txt"),
-      "ignored",
-      { encoding: "utf8", flag: "w" },
-    );
+    writeFileSync(path.join(sandbox.homeDir, ".claude", "plugins", "ignored.txt"), "ignored", {
+      encoding: "utf8",
+      flag: "w",
+    });
 
     const result = claudeProvider.discover({
       config: sandbox.config,
@@ -135,12 +128,7 @@ describe("provider discovery", () => {
           "example-claude-skill",
           "SKILL.md",
         ),
-        statePath: path.join(
-          sandbox.projectRoot,
-          ".claude",
-          "skills",
-          "example-claude-skill",
-        ),
+        statePath: path.join(sandbox.projectRoot, ".claude", "skills", "example-claude-skill"),
       }),
     );
     expect(result.items).toContainEqual(
@@ -149,11 +137,7 @@ describe("provider discovery", () => {
         enabled: true,
         mutability: "read-write",
         sourcePath: path.join(sandbox.projectRoot, ".mcp.json"),
-        statePath: path.join(
-          sandbox.projectRoot,
-          ".claude",
-          "settings.local.json",
-        ),
+        statePath: path.join(sandbox.projectRoot, ".claude", "settings.local.json"),
       }),
     );
   });
@@ -162,11 +146,10 @@ describe("provider discovery", () => {
     const sandbox = createSandbox();
 
     mkdirSync(path.join(sandbox.homeDir, ".claude"), { recursive: true });
-    writeFileSync(
-      path.join(sandbox.homeDir, ".claude", "settings.json"),
-      "{ invalid json",
-      { encoding: "utf8", flag: "w" },
-    );
+    writeFileSync(path.join(sandbox.homeDir, ".claude", "settings.json"), "{ invalid json", {
+      encoding: "utf8",
+      flag: "w",
+    });
     mkdirSync(path.join(sandbox.projectRoot, ".claude", "settings.local.json"), {
       recursive: true,
     });
@@ -186,18 +169,9 @@ describe("provider discovery", () => {
   it("discovers Codex skills, configured MCPs, and plugins", () => {
     const sandbox = createSandbox();
 
-    copyFixture(
-      "codex/global/config.toml",
-      path.join(sandbox.homeDir, ".codex", "config.toml"),
-    );
-    copyFixture(
-      "codex/global/skills",
-      path.join(sandbox.homeDir, ".codex", "skills"),
-    );
-    copyFixture(
-      "codex/project/.codex/skills",
-      path.join(sandbox.projectRoot, ".codex", "skills"),
-    );
+    copyFixture("codex/global/config.toml", path.join(sandbox.homeDir, ".codex", "config.toml"));
+    copyFixture("codex/global/skills", path.join(sandbox.homeDir, ".codex", "skills"));
+    copyFixture("codex/project/.codex/skills", path.join(sandbox.projectRoot, ".codex", "skills"));
 
     const result = codexProvider.discover({
       config: sandbox.config,
@@ -246,10 +220,10 @@ describe("provider discovery", () => {
     writeFileSync(
       path.join(sandbox.homeDir, ".codex", "config.toml"),
       [
-        '[mcp_servers.github]',
+        "[mcp_servers.github]",
         'display_name = "GitHub"',
         "",
-        '[plugins.safe-shell]',
+        "[plugins.safe-shell]",
         'display_name = "Safe Shell"',
         "",
       ].join("\n"),
@@ -274,9 +248,7 @@ describe("provider discovery", () => {
         provider: "codex",
         layer: "global",
         code: "file-unreadable",
-        message: expect.stringContaining(
-          path.join(sandbox.homeDir, ".codex", "skills"),
-        ),
+        message: expect.stringContaining(path.join(sandbox.homeDir, ".codex", "skills")),
       },
     ]);
   });
@@ -288,14 +260,8 @@ describe("provider discovery", () => {
       "cursor/global/skills-cursor",
       path.join(sandbox.homeDir, ".cursor", "skills-cursor"),
     );
-    copyFixture(
-      "cursor/global/mcp.json",
-      path.join(sandbox.homeDir, ".cursor", "mcp.json"),
-    );
-    copyFixture(
-      "cursor/root/profiles",
-      path.join(sandbox.cursorRoot, "profiles"),
-    );
+    copyFixture("cursor/global/mcp.json", path.join(sandbox.homeDir, ".cursor", "mcp.json"));
+    copyFixture("cursor/root/profiles", path.join(sandbox.cursorRoot, "profiles"));
     mkdirSync(
       path.join(
         sandbox.homeDir,
@@ -386,11 +352,10 @@ describe("provider discovery", () => {
     mkdirSync(path.join(sandbox.cursorRoot, "profiles", "default"), {
       recursive: true,
     });
-    writeFileSync(
-      path.join(sandbox.cursorRoot, "profiles", "default", "extensions.json"),
-      "{}",
-      { encoding: "utf8", flag: "w" },
-    );
+    writeFileSync(path.join(sandbox.cursorRoot, "profiles", "default", "extensions.json"), "{}", {
+      encoding: "utf8",
+      flag: "w",
+    });
 
     const result = cursorProvider.discover({
       config: sandbox.config,
@@ -408,11 +373,10 @@ describe("provider discovery", () => {
     const sandbox = createSandbox();
 
     mkdirSync(path.join(sandbox.homeDir, ".cursor"), { recursive: true });
-    writeFileSync(
-      path.join(sandbox.homeDir, ".cursor", "skills-cursor"),
-      "not a directory",
-      { encoding: "utf8", flag: "w" },
-    );
+    writeFileSync(path.join(sandbox.homeDir, ".cursor", "skills-cursor"), "not a directory", {
+      encoding: "utf8",
+      flag: "w",
+    });
     writeFileSync(
       path.join(sandbox.homeDir, ".cursor", "mcp.json"),
       JSON.stringify({
@@ -447,9 +411,7 @@ describe("provider discovery", () => {
         provider: "cursor",
         layer: "global",
         code: "file-unreadable",
-        message: expect.stringContaining(
-          path.join(sandbox.homeDir, ".cursor", "skills-cursor"),
-        ),
+        message: expect.stringContaining(path.join(sandbox.homeDir, ".cursor", "skills-cursor")),
       },
     ]);
   });

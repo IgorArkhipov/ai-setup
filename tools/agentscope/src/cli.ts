@@ -6,9 +6,9 @@ import { fileURLToPath } from "node:url";
 import { cac } from "cac";
 import { runDoctor } from "./commands/doctor.js";
 import { runList } from "./commands/list.js";
+import { renderProviders } from "./commands/providers.js";
 import { runRestore } from "./commands/restore.js";
 import { runToggle } from "./commands/toggle.js";
-import { renderProviders } from "./commands/providers.js";
 
 interface CliIo {
   stdout: (message: string) => void;
@@ -66,20 +66,16 @@ function createCli(packageRoot: string, io: CliIo) {
   const cli = cac("agentscope");
   let exitCode = 0;
 
-  const runHandled = (
-    action: () => { exitCode?: number; output: string } | string,
-  ): void => {
+  const runHandled = (action: () => { exitCode?: number; output: string } | string): void => {
     exitCode = handleCommand(action, io);
   };
 
   cli.version(readVersion(packageRoot));
   cli.help();
 
-  cli
-    .command("providers", "Print the provider capability matrix")
-    .action(() => {
-      runHandled(() => renderProviders(fixturesRoot));
-    });
+  cli.command("providers", "Print the provider capability matrix").action(() => {
+    runHandled(() => renderProviders(fixturesRoot));
+  });
 
   cli
     .command("doctor", "Validate fixtures and local provider inputs")
@@ -168,10 +164,7 @@ function createCli(packageRoot: string, io: CliIo) {
   };
 }
 
-export function runCli(
-  argv: string[],
-  options: RunCliOptions = {},
-): number {
+export function runCli(argv: string[], options: RunCliOptions = {}): number {
   const io: CliIo = {
     ...defaultIo(),
     ...options,

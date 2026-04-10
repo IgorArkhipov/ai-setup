@@ -112,9 +112,7 @@ export function renderToggleResultJson(result: ToggleExecutionResult): string {
       ...result,
       operations: result.operations.map(describeOperation),
       affectedTargets: result.affectedTargets.map((target) => describeTarget(target)),
-      ...(result.status === "dry-run"
-        ? { writes: "no writes were performed" }
-        : {}),
+      ...(result.status === "dry-run" ? { writes: "no writes were performed" } : {}),
     },
     null,
     2,
@@ -122,10 +120,7 @@ export function renderToggleResultJson(result: ToggleExecutionResult): string {
 }
 
 export function renderRestoreResultHuman(result: RestoreExecutionResult): string {
-  const lines = [
-    `status: ${result.status}`,
-    `backupId: ${result.backupId}`,
-  ];
+  const lines = [`status: ${result.status}`, `backupId: ${result.backupId}`];
 
   if ("reason" in result) {
     lines.push(`reason: ${result.reason}`);

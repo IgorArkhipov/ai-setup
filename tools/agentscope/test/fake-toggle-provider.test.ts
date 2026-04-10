@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { fakeToggleProvider, fakeToggleIds } from "./support/fake-toggle-provider.js";
+import { fakeToggleIds, fakeToggleProvider } from "./support/fake-toggle-provider.js";
 import { createMutationSandbox } from "./support/mutation-sandbox.js";
 
 const sandboxes: Array<ReturnType<typeof createMutationSandbox>> = [];

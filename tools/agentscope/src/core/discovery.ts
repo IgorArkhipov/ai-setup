@@ -1,13 +1,13 @@
+import type { ProviderId } from "../providers/registry.js";
+import type { AgentScopeConfig } from "./config.js";
 import {
   categoryOrder,
-  layerOrder,
-  providerOrder,
   type DiscoveryItem,
   type DiscoveryResult,
   type DiscoveryWarning,
+  layerOrder,
+  providerOrder,
 } from "./models.js";
-import type { AgentScopeConfig } from "./config.js";
-import type { ProviderId } from "../providers/registry.js";
 import type { TogglePlanDecision, TogglePlanInput } from "./mutation-models.js";
 
 export interface ProviderDiscoveryInput {
@@ -31,8 +31,7 @@ export function sortDiscoveryItems(items: DiscoveryItem[]): DiscoveryItem[] {
     return (
       compareByOrder(left.provider, providerOrder) -
         compareByOrder(right.provider, providerOrder) ||
-      compareByOrder(left.layer, layerOrder) -
-        compareByOrder(right.layer, layerOrder) ||
+      compareByOrder(left.layer, layerOrder) - compareByOrder(right.layer, layerOrder) ||
       compareByOrder(left.category, categoryOrder) -
         compareByOrder(right.category, categoryOrder) ||
       left.id.localeCompare(right.id)
@@ -40,9 +39,7 @@ export function sortDiscoveryItems(items: DiscoveryItem[]): DiscoveryItem[] {
   });
 }
 
-export function sortDiscoveryWarnings(
-  warnings: DiscoveryWarning[],
-): DiscoveryWarning[] {
+export function sortDiscoveryWarnings(warnings: DiscoveryWarning[]): DiscoveryWarning[] {
   return [...warnings].sort((left, right) => {
     return (
       compareByOrder(left.provider, providerOrder) -

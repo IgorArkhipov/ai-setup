@@ -54,6 +54,7 @@ Claude is the first provider with real dry-run, apply, and restore coverage. Cod
 
 ## Baseline Verification
 
+- `npm run lint`
 - `npm test`
 - `npm run coverage`
 - `npm run build`

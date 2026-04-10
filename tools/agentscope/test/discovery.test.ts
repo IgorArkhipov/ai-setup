@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-  runDiscovery,
-  sortDiscoveryItems,
-  type ProviderModule,
-} from "../src/core/discovery.js";
 import type { AgentScopeConfig } from "../src/core/config.js";
+import { type ProviderModule, runDiscovery, sortDiscoveryItems } from "../src/core/discovery.js";
 import type { DiscoveryItem } from "../src/core/models.js";
 
 const config: AgentScopeConfig = {
@@ -97,9 +93,7 @@ describe("discovery orchestration", () => {
 
     const result = runDiscovery(providers, { config, homeDir: "/workspace/home" });
 
-    expect(result.items.map((item) => item.id)).toEqual([
-      "claude:global:skill:healthy",
-    ]);
+    expect(result.items.map((item) => item.id)).toEqual(["claude:global:skill:healthy"]);
     expect(result.warnings).toEqual([
       {
         provider: "codex",

@@ -31,18 +31,11 @@ describe("loadConfig", () => {
 
     expect(config.projectRoot).toBe(cwd);
     expect(config.appStateRoot).toBe("/Users/tester/.config/agentscope");
-    expect(config.cursorRoot).toBe(
-      "/Users/tester/Library/Application Support/Cursor/User",
-    );
+    expect(config.cursorRoot).toBe("/Users/tester/Library/Application Support/Cursor/User");
   });
 
   it("lets user config override defaults", () => {
-    const userConfigPath = path.join(
-      homeDir,
-      ".config",
-      "agentscope",
-      "config.json",
-    );
+    const userConfigPath = path.join(homeDir, ".config", "agentscope", "config.json");
     const config = loadConfig({
       cwd,
       homeDir,
@@ -61,12 +54,7 @@ describe("loadConfig", () => {
   });
 
   it("lets project config override user config", () => {
-    const userConfigPath = path.join(
-      homeDir,
-      ".config",
-      "agentscope",
-      "config.json",
-    );
+    const userConfigPath = path.join(homeDir, ".config", "agentscope", "config.json");
     const projectConfigPath = path.join(cwd, ".agentscope.json");
     const config = loadConfig({
       cwd,
@@ -89,17 +77,9 @@ describe("loadConfig", () => {
   });
 
   it("lets CLI overrides win over file config in exact precedence order", () => {
-    const userConfigPath = path.join(
-      homeDir,
-      ".config",
-      "agentscope",
-      "config.json",
-    );
+    const userConfigPath = path.join(homeDir, ".config", "agentscope", "config.json");
     const overriddenProjectRoot = "/workspace/override-project";
-    const overriddenProjectConfigPath = path.join(
-      overriddenProjectRoot,
-      ".agentscope.json",
-    );
+    const overriddenProjectConfigPath = path.join(overriddenProjectRoot, ".agentscope.json");
     const config = loadConfig({
       cwd,
       homeDir,
@@ -128,12 +108,7 @@ describe("loadConfig", () => {
   });
 
   it("rejects a future major schema version", () => {
-    const userConfigPath = path.join(
-      homeDir,
-      ".config",
-      "agentscope",
-      "config.json",
-    );
+    const userConfigPath = path.join(homeDir, ".config", "agentscope", "config.json");
 
     expect(() =>
       loadConfig({
@@ -149,12 +124,7 @@ describe("loadConfig", () => {
   });
 
   it("ignores unknown additive keys", () => {
-    const userConfigPath = path.join(
-      homeDir,
-      ".config",
-      "agentscope",
-      "config.json",
-    );
+    const userConfigPath = path.join(homeDir, ".config", "agentscope", "config.json");
     const config = loadConfig({
       cwd,
       homeDir,

@@ -2,11 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 export type ProviderId = "claude" | "codex" | "cursor";
-export type CapabilityStatus =
-  | "verified"
-  | "read-only"
-  | "unsupported"
-  | "needs-verification";
+export type CapabilityStatus = "verified" | "read-only" | "unsupported" | "needs-verification";
 
 export interface CapabilityMatrix {
   version: 1;
@@ -56,10 +52,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isCapabilityStatus(value: unknown): value is CapabilityStatus {
-  return (
-    typeof value === "string" &&
-    capabilityStatuses.has(value as CapabilityStatus)
-  );
+  return typeof value === "string" && capabilityStatuses.has(value as CapabilityStatus);
 }
 
 function parseJsonObject(raw: string, label: string): Record<string, unknown> {
@@ -95,17 +88,11 @@ function validateClaudeSettings(raw: string, label: string): string[] {
     }
   }
 
-  if (
-    doc.enabledMcpjsonServers !== undefined &&
-    !isRecord(doc.enabledMcpjsonServers)
-  ) {
+  if (doc.enabledMcpjsonServers !== undefined && !isRecord(doc.enabledMcpjsonServers)) {
     issues.push("enabledMcpjsonServers must be an object");
   }
 
-  if (
-    doc.disabledMcpjsonServers !== undefined &&
-    !isRecord(doc.disabledMcpjsonServers)
-  ) {
+  if (doc.disabledMcpjsonServers !== undefined && !isRecord(doc.disabledMcpjsonServers)) {
     issues.push("disabledMcpjsonServers must be an object");
   }
 
@@ -136,10 +123,7 @@ function validateCodexConfig(raw: string): string[] {
   for (const [index, line] of lines.entries()) {
     const trimmed = line.trim();
 
-    if (
-      !trimmed.startsWith("[plugins") &&
-      !trimmed.startsWith("[mcp_servers")
-    ) {
+    if (!trimmed.startsWith("[plugins") && !trimmed.startsWith("[mcp_servers")) {
       continue;
     }
 
@@ -223,20 +207,17 @@ export const providerRegistry: ProviderDescriptor[] = [
       {
         relativePath: "claude/global/settings.local.json",
         description: "Claude global local settings",
-        validate: (raw) =>
-          validateClaudeSettings(raw, "Claude global settings.local.json"),
+        validate: (raw) => validateClaudeSettings(raw, "Claude global settings.local.json"),
       },
       {
         relativePath: "claude/project/.claude/settings.json",
         description: "Claude project settings",
-        validate: (raw) =>
-          validateClaudeSettings(raw, "Claude project settings.json"),
+        validate: (raw) => validateClaudeSettings(raw, "Claude project settings.json"),
       },
       {
         relativePath: "claude/project/.claude/settings.local.json",
         description: "Claude project local settings",
-        validate: (raw) =>
-          validateClaudeSettings(raw, "Claude project settings.local.json"),
+        validate: (raw) => validateClaudeSettings(raw, "Claude project settings.local.json"),
       },
       {
         relativePath: "claude/project/.claude/skills/example-claude-skill/SKILL.md",
@@ -327,18 +308,14 @@ export function loadCapabilityMatrix(fixturesRoot: string): CapabilityMatrix {
     }
 
     if (typeof providerNote !== "string" || providerNote.length === 0) {
-      throw new Error(
-        `capability-matrix.json is missing note for ${provider.id}`,
-      );
+      throw new Error(`capability-matrix.json is missing note for ${provider.id}`);
     }
 
     for (const field of ["skills", "configuredMcps", "tools"] as const) {
       const status = providerCaps[field];
 
       if (!isCapabilityStatus(status)) {
-        throw new Error(
-          `capability-matrix.json has an invalid ${provider.id}.${field} value`,
-        );
+        throw new Error(`capability-matrix.json has an invalid ${provider.id}.${field} value`);
       }
     }
 
@@ -357,9 +334,7 @@ export function loadCapabilityMatrix(fixturesRoot: string): CapabilityMatrix {
   };
 }
 
-export function validateProviderFixtures(
-  fixturesRoot: string,
-): FixtureValidationReport {
+export function validateProviderFixtures(fixturesRoot: string): FixtureValidationReport {
   const checkedFiles: string[] = [];
   const issues: FixtureValidationIssue[] = [];
 

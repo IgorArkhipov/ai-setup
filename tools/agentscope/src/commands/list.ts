@@ -1,5 +1,5 @@
 import os from "node:os";
-import { loadConfig, type AgentScopeConfigOverrides } from "../core/config.js";
+import { type AgentScopeConfigOverrides, loadConfig } from "../core/config.js";
 import { runDiscovery } from "../core/discovery.js";
 import { renderListHuman, renderListJson } from "../core/output.js";
 import { claudeProvider } from "../providers/claude.js";
@@ -30,29 +30,17 @@ function invalidLayerResult(json: boolean | undefined): ListCommandResult {
 }
 
 function definedOverrides(
-  options: Pick<
-    AgentScopeConfigOverrides,
-    "projectRoot" | "appStateRoot" | "cursorRoot"
-  >,
+  options: Pick<AgentScopeConfigOverrides, "projectRoot" | "appStateRoot" | "cursorRoot">,
 ): AgentScopeConfigOverrides {
   return {
-    ...(options.projectRoot === undefined
-      ? {}
-      : { projectRoot: options.projectRoot }),
-    ...(options.appStateRoot === undefined
-      ? {}
-      : { appStateRoot: options.appStateRoot }),
-    ...(options.cursorRoot === undefined
-      ? {}
-      : { cursorRoot: options.cursorRoot }),
+    ...(options.projectRoot === undefined ? {} : { projectRoot: options.projectRoot }),
+    ...(options.appStateRoot === undefined ? {} : { appStateRoot: options.appStateRoot }),
+    ...(options.cursorRoot === undefined ? {} : { cursorRoot: options.cursorRoot }),
   };
 }
 
 export function runList(options: ListCommandOptions = {}): ListCommandResult {
-  if (
-    options.layer !== undefined &&
-    !supportedLayers.has(options.layer)
-  ) {
+  if (options.layer !== undefined && !supportedLayers.has(options.layer)) {
     return invalidLayerResult(options.json);
   }
 
@@ -63,24 +51,22 @@ export function runList(options: ListCommandOptions = {}): ListCommandResult {
     homeDir,
     overrides: definedOverrides(options),
   });
-  const result = runDiscovery(
-    [claudeProvider, codexProvider, cursorProvider],
-    { config, homeDir },
-  );
+  const result = runDiscovery([claudeProvider, codexProvider, cursorProvider], { config, homeDir });
   const filtered = {
     items: result.items.filter((item) => {
-      return (options.provider === undefined || item.provider === options.provider) &&
-        (options.layer === undefined ||
-          options.layer === "all" ||
-          item.layer === options.layer);
+      return (
+        (options.provider === undefined || item.provider === options.provider) &&
+        (options.layer === undefined || options.layer === "all" || item.layer === options.layer)
+      );
     }),
     warnings: result.warnings.filter((warning) => {
-      return (options.provider === undefined ||
-        warning.provider === options.provider) &&
+      return (
+        (options.provider === undefined || warning.provider === options.provider) &&
         (options.layer === undefined ||
           options.layer === "all" ||
           warning.layer === undefined ||
-          warning.layer === options.layer);
+          warning.layer === options.layer)
+      );
     }),
   };
 

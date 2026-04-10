@@ -9,11 +9,11 @@ import {
   writeSqliteItemValue,
 } from "../../src/core/mutation-io.js";
 import {
-  toSelectedItemIdentity,
   type MutationOperation,
   type MutationTarget,
   type TogglePlanDecision,
   type TogglePlanInput,
+  toSelectedItemIdentity,
 } from "../../src/core/mutation-models.js";
 
 export const fakeToggleIds = {
@@ -51,7 +51,12 @@ function currentNoopEnabled(projectRoot: string): boolean {
   return existsSync(fullPaths(projectRoot).noopPath);
 }
 
-function buildItem(id: string, displayName: string, enabled: boolean, projectRoot: string): DiscoveryItem {
+function buildItem(
+  id: string,
+  displayName: string,
+  enabled: boolean,
+  projectRoot: string,
+): DiscoveryItem {
   const sourcePath = path.join(fakeRoot(projectRoot), "provider.json");
 
   return {
@@ -102,10 +107,7 @@ function buildFullTargets(projectRoot: string): MutationTarget[] {
   ]);
 }
 
-function buildFullOperations(
-  projectRoot: string,
-  targetEnabled: boolean,
-): MutationOperation[] {
+function buildFullOperations(projectRoot: string, targetEnabled: boolean): MutationOperation[] {
   const paths = fullPaths(projectRoot);
 
   if (targetEnabled) {
@@ -230,18 +232,21 @@ function planNoopToggle(input: TogglePlanInput): TogglePlanDecision {
     plan: {
       selection: toSelectedItemIdentity(input.item),
       targetEnabled: input.targetEnabled,
-      operations: actualEnabled === input.targetEnabled ? [] : [
-        input.targetEnabled
-          ? {
-              type: "createFile",
-              path: paths.noopPath,
-              content: encoder.encode("enabled\n"),
-            }
-          : {
-              type: "deletePath",
-              path: paths.noopPath,
-            },
-      ],
+      operations:
+        actualEnabled === input.targetEnabled
+          ? []
+          : [
+              input.targetEnabled
+                ? {
+                    type: "createFile",
+                    path: paths.noopPath,
+                    content: encoder.encode("enabled\n"),
+                  }
+                : {
+                    type: "deletePath",
+                    path: paths.noopPath,
+                  },
+            ],
       affectedTargets: targets,
       sourceFingerprints: captureSourceFingerprints(targets),
     },
@@ -257,7 +262,7 @@ export function setupFakeToggleFixtures(projectRoot: string): void {
 
   writeFileSync(
     paths.settingsPath,
-    JSON.stringify(
+    `${JSON.stringify(
       {
         feature: {
           enabled: false,
@@ -270,7 +275,7 @@ export function setupFakeToggleFixtures(projectRoot: string): void {
       },
       null,
       2,
-    ) + "\n",
+    )}\n`,
   );
   writeFileSync(paths.originalPath, "original name\n");
   writeFileSync(paths.deletedPath, "delete me\n");
@@ -303,12 +308,7 @@ export const fakeToggleProvider: ProviderModule = {
           currentFullEnabled(projectRoot),
           projectRoot,
         ),
-        buildItem(
-          fakeToggleIds.noop,
-          "Fake Noop Toggle",
-          true,
-          projectRoot,
-        ),
+        buildItem(fakeToggleIds.noop, "Fake Noop Toggle", true, projectRoot),
       ],
       warnings: [],
     };

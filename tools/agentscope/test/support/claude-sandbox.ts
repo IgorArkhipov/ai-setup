@@ -1,10 +1,10 @@
 import {
   cpSync,
   existsSync,
-  mkdtempSync,
   mkdirSync,
-  readFileSync,
+  mkdtempSync,
   readdirSync,
+  readFileSync,
   rmSync,
 } from "node:fs";
 import os from "node:os";
@@ -41,16 +41,12 @@ export function createClaudeSandbox(): ClaudeSandbox {
   mkdirSync(projectRoot, { recursive: true });
   mkdirSync(cursorRoot, { recursive: true });
 
-  cpSync(
-    path.join(runtimeFixturesRoot, "home", ".claude"),
-    path.join(homeDir, ".claude"),
-    { recursive: true },
-  );
-  cpSync(
-    path.join(runtimeFixturesRoot, "project", ".claude"),
-    path.join(projectRoot, ".claude"),
-    { recursive: true },
-  );
+  cpSync(path.join(runtimeFixturesRoot, "home", ".claude"), path.join(homeDir, ".claude"), {
+    recursive: true,
+  });
+  cpSync(path.join(runtimeFixturesRoot, "project", ".claude"), path.join(projectRoot, ".claude"), {
+    recursive: true,
+  });
   cpSync(
     path.join(runtimeFixturesRoot, "project", ".mcp.json"),
     path.join(projectRoot, ".mcp.json"),

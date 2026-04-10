@@ -1,15 +1,12 @@
 import os from "node:os";
 import path from "node:path";
-import { loadConfig, type AgentScopeConfigOverrides } from "../core/config.js";
+import { type AgentScopeConfigOverrides, loadConfig } from "../core/config.js";
 import { runDiscovery } from "../core/discovery.js";
 import type { DiscoveryWarning } from "../core/models.js";
 import { claudeProvider } from "../providers/claude.js";
 import { codexProvider } from "../providers/codex.js";
 import { cursorProvider } from "../providers/cursor.js";
-import {
-  loadCapabilityMatrix,
-  validateProviderFixtures,
-} from "../providers/registry.js";
+import { loadCapabilityMatrix, validateProviderFixtures } from "../providers/registry.js";
 
 export interface DoctorOptions extends AgentScopeConfigOverrides {
   cwd?: string;
@@ -22,21 +19,12 @@ export interface DoctorResult {
 }
 
 function definedOverrides(
-  options: Pick<
-    AgentScopeConfigOverrides,
-    "projectRoot" | "appStateRoot" | "cursorRoot"
-  >,
+  options: Pick<AgentScopeConfigOverrides, "projectRoot" | "appStateRoot" | "cursorRoot">,
 ): AgentScopeConfigOverrides {
   return {
-    ...(options.projectRoot === undefined
-      ? {}
-      : { projectRoot: options.projectRoot }),
-    ...(options.appStateRoot === undefined
-      ? {}
-      : { appStateRoot: options.appStateRoot }),
-    ...(options.cursorRoot === undefined
-      ? {}
-      : { cursorRoot: options.cursorRoot }),
+    ...(options.projectRoot === undefined ? {} : { projectRoot: options.projectRoot }),
+    ...(options.appStateRoot === undefined ? {} : { appStateRoot: options.appStateRoot }),
+    ...(options.cursorRoot === undefined ? {} : { cursorRoot: options.cursorRoot }),
   };
 }
 
@@ -57,9 +45,7 @@ export function runDoctor(
     const lines = ["agentscope doctor: fixture validation failed", ""];
 
     for (const issue of report.issues) {
-      lines.push(
-        `- ${issue.providerId} ${issue.relativePath}: ${issue.message}`,
-      );
+      lines.push(`- ${issue.providerId} ${issue.relativePath}: ${issue.message}`);
     }
 
     return { exitCode: 1, output: lines.join("\n") };
@@ -72,10 +58,10 @@ export function runDoctor(
     homeDir,
     overrides: definedOverrides(options),
   });
-  const discovery = runDiscovery(
-    [claudeProvider, codexProvider, cursorProvider],
-    { config, homeDir },
-  );
+  const discovery = runDiscovery([claudeProvider, codexProvider, cursorProvider], {
+    config,
+    homeDir,
+  });
 
   if (discovery.warnings.length > 0) {
     return {

@@ -1,19 +1,9 @@
-import {
-  existsSync,
-  mkdtempSync,
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  rmSync,
-} from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import type { AgentScopeConfig } from "../../src/core/config.js";
 import { readSqliteItemValue } from "../../src/core/mutation-io.js";
-import {
-  fakeToggleIds,
-  setupFakeToggleFixtures,
-} from "./fake-toggle-provider.js";
+import { fakeToggleIds, setupFakeToggleFixtures } from "./fake-toggle-provider.js";
 
 export interface MutationSandbox {
   root: string;

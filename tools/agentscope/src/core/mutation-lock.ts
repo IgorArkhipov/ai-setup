@@ -1,10 +1,4 @@
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  unlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 export interface MutationLockOptions {
@@ -24,12 +18,7 @@ function defaultIsProcessAlive(pid: number): boolean {
     process.kill(pid, 0);
     return true;
   } catch (error) {
-    if (
-      typeof error === "object" &&
-      error !== null &&
-      "code" in error &&
-      error.code === "ESRCH"
-    ) {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === "ESRCH") {
       return false;
     }
 
@@ -46,9 +35,7 @@ function parseLockPid(lockPath: string): number | null {
   }
 }
 
-export function acquireMutationLock(
-  options: MutationLockOptions,
-): MutationLockHandle {
+export function acquireMutationLock(options: MutationLockOptions): MutationLockHandle {
   const now = options.now ?? (() => new Date());
   const pid = options.pid ?? process.pid;
   const isProcessAlive = options.isProcessAlive ?? defaultIsProcessAlive;

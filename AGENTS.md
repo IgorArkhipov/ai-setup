@@ -4,7 +4,7 @@ See `PROJECT.md` for the project description.
 
 ## Stack
 
-TypeScript, Node.js 25.9+, Vitest, GitHub Actions
+TypeScript, Node.js 25.9+, Biome, Vitest, GitHub Actions
 
 ## Project Layout
 
@@ -20,11 +20,14 @@ Run these from `tools/agentscope`:
 - `npm test` - run the Vitest suite
 - `npm run coverage` - run tests with coverage reporting and thresholds
 - `npm run build` - compile `src/` into `dist/`
+- `npm run lint` - run Biome checks against the repository
+- `npm run format` - run Biome fixes and formatting across supported repo files
 
 ## Conventions
 
 - Keep production code in `src/` and tests in `test/`
 - Follow the existing ESM and strict TypeScript style already used in `tools/agentscope`
+- Use the root `biome.jsonc` and workspace `.vscode/settings.json` as the default linting and formatting setup for supported file types
 - Prefer fixture-backed tests for provider discovery, CLI, and mutation behavior
 - Do not hand-edit `dist/`; regenerate it from source with `npm run build`
 - Update CI and README documentation when commands, coverage expectations, or project structure change

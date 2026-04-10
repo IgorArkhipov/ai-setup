@@ -33,8 +33,4 @@ export interface DiscoveryResult {
 
 export const providerOrder: DiscoveryProvider[] = ["claude", "codex", "cursor"];
 export const layerOrder: DiscoveryLayer[] = ["global", "project"];
-export const categoryOrder: DiscoveryCategory[] = [
-  "skill",
-  "configured-mcp",
-  "tool",
-];
+export const categoryOrder: DiscoveryCategory[] = ["skill", "configured-mcp", "tool"];

@@ -1,9 +1,9 @@
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import type { ProviderModule } from "../src/core/discovery.js";
 import { runToggle } from "../src/commands/toggle.js";
-import { createMutationSandbox } from "./support/mutation-sandbox.js";
+import type { ProviderModule } from "../src/core/discovery.js";
 import { fakeToggleIds, fakeToggleProvider } from "./support/fake-toggle-provider.js";
+import { createMutationSandbox } from "./support/mutation-sandbox.js";
 
 const sandboxes: Array<ReturnType<typeof createMutationSandbox>> = [];
 const runtimeRoot = path.resolve(import.meta.dirname, "fixtures", "runtime");
@@ -14,10 +14,7 @@ afterEach(() => {
   }
 });
 
-function fakeOptions(
-  sandbox: ReturnType<typeof createMutationSandbox>,
-  id = fakeToggleIds.full,
-) {
+function fakeOptions(sandbox: ReturnType<typeof createMutationSandbox>, id = fakeToggleIds.full) {
   return {
     cwd: sandbox.projectRoot,
     homeDir: sandbox.homeDir,

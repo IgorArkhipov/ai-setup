@@ -1,13 +1,13 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { acquireMutationLock } from "../src/core/mutation-lock.js";
-import { loadBackup } from "../src/core/mutation-state.js";
 import { runRestore } from "../src/commands/restore.js";
 import { runToggle } from "../src/commands/toggle.js";
+import { acquireMutationLock } from "../src/core/mutation-lock.js";
+import { loadBackup } from "../src/core/mutation-state.js";
 import { createClaudeSandbox } from "./support/claude-sandbox.js";
-import { createMutationSandbox } from "./support/mutation-sandbox.js";
 import { fakeToggleIds, fakeToggleProvider } from "./support/fake-toggle-provider.js";
+import { createMutationSandbox } from "./support/mutation-sandbox.js";
 
 type RestoreSandbox =
   | ReturnType<typeof createMutationSandbox>
@@ -111,11 +111,7 @@ describe("runRestore", () => {
       output: expect.stringContaining("backup manifest not found"),
     });
 
-    const invalidBackupRoot = path.join(
-      sandbox.appStateRoot,
-      "backups",
-      "backup-invalid",
-    );
+    const invalidBackupRoot = path.join(sandbox.appStateRoot, "backups", "backup-invalid");
     mkdirSync(invalidBackupRoot, { recursive: true });
     writeFileSync(
       path.join(invalidBackupRoot, "manifest.json"),

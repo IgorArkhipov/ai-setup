@@ -1,11 +1,8 @@
 import os from "node:os";
-import { loadConfig, type AgentScopeConfigOverrides } from "../core/config.js";
-import { runDiscovery, type ProviderModule } from "../core/discovery.js";
+import { type AgentScopeConfigOverrides, loadConfig } from "../core/config.js";
+import { type ProviderModule, runDiscovery } from "../core/discovery.js";
 import { executeTogglePlan } from "../core/mutation-engine.js";
-import {
-  renderToggleResultHuman,
-  renderToggleResultJson,
-} from "../core/mutation-output.js";
+import { renderToggleResultHuman, renderToggleResultJson } from "../core/mutation-output.js";
 import { claudeProvider } from "../providers/claude.js";
 import { codexProvider } from "../providers/codex.js";
 import { cursorProvider } from "../providers/cursor.js";
@@ -51,21 +48,12 @@ function commandErrorOutput(
 }
 
 function definedOverrides(
-  options: Pick<
-    AgentScopeConfigOverrides,
-    "projectRoot" | "appStateRoot" | "cursorRoot"
-  >,
+  options: Pick<AgentScopeConfigOverrides, "projectRoot" | "appStateRoot" | "cursorRoot">,
 ): AgentScopeConfigOverrides {
   return {
-    ...(options.projectRoot === undefined
-      ? {}
-      : { projectRoot: options.projectRoot }),
-    ...(options.appStateRoot === undefined
-      ? {}
-      : { appStateRoot: options.appStateRoot }),
-    ...(options.cursorRoot === undefined
-      ? {}
-      : { cursorRoot: options.cursorRoot }),
+    ...(options.projectRoot === undefined ? {} : { projectRoot: options.projectRoot }),
+    ...(options.appStateRoot === undefined ? {} : { appStateRoot: options.appStateRoot }),
+    ...(options.cursorRoot === undefined ? {} : { cursorRoot: options.cursorRoot }),
   };
 }
 
@@ -113,22 +101,14 @@ export function runToggle(options: ToggleCommandOptions): ToggleCommandResult {
   if (matches.length === 0) {
     return {
       exitCode: 1,
-      output: commandErrorOutput(
-        options.json,
-        "blocked",
-        `unknown selection for ${options.id}`,
-      ),
+      output: commandErrorOutput(options.json, "blocked", `unknown selection for ${options.id}`),
     };
   }
 
   if (matches.length > 1) {
     return {
       exitCode: 1,
-      output: commandErrorOutput(
-        options.json,
-        "blocked",
-        `ambiguous selection for ${options.id}`,
-      ),
+      output: commandErrorOutput(options.json, "blocked", `ambiguous selection for ${options.id}`),
     };
   }
 
@@ -136,11 +116,7 @@ export function runToggle(options: ToggleCommandOptions): ToggleCommandResult {
   if (selected === undefined) {
     return {
       exitCode: 1,
-      output: commandErrorOutput(
-        options.json,
-        "blocked",
-        `unknown selection for ${options.id}`,
-      ),
+      output: commandErrorOutput(options.json, "blocked", `unknown selection for ${options.id}`),
     };
   }
 
@@ -170,18 +146,13 @@ export function runToggle(options: ToggleCommandOptions): ToggleCommandResult {
         ? {}
         : { generateBackupId: options.generateBackupId }),
       ...(options.pid === undefined ? {} : { pid: options.pid }),
-      ...(options.isProcessAlive === undefined
-        ? {}
-        : { isProcessAlive: options.isProcessAlive }),
+      ...(options.isProcessAlive === undefined ? {} : { isProcessAlive: options.isProcessAlive }),
     },
     options.apply === true,
   );
 
   return {
-    exitCode:
-      result.status === "blocked" || result.status === "failed" ? 1 : 0,
-    output: options.json
-      ? renderToggleResultJson(result)
-      : renderToggleResultHuman(result),
+    exitCode: result.status === "blocked" || result.status === "failed" ? 1 : 0,
+    output: options.json ? renderToggleResultJson(result) : renderToggleResultHuman(result),
   };
 }

@@ -49,6 +49,12 @@ jobs:
           cache: npm
           cache-dependency-path: tools/agentscope/package-lock.json
 
+      - name: Install Biome
+        run: npm --prefix tools/agentscope ci
+
+      - name: Check Biome formatting and lint
+        run: npm --prefix tools/agentscope run biome:check
+
       - name: Lint Markdown
         run: npx --yes markdownlint-cli2 "**/*.md"
 

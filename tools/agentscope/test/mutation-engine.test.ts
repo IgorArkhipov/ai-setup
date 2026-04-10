@@ -1,15 +1,9 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { executeTogglePlan, restoreBackupById } from "../src/core/mutation-engine.js";
+import { captureSourceFingerprint, dedupeMutationTargets } from "../src/core/mutation-io.js";
 import { acquireMutationLock } from "../src/core/mutation-lock.js";
-import {
-  captureSourceFingerprint,
-  dedupeMutationTargets,
-} from "../src/core/mutation-io.js";
-import {
-  executeTogglePlan,
-  restoreBackupById,
-} from "../src/core/mutation-engine.js";
 import { fakeToggleIds, fakeToggleProvider } from "./support/fake-toggle-provider.js";
 import { createMutationSandbox } from "./support/mutation-sandbox.js";
 
@@ -21,10 +15,7 @@ afterEach(() => {
   }
 });
 
-function planFor(
-  sandbox: ReturnType<typeof createMutationSandbox>,
-  itemId: string,
-) {
+function planFor(sandbox: ReturnType<typeof createMutationSandbox>, itemId: string) {
   const discovery = fakeToggleProvider.discover({
     config: sandbox.config,
     homeDir: sandbox.homeDir,
@@ -133,7 +124,7 @@ describe("mutation engine", () => {
     const decision = planFor(sandbox, fakeToggleIds.full);
     writeFileSync(
       sandbox.pathFor(".fake-toggle/json/settings.json"),
-      JSON.stringify({ feature: { enabled: "drifted", plugins: {} } }, null, 2) + "\n",
+      `${JSON.stringify({ feature: { enabled: "drifted", plugins: {} } }, null, 2)}\n`,
     );
 
     const result = executeTogglePlan(
@@ -239,9 +230,10 @@ describe("mutation engine", () => {
       reason: expect.stringContaining("missing.txt"),
     });
     expect(sandbox.listBackupIds()).toEqual([]);
-    expect(sandbox.readJson<{ feature: { enabled: boolean } }>(
-      ".fake-toggle/json/settings.json",
-    ).feature.enabled).toBe(false);
+    expect(
+      sandbox.readJson<{ feature: { enabled: boolean } }>(".fake-toggle/json/settings.json").feature
+        .enabled,
+    ).toBe(false);
     expect(sandbox.readAuditLog()).toEqual([
       expect.objectContaining({
         event: "failed-apply",
@@ -260,7 +252,9 @@ describe("mutation engine", () => {
     if (decision.status !== "planned") {
       throw new Error("expected planned decision");
     }
-    decision.plan.operations.splice(0, 0,
+    decision.plan.operations.splice(
+      0,
+      0,
       {
         type: "deletePath",
         path: largePath,
@@ -305,11 +299,7 @@ describe("mutation engine", () => {
   it("records failed-apply when guarded setup fails before mutations begin", () => {
     const sandbox = createMutationSandbox();
     sandboxes.push(sandbox);
-    const blockedBackupPath = path.join(
-      sandbox.appStateRoot,
-      "backups",
-      "backup-blocked",
-    );
+    const blockedBackupPath = path.join(sandbox.appStateRoot, "backups", "backup-blocked");
     mkdirSync(path.join(sandbox.appStateRoot, "backups"), { recursive: true });
     writeFileSync(blockedBackupPath, "not a directory");
 
@@ -363,9 +353,10 @@ describe("mutation engine", () => {
       backupId: "backup-restore",
       affectedTargets: expect.any(Array),
     });
-    expect(sandbox.readJson<{ feature: { enabled: boolean } }>(
-      ".fake-toggle/json/settings.json",
-    ).feature.enabled).toBe(false);
+    expect(
+      sandbox.readJson<{ feature: { enabled: boolean } }>(".fake-toggle/json/settings.json").feature
+        .enabled,
+    ).toBe(false);
 
     expect(
       restoreBackupById("bad id", {
@@ -402,10 +393,7 @@ describe("mutation engine", () => {
       backupId: "backup-restore-failure",
     });
 
-    const sqliteBeforeRestore = sandbox.readSqliteValue(
-      ".fake-toggle/sqlite/items.db",
-      "feature",
-    );
+    const sqliteBeforeRestore = sandbox.readSqliteValue(".fake-toggle/sqlite/items.db", "feature");
     const manifestPath = path.join(
       sandbox.appStateRoot,
       "backups",

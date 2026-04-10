@@ -1,8 +1,8 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { acquireMutationLock } from "../src/core/mutation-lock.js";
 import { captureBackupEntry } from "../src/core/mutation-io.js";
+import { acquireMutationLock } from "../src/core/mutation-lock.js";
 import {
   appendAuditEntry,
   initializeMutationState,
@@ -55,25 +55,10 @@ describe("mutation state", () => {
 
     expect(manifest.backupId).toBe("backup-001");
     expect(
-      existsSync(
-        path.join(
-          sandbox.appStateRoot,
-          "backups",
-          "backup-001",
-          "manifest.json",
-        ),
-      ),
+      existsSync(path.join(sandbox.appStateRoot, "backups", "backup-001", "manifest.json")),
     ).toBe(true);
     expect(
-      existsSync(
-        path.join(
-          sandbox.appStateRoot,
-          "backups",
-          "backup-001",
-          "blobs",
-          "entry-1.bin",
-        ),
-      ),
+      existsSync(path.join(sandbox.appStateRoot, "backups", "backup-001", "blobs", "entry-1.bin")),
     ).toBe(true);
 
     const loaded = loadBackup(sandbox.appStateRoot, "backup-001");
@@ -145,9 +130,7 @@ describe("mutation state", () => {
     });
 
     expect(
-      JSON.parse(
-        readFileSync(path.join(sandbox.appStateRoot, "locks", "mutation.lock"), "utf8"),
-      ),
+      JSON.parse(readFileSync(path.join(sandbox.appStateRoot, "locks", "mutation.lock"), "utf8")),
     ).toEqual({
       pid: 123,
       acquiredAt: "2026-04-08T10:00:00.000Z",
@@ -162,9 +145,7 @@ describe("mutation state", () => {
     ).toThrow("mutation lock is already held by pid 123");
 
     lock.release();
-    expect(existsSync(path.join(sandbox.appStateRoot, "locks", "mutation.lock"))).toBe(
-      false,
-    );
+    expect(existsSync(path.join(sandbox.appStateRoot, "locks", "mutation.lock"))).toBe(false);
   });
 
   it("reclaims a stale advisory lock from a dead process", () => {
@@ -187,9 +168,7 @@ describe("mutation state", () => {
     });
 
     expect(
-      JSON.parse(
-        readFileSync(path.join(sandbox.appStateRoot, "locks", "mutation.lock"), "utf8"),
-      ),
+      JSON.parse(readFileSync(path.join(sandbox.appStateRoot, "locks", "mutation.lock"), "utf8")),
     ).toEqual({
       pid: 456,
       acquiredAt: "2026-04-08T10:05:00.000Z",
@@ -240,8 +219,8 @@ describe("mutation state", () => {
       ),
     );
 
-    expect(() =>
-      loadBackup(sandbox.appStateRoot, "backup-blob").readBlob("../escape.bin"),
-    ).toThrow("invalid blob id");
+    expect(() => loadBackup(sandbox.appStateRoot, "backup-blob").readBlob("../escape.bin")).toThrow(
+      "invalid blob id",
+    );
   });
 });

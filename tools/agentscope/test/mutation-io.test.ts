@@ -88,9 +88,11 @@ describe("mutation io", () => {
     });
 
     expect(readFileSync(generatedPath, "utf8")).toBe("enabled\n");
-    expect(sandbox.readJson<{ feature: { enabled: boolean; plugins: Record<string, unknown> } }>(
-      ".fake-toggle/json/settings.json",
-    )).toEqual({
+    expect(
+      sandbox.readJson<{ feature: { enabled: boolean; plugins: Record<string, unknown> } }>(
+        ".fake-toggle/json/settings.json",
+      ),
+    ).toEqual({
       feature: {
         enabled: true,
         plugins: {
@@ -184,9 +186,7 @@ describe("mutation io", () => {
       return captured.blob;
     });
 
-    expect(readSqliteItemValue(sqlitePath, "feature")).toEqual(
-      Uint8Array.from([10, 11, 12]),
-    );
+    expect(readSqliteItemValue(sqlitePath, "feature")).toEqual(Uint8Array.from([10, 11, 12]));
   });
 
   it("rejects unsafe SQLite identifiers", () => {

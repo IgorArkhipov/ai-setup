@@ -1,26 +1,18 @@
-import { existsSync, readdirSync, readFileSync, type Dirent } from "node:fs";
+import { type Dirent, existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { ProviderModule } from "../core/discovery.js";
-import type {
-  DiscoveryItem,
-  DiscoveryResult,
-  DiscoveryWarning,
-} from "../core/models.js";
+import type { DiscoveryItem, DiscoveryResult, DiscoveryWarning } from "../core/models.js";
 import {
-  toSelectedItemIdentity,
   type TogglePlanDecision,
   type TogglePlanInput,
+  toSelectedItemIdentity,
 } from "../core/mutation-models.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function pushWarning(
-  warnings: DiscoveryWarning[],
-  code: string,
-  message: string,
-): void {
+function pushWarning(warnings: DiscoveryWarning[], code: string, message: string): void {
   warnings.push({
     provider: "cursor",
     layer: "global",
@@ -29,10 +21,7 @@ function pushWarning(
   });
 }
 
-function discoverSkills(
-  rootPath: string,
-  warnings: DiscoveryWarning[],
-): DiscoveryItem[] {
+function discoverSkills(rootPath: string, warnings: DiscoveryWarning[]): DiscoveryItem[] {
   if (!existsSync(rootPath)) {
     return [];
   }
@@ -51,11 +40,7 @@ function discoverSkills(
       entries = readdirSync(current, { withFileTypes: true });
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
-      pushWarning(
-        warnings,
-        "file-unreadable",
-        `${current} could not be read: ${detail}`,
-      );
+      pushWarning(warnings, "file-unreadable", `${current} could not be read: ${detail}`);
       continue;
     }
 
@@ -88,10 +73,7 @@ function discoverSkills(
   return items;
 }
 
-function discoverMcp(
-  mcpPath: string,
-  warnings: DiscoveryWarning[],
-): DiscoveryItem[] {
+function discoverMcp(mcpPath: string, warnings: DiscoveryWarning[]): DiscoveryItem[] {
   if (!existsSync(mcpPath)) {
     return [];
   }
@@ -115,11 +97,7 @@ function discoverMcp(
   }
 
   if (!isRecord(parsed) || !isRecord(parsed.mcpServers)) {
-    pushWarning(
-      warnings,
-      "invalid-shape",
-      `${mcpPath} must define an object-valued mcpServers`,
-    );
+    pushWarning(warnings, "invalid-shape", `${mcpPath} must define an object-valued mcpServers`);
     return [];
   }
 
@@ -137,16 +115,9 @@ function discoverMcp(
   }));
 }
 
-function discoverExtensions(
-  cursorRoot: string,
-  warnings: DiscoveryWarning[],
-): DiscoveryItem[] {
+function discoverExtensions(cursorRoot: string, warnings: DiscoveryWarning[]): DiscoveryItem[] {
   if (!existsSync(cursorRoot)) {
-    pushWarning(
-      warnings,
-      "missing-root",
-      `Cursor root is missing or unreadable: ${cursorRoot}`,
-    );
+    pushWarning(warnings, "missing-root", `Cursor root is missing or unreadable: ${cursorRoot}`);
     return [];
   }
 
@@ -163,11 +134,7 @@ function discoverExtensions(
         continue;
       }
 
-      const extensionsPath = path.join(
-        profilesRoot,
-        profileEntry.name,
-        "extensions.json",
-      );
+      const extensionsPath = path.join(profilesRoot, profileEntry.name, "extensions.json");
 
       if (!existsSync(extensionsPath)) {
         continue;
@@ -178,11 +145,7 @@ function discoverExtensions(
         raw = readFileSync(extensionsPath, "utf8");
       } catch (error) {
         const detail = error instanceof Error ? error.message : String(error);
-        pushWarning(
-          warnings,
-          "file-unreadable",
-          `${extensionsPath} could not be read: ${detail}`,
-        );
+        pushWarning(warnings, "file-unreadable", `${extensionsPath} could not be read: ${detail}`);
         continue;
       }
 
@@ -191,25 +154,21 @@ function discoverExtensions(
         parsed = JSON.parse(raw);
       } catch (error) {
         const detail = error instanceof Error ? error.message : String(error);
-        pushWarning(
-          warnings,
-          "json-parse-error",
-          `${extensionsPath} is not valid JSON: ${detail}`,
-        );
+        pushWarning(warnings, "json-parse-error", `${extensionsPath} is not valid JSON: ${detail}`);
         continue;
       }
 
       if (!Array.isArray(parsed)) {
-        pushWarning(
-          warnings,
-          "invalid-shape",
-          `${extensionsPath} must be an array`,
-        );
+        pushWarning(warnings, "invalid-shape", `${extensionsPath} must be an array`);
         continue;
       }
 
       for (const [index, entry] of parsed.entries()) {
-        if (!isRecord(entry) || !isRecord(entry.identifier) || typeof entry.identifier.id !== "string") {
+        if (
+          !isRecord(entry) ||
+          !isRecord(entry.identifier) ||
+          typeof entry.identifier.id !== "string"
+        ) {
           pushWarning(
             warnings,
             "invalid-shape",
@@ -234,11 +193,7 @@ function discoverExtensions(
     }
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    pushWarning(
-      warnings,
-      "file-unreadable",
-      `${profilesRoot} could not be read: ${detail}`,
-    );
+    pushWarning(warnings, "file-unreadable", `${profilesRoot} could not be read: ${detail}`);
   }
 
   return items;
@@ -250,15 +205,8 @@ export const cursorProvider: ProviderModule = {
     const warnings: DiscoveryWarning[] = [];
     const items: DiscoveryItem[] = [];
 
-    items.push(
-      ...discoverSkills(
-        path.join(input.homeDir, ".cursor", "skills-cursor"),
-        warnings,
-      ),
-    );
-    items.push(
-      ...discoverMcp(path.join(input.homeDir, ".cursor", "mcp.json"), warnings),
-    );
+    items.push(...discoverSkills(path.join(input.homeDir, ".cursor", "skills-cursor"), warnings));
+    items.push(...discoverMcp(path.join(input.homeDir, ".cursor", "mcp.json"), warnings));
     items.push(...discoverExtensions(input.config.cursorRoot, warnings));
 
     return { items, warnings };

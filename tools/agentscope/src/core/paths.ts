@@ -17,16 +17,9 @@ export function expandHomePath(inputPath: string, homeDir: string): string {
   return inputPath;
 }
 
-export function normalizeAbsolutePath(
-  inputPath: string,
-  options: PathResolutionOptions,
-): string {
+export function normalizeAbsolutePath(inputPath: string, options: PathResolutionOptions): string {
   const expanded = expandHomePath(inputPath, options.homeDir);
-  return path.normalize(
-    path.isAbsolute(expanded)
-      ? expanded
-      : path.resolve(options.cwd, expanded),
-  );
+  return path.normalize(path.isAbsolute(expanded) ? expanded : path.resolve(options.cwd, expanded));
 }
 
 export function resolveProjectRoot(
@@ -34,10 +27,7 @@ export function resolveProjectRoot(
     configuredProjectRoot?: string | undefined;
   },
 ): string {
-  return normalizeAbsolutePath(
-    options.configuredProjectRoot ?? options.cwd,
-    options,
-  );
+  return normalizeAbsolutePath(options.configuredProjectRoot ?? options.cwd, options);
 }
 
 export function resolveAppStateRoot(
@@ -51,13 +41,7 @@ export function resolveAppStateRoot(
 }
 
 export function defaultCursorRoot(homeDir: string): string {
-  return path.resolve(
-    homeDir,
-    "Library",
-    "Application Support",
-    "Cursor",
-    "User",
-  );
+  return path.resolve(homeDir, "Library", "Application Support", "Cursor", "User");
 }
 
 export function resolveCursorRoot(

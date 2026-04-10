@@ -1,11 +1,3 @@
-import { acquireMutationLock, type MutationLockOptions } from "./mutation-lock.js";
-import {
-  appendAuditEntry,
-  deleteBackup,
-  initializeMutationState,
-  loadBackup,
-  persistBackup,
-} from "./mutation-state.js";
 import {
   applyMutationOperation,
   captureBackupEntry,
@@ -15,6 +7,7 @@ import {
   restoreBackupEntry,
   sourceFingerprintMatches,
 } from "./mutation-io.js";
+import { acquireMutationLock, type MutationLockOptions } from "./mutation-lock.js";
 import type {
   BackupEntry,
   FailedApplyAuditEntry,
@@ -26,6 +19,13 @@ import type {
   ToggleExecutionResult,
   TogglePlanDecision,
 } from "./mutation-models.js";
+import {
+  appendAuditEntry,
+  deleteBackup,
+  initializeMutationState,
+  loadBackup,
+  persistBackup,
+} from "./mutation-state.js";
 
 export interface MutationEngineOptions extends Pick<MutationLockOptions, "isProcessAlive" | "pid"> {
   appStateRoot: string;
@@ -57,10 +57,7 @@ function failedAuditEntry(
   };
 }
 
-function asBlocked(
-  plan: MutationPlan,
-  reason: string,
-): MutationBlockedDecision {
+function asBlocked(plan: MutationPlan, reason: string): MutationBlockedDecision {
   return {
     status: "blocked",
     selection: plan.selection,
@@ -197,9 +194,7 @@ export function executeTogglePlan(
       appStateRoot: options.appStateRoot,
       ...(options.now === undefined ? {} : { now: options.now }),
       ...(options.pid === undefined ? {} : { pid: options.pid }),
-      ...(options.isProcessAlive === undefined
-        ? {}
-        : { isProcessAlive: options.isProcessAlive }),
+      ...(options.isProcessAlive === undefined ? {} : { isProcessAlive: options.isProcessAlive }),
     });
   } catch (error) {
     return asBlocked(
@@ -212,7 +207,6 @@ export function executeTogglePlan(
   const completedOperations: MutationOperation[] = [];
 
   try {
-
     for (const expected of plan.sourceFingerprints) {
       const actual = captureSourceFingerprint(
         expected.type === "path"
@@ -231,15 +225,12 @@ export function executeTogglePlan(
       );
 
       if (!sourceFingerprintMatches(expected, actual)) {
-        return asBlocked(
-          plan,
-          `fingerprint-drift: ${JSON.stringify(actual)}`,
-        );
+        return asBlocked(plan, `fingerprint-drift: ${JSON.stringify(actual)}`);
       }
     }
 
-    const capturedEntries = dedupeMutationTargets(plan.affectedTargets).map(
-      (target, index) => captureBackupEntry(target, `entry-${index + 1}`),
+    const capturedEntries = dedupeMutationTargets(plan.affectedTargets).map((target, index) =>
+      captureBackupEntry(target, `entry-${index + 1}`),
     );
     manifest = persistBackup({
       appStateRoot: options.appStateRoot,
@@ -328,14 +319,7 @@ export function executeTogglePlan(
 
     appendAuditEntry(
       options.appStateRoot,
-      failedAuditEntry(
-        options,
-        plan,
-        reason,
-        true,
-        null,
-        backupDeleted,
-      ),
+      failedAuditEntry(options, plan, reason, true, null, backupDeleted),
     );
 
     return {
@@ -388,9 +372,7 @@ export function restoreBackupById(
       appStateRoot: options.appStateRoot,
       ...(options.now === undefined ? {} : { now: options.now }),
       ...(options.pid === undefined ? {} : { pid: options.pid }),
-      ...(options.isProcessAlive === undefined
-        ? {}
-        : { isProcessAlive: options.isProcessAlive }),
+      ...(options.isProcessAlive === undefined ? {} : { isProcessAlive: options.isProcessAlive }),
     });
   } catch (error) {
     return {
@@ -416,7 +398,8 @@ export function restoreBackupById(
         rollbackEntriesSnapshot.map((snapshot) => snapshot.entry).reverse(),
         (blobId) => {
           const snapshot = rollbackEntriesSnapshot.find(
-            (entry) => entry.entry.payload?.storage === "blob" && entry.entry.payload.blobId === blobId,
+            (entry) =>
+              entry.entry.payload?.storage === "blob" && entry.entry.payload.blobId === blobId,
           );
 
           if (snapshot?.blob === null || snapshot === undefined) {

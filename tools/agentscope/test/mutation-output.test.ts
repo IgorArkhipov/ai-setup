@@ -97,9 +97,7 @@ affectedTargets:
       rollbackFailure: "rollback snapshot missing",
     };
 
-    expect(renderToggleResultHuman(toggleResult)).toContain(
-      "rollbackFailure: blob missing",
-    );
+    expect(renderToggleResultHuman(toggleResult)).toContain("rollbackFailure: blob missing");
     expect(JSON.parse(renderToggleResultJson(toggleResult))).toMatchObject({
       rollbackFailure: "blob missing",
     });

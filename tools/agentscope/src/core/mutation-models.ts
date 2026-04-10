@@ -40,9 +40,7 @@ export interface SqliteItemMutationTarget {
   valueColumn: string;
 }
 
-export type MutationTarget =
-  | PathMutationTarget
-  | SqliteItemMutationTarget;
+export type MutationTarget = PathMutationTarget | SqliteItemMutationTarget;
 
 export interface CreateFileOperation {
   type: "createFile";
@@ -120,9 +118,7 @@ export interface SqliteItemSourceFingerprint {
   digest: string | null;
 }
 
-export type SourceFingerprint =
-  | PathSourceFingerprint
-  | SqliteItemSourceFingerprint;
+export type SourceFingerprint = PathSourceFingerprint | SqliteItemSourceFingerprint;
 
 interface InlineBackupPayload {
   storage: "inline";
@@ -196,10 +192,7 @@ export interface FailedApplyAuditEntry {
   backupDeleted: boolean;
 }
 
-export type AuditEntry =
-  | ApplyAuditEntry
-  | RestoreAuditEntry
-  | FailedApplyAuditEntry;
+export type AuditEntry = ApplyAuditEntry | RestoreAuditEntry | FailedApplyAuditEntry;
 
 export interface MutationPlan {
   selection: SelectedItemIdentity;
@@ -223,9 +216,7 @@ export interface PlannedToggleDecision {
   plan: MutationPlan;
 }
 
-export type TogglePlanDecision =
-  | MutationBlockedDecision
-  | PlannedToggleDecision;
+export type TogglePlanDecision = MutationBlockedDecision | PlannedToggleDecision;
 
 export interface ToggleDryRunResult {
   status: "dry-run";

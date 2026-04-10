@@ -2,8 +2,8 @@ import { existsSync, rmSync, writeFileSync } from "node:fs";
 import { afterEach, describe, expect, it } from "vitest";
 import { runRestore } from "../src/commands/restore.js";
 import { runToggle } from "../src/commands/toggle.js";
-import { claudeProvider } from "../src/providers/claude.js";
 import { vaultDescriptor } from "../src/core/mutation-vault.js";
+import { claudeProvider } from "../src/providers/claude.js";
 import { createClaudeSandbox } from "./support/claude-sandbox.js";
 
 const sandboxes: Array<ReturnType<typeof createClaudeSandbox>> = [];
@@ -40,9 +40,7 @@ describe("claude provider", () => {
         id: "claude:project:skill:example-claude-skill",
         enabled: true,
         mutability: "read-write",
-        sourcePath: sandbox.projectPath(
-          ".claude/skills/example-claude-skill/SKILL.md",
-        ),
+        sourcePath: sandbox.projectPath(".claude/skills/example-claude-skill/SKILL.md"),
         statePath: sandbox.projectPath(".claude/skills/example-claude-skill"),
       }),
     );
@@ -99,9 +97,7 @@ describe("claude provider", () => {
       generateBackupId: () => "backup-skill-disable",
     });
     expect(applied.exitCode).toBe(0);
-    expect(existsSync(sandbox.projectPath(".claude/skills/example-claude-skill"))).toBe(
-      false,
-    );
+    expect(existsSync(sandbox.projectPath(".claude/skills/example-claude-skill"))).toBe(false);
     expect(existsSync(descriptor.vaultedPath)).toBe(true);
     expect(existsSync(descriptor.entryPath)).toBe(true);
     expect(sandbox.listBackupIds()).toEqual(["backup-skill-disable"]);
@@ -148,18 +144,14 @@ describe("claude provider", () => {
       generateBackupId: () => "backup-skill-enable",
     });
     expect(enabled.exitCode).toBe(0);
-    expect(existsSync(sandbox.projectPath(".claude/skills/example-claude-skill"))).toBe(
-      true,
-    );
+    expect(existsSync(sandbox.projectPath(".claude/skills/example-claude-skill"))).toBe(true);
 
     const restored = runRestore({
       ...sandboxOptions(sandbox),
       backupId: "backup-skill-disable",
     });
     expect(restored.exitCode).toBe(0);
-    expect(existsSync(sandbox.projectPath(".claude/skills/example-claude-skill"))).toBe(
-      true,
-    );
+    expect(existsSync(sandbox.projectPath(".claude/skills/example-claude-skill"))).toBe(true);
   });
 
   it("blocks skill enable when the vault manifest or vaulted directory is missing", () => {
@@ -208,9 +200,7 @@ describe("claude provider", () => {
         displayName: "example-claude-skill",
         enabled: false,
         mutability: "read-write",
-        sourcePath: sandbox.projectPath(
-          ".claude/skills/example-claude-skill/SKILL.md",
-        ),
+        sourcePath: sandbox.projectPath(".claude/skills/example-claude-skill/SKILL.md"),
         statePath: descriptor.entryPath,
       },
       targetEnabled: true,
@@ -235,10 +225,7 @@ describe("claude provider", () => {
     });
     expect(JSON.parse(disabled.output)).toMatchObject({
       status: "dry-run",
-      operations: [
-        { type: "removeJsonObjectEntry" },
-        { type: "updateJsonObjectEntry" },
-      ],
+      operations: [{ type: "removeJsonObjectEntry" }, { type: "updateJsonObjectEntry" }],
     });
 
     writeFileSync(

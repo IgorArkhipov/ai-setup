@@ -165,12 +165,7 @@ export function loadVaultEntries(input: {
   layer: DiscoveryLayer;
   kind: VaultEntryKind;
 }): LoadedVaultEntry[] {
-  const rootPath = sliceRoot(
-    input.appStateRoot,
-    input.provider,
-    input.layer,
-    input.kind,
-  );
+  const rootPath = sliceRoot(input.appStateRoot, input.provider, input.layer, input.kind);
 
   if (!existsSync(rootPath)) {
     return [];
@@ -202,10 +197,7 @@ export function loadVaultEntries(input: {
       continue;
     }
 
-    const entry = validateEntry(
-      readFileSync(descriptor.entryPath, "utf8"),
-      descriptor.entryPath,
-    );
+    const entry = validateEntry(readFileSync(descriptor.entryPath, "utf8"), descriptor.entryPath);
 
     entries.push({
       ...entry,

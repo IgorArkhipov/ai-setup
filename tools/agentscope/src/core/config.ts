@@ -1,10 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import {
-  resolveAppStateRoot,
-  resolveCursorRoot,
-  resolveProjectRoot,
-} from "./paths.js";
+import { resolveAppStateRoot, resolveCursorRoot, resolveProjectRoot } from "./paths.js";
 
 export interface AgentScopeConfigOverrides {
   appStateRoot?: string;
@@ -42,10 +38,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function parseConfigDocument(
-  raw: string,
-  label: string,
-): AgentScopeConfigDocument {
+function parseConfigDocument(raw: string, label: string): AgentScopeConfigDocument {
   let parsed: unknown;
 
   try {
@@ -114,12 +107,7 @@ export function loadConfig(options: LoadConfigOptions): AgentScopeConfig {
     projectRoot: options.cwd,
   };
 
-  const userConfigPath = path.resolve(
-    options.homeDir,
-    ".config",
-    "agentscope",
-    "config.json",
-  );
+  const userConfigPath = path.resolve(options.homeDir, ".config", "agentscope", "config.json");
   const userConfig = loadOptionalConfigDocument(userConfigPath, userConfigPath, {
     fileExists,
     readFile,
@@ -127,18 +115,13 @@ export function loadConfig(options: LoadConfigOptions): AgentScopeConfig {
 
   const projectConfigLookupRoot = resolveProjectRoot({
     ...pathOptions,
-    configuredProjectRoot:
-      overrides.projectRoot ?? userConfig.projectRoot ?? defaults.projectRoot,
+    configuredProjectRoot: overrides.projectRoot ?? userConfig.projectRoot ?? defaults.projectRoot,
   });
   const projectConfigPath = path.join(projectConfigLookupRoot, ".agentscope.json");
-  const projectConfig = loadOptionalConfigDocument(
-    projectConfigPath,
-    projectConfigPath,
-    {
-      fileExists,
-      readFile,
-    },
-  );
+  const projectConfig = loadOptionalConfigDocument(projectConfigPath, projectConfigPath, {
+    fileExists,
+    readFile,
+  });
 
   const merged = {
     ...defaults,

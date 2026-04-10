@@ -18,9 +18,7 @@ describe("cli", () => {
 
     expect(exitCode).toBe(1);
     expect(stdout).not.toHaveBeenCalled();
-    expect(stderr).toHaveBeenCalledWith(
-      expect.stringContaining("Unknown option"),
-    );
+    expect(stderr).toHaveBeenCalledWith(expect.stringContaining("Unknown option"));
   });
 
   it("returns non-zero when no command is provided", () => {
@@ -84,9 +82,7 @@ describe("cli", () => {
 
     expect(exitCode).toBe(0);
     expect(stderr).not.toHaveBeenCalled();
-    expect(stdout).toHaveBeenCalledWith(
-      expect.stringContaining("status: dry-run"),
-    );
+    expect(stdout).toHaveBeenCalledWith(expect.stringContaining("status: dry-run"));
   });
 
   it("routes restore to the registered command handler", () => {
@@ -113,9 +109,7 @@ describe("cli", () => {
 
     expect(exitCode).toBe(1);
     expect(stderr).not.toHaveBeenCalled();
-    expect(stdout).toHaveBeenCalledWith(
-      expect.stringContaining("backup manifest not found"),
-    );
+    expect(stdout).toHaveBeenCalledWith(expect.stringContaining("backup manifest not found"));
   });
 
   it("routes list filters through the registered command handler", () => {
@@ -182,8 +176,6 @@ describe("cli", () => {
 
     expect(exitCode).toBe(1);
     expect(stderr).not.toHaveBeenCalled();
-    expect(stdout).toHaveBeenCalledWith(
-      "invalid layer: expected global, project, or all",
-    );
+    expect(stdout).toHaveBeenCalledWith("invalid layer: expected global, project, or all");
   });
 });

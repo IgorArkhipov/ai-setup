@@ -11,7 +11,11 @@
     "agentscope": "./dist/cli.js"
   },
   "scripts": {
+    "biome:check": "biome check --config-path ../../biome.jsonc ../../",
+    "biome:write": "biome check --write --config-path ../../biome.jsonc ../../",
     "build": "tsc -p tsconfig.json",
+    "format": "npm run biome:write",
+    "lint": "npm run biome:check",
     "test": "vitest run",
     "coverage": "vitest run --coverage"
   },
@@ -19,6 +23,7 @@
     "cac": "7.0.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.11",
     "@types/node": "^25.5.2",
     "@vitest/coverage-v8": "^4.1.4",
     "typescript": "6.0.2",

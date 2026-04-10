@@ -1,15 +1,11 @@
-import { existsSync, readdirSync, readFileSync, type Dirent } from "node:fs";
+import { type Dirent, existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { ProviderModule } from "../core/discovery.js";
-import type {
-  DiscoveryItem,
-  DiscoveryResult,
-  DiscoveryWarning,
-} from "../core/models.js";
+import type { DiscoveryItem, DiscoveryResult, DiscoveryWarning } from "../core/models.js";
 import {
-  toSelectedItemIdentity,
   type TogglePlanDecision,
   type TogglePlanInput,
+  toSelectedItemIdentity,
 } from "../core/mutation-models.js";
 
 interface ParsedCodexEntry {
@@ -36,9 +32,7 @@ function parseSectionHeader(
 ): { kind: CodexSectionKind; id: string } {
   const match = line.match(/^\[(plugins|mcp_servers)\.(.+)\]$/);
   if (match === null) {
-    throw new Error(
-      `line ${lineNumber} must use [plugins.<id>] or [mcp_servers.<id>]`,
-    );
+    throw new Error(`line ${lineNumber} must use [plugins.<id>] or [mcp_servers.<id>]`);
   }
 
   const [, kind, rawId] = match;
@@ -79,8 +73,7 @@ export function parseCodexConfig(raw: string): ParsedCodexConfig {
 
     if (line.startsWith("[plugins") || line.startsWith("[mcp_servers")) {
       currentSection = parseSectionHeader(line, lineNumber);
-      const bucket =
-        currentSection.kind === "plugins" ? plugins : mcpServers;
+      const bucket = currentSection.kind === "plugins" ? plugins : mcpServers;
 
       if (!bucket.has(currentSection.id)) {
         bucket.set(currentSection.id, { id: currentSection.id });
@@ -175,12 +168,7 @@ function discoverSkillFiles(
       entries = readdirSync(current, { withFileTypes: true });
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
-      pushWarning(
-        warnings,
-        layer,
-        "file-unreadable",
-        `${current} could not be read: ${detail}`,
-      );
+      pushWarning(warnings, layer, "file-unreadable", `${current} could not be read: ${detail}`);
       continue;
     }
 
@@ -221,11 +209,7 @@ export const codexProvider: ProviderModule = {
     const warnings: DiscoveryWarning[] = [];
 
     items.push(
-      ...discoverSkillFiles(
-        path.join(input.homeDir, ".codex", "skills"),
-        "global",
-        warnings,
-      ),
+      ...discoverSkillFiles(path.join(input.homeDir, ".codex", "skills"), "global", warnings),
     );
     items.push(
       ...discoverSkillFiles(

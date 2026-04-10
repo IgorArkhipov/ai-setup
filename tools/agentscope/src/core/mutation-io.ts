@@ -1,9 +1,10 @@
+import { createHash } from "node:crypto";
 import {
   existsSync,
   mkdirSync,
   mkdtempSync,
-  readFileSync,
   readdirSync,
+  readFileSync,
   renameSync,
   rmSync,
   statSync,
@@ -11,7 +12,6 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { createHash } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 import type {
   BackupEntry,
@@ -72,9 +72,7 @@ function assertObjectTarget(
   jsonPath: Array<string | number>,
 ): Record<string, unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new Error(
-      `${filePath} path ${jsonPath.join(".")} must resolve to a JSON object`,
-    );
+    throw new Error(`${filePath} path ${jsonPath.join(".")} must resolve to a JSON object`);
   }
 
   return value as Record<string, unknown>;
@@ -110,10 +108,7 @@ function resolveJsonPath(
   return current;
 }
 
-function updateJsonDocument(
-  filePath: string,
-  updater: (document: unknown) => unknown,
-): void {
+function updateJsonDocument(filePath: string, updater: (document: unknown) => unknown): void {
   const current = readJsonDocument(filePath);
   const updated = updater(current);
   writeFileAtomic(filePath, Buffer.from(deterministicJson(updated)));
@@ -167,7 +162,11 @@ function readDirectorySnapshot(targetPath: string): Uint8Array {
 
 function restoreDirectorySnapshot(targetPath: string, payload: Uint8Array): void {
   const parsed = JSON.parse(Buffer.from(payload).toString("utf8")) as DirectorySnapshot;
-  if (parsed.kind !== "directory" || !Array.isArray(parsed.directories) || !Array.isArray(parsed.files)) {
+  if (
+    parsed.kind !== "directory" ||
+    !Array.isArray(parsed.directories) ||
+    !Array.isArray(parsed.files)
+  ) {
     throw new Error(`Invalid directory snapshot for ${targetPath}`);
   }
 
@@ -216,7 +215,9 @@ function assertSqliteIdentifier(identifier: string, label: string): string {
   return identifier;
 }
 
-function sqliteSelectValue(target: Extract<MutationTarget, { type: "sqlite-item" }>): Uint8Array | null {
+function sqliteSelectValue(
+  target: Extract<MutationTarget, { type: "sqlite-item" }>,
+): Uint8Array | null {
   if (!existsSync(target.databasePath)) {
     return null;
   }
@@ -268,9 +269,7 @@ function sqliteReplaceValue(
   }
 }
 
-function sqliteDeleteValue(
-  target: Extract<MutationTarget, { type: "sqlite-item" }>,
-): void {
+function sqliteDeleteValue(target: Extract<MutationTarget, { type: "sqlite-item" }>): void {
   if (!existsSync(target.databasePath)) {
     return;
   }
@@ -334,10 +333,7 @@ function restorePathEntry(entry: PathBackupEntry, payload: Uint8Array | null): v
   writeFileAtomic(entry.target.path, payload);
 }
 
-function restoreSqliteEntry(
-  entry: SqliteItemBackupEntry,
-  payload: Uint8Array | null,
-): void {
+function restoreSqliteEntry(entry: SqliteItemBackupEntry, payload: Uint8Array | null): void {
   if (!entry.existed) {
     sqliteDeleteValue(entry.target);
     return;
@@ -543,9 +539,7 @@ export function applyMutationOperation(operation: MutationOperation): void {
         const parent = resolveJsonPath(document, parentPath, operation.path);
         if (typeof lastSegment === "number") {
           if (!Array.isArray(parent) || lastSegment < 0 || lastSegment >= parent.length) {
-            throw new Error(
-              `${operation.path} path ${operation.jsonPath.join(".")} is missing`,
-            );
+            throw new Error(`${operation.path} path ${operation.jsonPath.join(".")} is missing`);
           }
           parent[lastSegment] = operation.value;
           return document;
@@ -601,9 +595,7 @@ export function createSqliteItemsDatabase(databasePath: string): void {
   ensureParentDirectory(databasePath);
   const db = new DatabaseSync(databasePath);
   try {
-    db.exec(
-      "CREATE TABLE IF NOT EXISTS items (key TEXT PRIMARY KEY, value BLOB NOT NULL)",
-    );
+    db.exec("CREATE TABLE IF NOT EXISTS items (key TEXT PRIMARY KEY, value BLOB NOT NULL)");
   } finally {
     db.close();
   }

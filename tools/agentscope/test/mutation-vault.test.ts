@@ -5,18 +5,15 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   loadVaultEntries,
   serializeVaultEntry,
-  vaultDescriptor,
   type VaultEntry,
+  vaultDescriptor,
 } from "../src/core/mutation-vault.js";
 import { createClaudeSandbox } from "./support/claude-sandbox.js";
 
 const tempRoots: string[] = [];
 
 function createTempRoot(): string {
-  const root = path.join(
-    os.tmpdir(),
-    `agentscope-vault-${Math.random().toString(16).slice(2)}`,
-  );
+  const root = path.join(os.tmpdir(), `agentscope-vault-${Math.random().toString(16).slice(2)}`);
   mkdirSync(root, { recursive: true });
   tempRoots.push(root);
   return root;
@@ -209,13 +206,7 @@ describe("mutation vault", () => {
 
   it("ignores malformed vault directory names while loading valid entries", () => {
     const appStateRoot = createTempRoot();
-    const rootPath = path.join(
-      appStateRoot,
-      "vault",
-      "claude",
-      "project",
-      "skill",
-    );
+    const rootPath = path.join(appStateRoot, "vault", "claude", "project", "skill");
 
     writeEntry(appStateRoot, {
       version: 1,
@@ -249,9 +240,9 @@ describe("mutation vault", () => {
       JSON.stringify({ sandbox: true }, null, 2),
     );
 
-    expect(
-      sandbox.readProjectJson<{ sandbox: boolean }>(".claude/settings.local.json"),
-    ).toEqual({ sandbox: true });
+    expect(sandbox.readProjectJson<{ sandbox: boolean }>(".claude/settings.local.json")).toEqual({
+      sandbox: true,
+    });
     expect(
       JSON.parse(
         readFileSync(

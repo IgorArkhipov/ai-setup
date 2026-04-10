@@ -57,7 +57,7 @@ describe("doctor and providers commands", () => {
     cpSync(fixturesRoot, tempRoot, { recursive: true });
     writeFileSync(
       path.join(tempRoot, "cursor", "global", "mcp.json"),
-      "{\"mcpServers\": []}",
+      '{"mcpServers": []}',
       "utf8",
     );
 
@@ -81,12 +81,8 @@ describe("doctor and providers commands", () => {
   it("prints the supported providers in deterministic order", () => {
     const output = renderProviders(fixturesRoot);
 
-    expect(output.indexOf("Claude Code (claude)")).toBeLessThan(
-      output.indexOf("Codex (codex)"),
-    );
-    expect(output.indexOf("Codex (codex)")).toBeLessThan(
-      output.indexOf("Cursor (cursor)"),
-    );
+    expect(output.indexOf("Claude Code (claude)")).toBeLessThan(output.indexOf("Codex (codex)"));
+    expect(output.indexOf("Codex (codex)")).toBeLessThan(output.indexOf("Cursor (cursor)"));
     expect(output).toContain("Claude Code (claude)");
     expect(output).toContain("Codex (codex)");
     expect(output).toContain("Cursor (cursor)");

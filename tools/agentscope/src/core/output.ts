@@ -1,8 +1,6 @@
 import type { DiscoveryResult } from "./models.js";
 
-function renderWarningLabel(
-  warning: DiscoveryResult["warnings"][number],
-): string {
+function renderWarningLabel(warning: DiscoveryResult["warnings"][number]): string {
   const layer = warning.layer === undefined ? "" : ` ${warning.layer}`;
   return `${warning.provider}${layer} ${warning.code}: ${warning.message}`;
 }
@@ -17,9 +15,7 @@ export function renderListHuman(result: DiscoveryResult): string {
     lines.push("");
 
     for (const item of result.items) {
-      lines.push(
-        `- ${item.provider} ${item.layer} ${item.category} ${item.displayName}`,
-      );
+      lines.push(`- ${item.provider} ${item.layer} ${item.category} ${item.displayName}`);
       lines.push(`  id: ${item.id}`);
       lines.push(`  enabled: ${item.enabled}`);
       lines.push(`  mutability: ${item.mutability}`);
