@@ -1,5 +1,8 @@
 # AgentScope Discovery And Safe Mutation Foundation
 
+[![CI](https://github.com/IgorArkhipov/ai-setup/actions/workflows/ci.yml/badge.svg)](https://github.com/IgorArkhipov/ai-setup/actions/workflows/ci.yml)
+[![Coverage Target](https://img.shields.io/badge/coverage%20target-lines%2Fstatements%2Ffunctions%2080%25%2B-brightgreen)](https://github.com/IgorArkhipov/ai-setup/actions/workflows/ci.yml)
+
 This directory is an isolated TypeScript sub-project.
 
 ## Provider Capability Matrix
@@ -52,4 +55,5 @@ Claude is the first provider with real dry-run, apply, and restore coverage. Cod
 ## Baseline Verification
 
 - `npm test`
+- `npm run coverage`
 - `npm run build`

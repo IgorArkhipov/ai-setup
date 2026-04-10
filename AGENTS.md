@@ -1,19 +1,36 @@
-See PROJECT.md for project description.
+# Repository Instructions
+
+See `PROJECT.md` for the project description.
 
 ## Stack
-Ruby on Rails 8, PostgreSQL 18, Minitest, Sidekiq, Redis
 
-## Key commands
-- `bin/setup` — bootstrap
-- `bin/rails s` — run server
-- `bundle exec rspec` — run tests
-- `bin/rails db:migrate` — migrate
+TypeScript, Node.js 25.9+, Vitest, GitHub Actions
+
+## Project Layout
+
+- `tools/agentscope` contains the actual application code, tests, and npm package metadata
+- `.github/workflows/ci.yml` is the canonical CI workflow for the repository
+- Root-level `docs/` and `memory-bank/` directories are project planning and reference material
+
+## Key Commands
+
+Run these from `tools/agentscope`:
+
+- `npm ci` - install dependencies
+- `npm test` - run the Vitest suite
+- `npm run coverage` - run tests with coverage reporting and thresholds
+- `npm run build` - compile `src/` into `dist/`
 
 ## Conventions
-- Standard Rails MVC, Comand pattern, no service objects apart from external API clients
-- Minitest for tests, FactoryBot for fixtures
-- No new gems without explicit request
+
+- Keep production code in `src/` and tests in `test/`
+- Follow the existing ESM and strict TypeScript style already used in `tools/agentscope`
+- Prefer fixture-backed tests for provider discovery, CLI, and mutation behavior
+- Do not hand-edit `dist/`; regenerate it from source with `npm run build`
+- Update CI and README documentation when commands, coverage expectations, or project structure change
 
 ## Constraints
-- Don't touch existing migrations
-- Don't implement auth yet
+
+- `tools/agentscope` is the active code project
+- Keep CI changes in the existing `.github/workflows/ci.yml` unless there is a strong reason to split workflows
+- Avoid adding new dependencies unless they are required for the requested work

@@ -12,14 +12,16 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "cac": "6.7.14"
+    "cac": "7.0.0"
   },
   "devDependencies": {
     "@types/node": "^25.5.2",
-    "typescript": "5.9.3",
-    "vitest": "3.2.4"
+    "@vitest/coverage-v8": "^4.1.4",
+    "typescript": "6.0.2",
+    "vitest": "4.1.4"
   }
 }
