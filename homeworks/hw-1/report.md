@@ -15,6 +15,15 @@
 - Total post-implementation review and alignment: about 50 minutes
 - Total for Feature 001 planning + review loop: about 122 minutes
 
+### Required homework split
+
+The detailed tracked times above already include both my time and the agent's time. They are extracted into the homework-required categories below, without adding any extra time:
+
+- Human planning time involved: about 30-40 minutes
+- Agent planning time involved: about 15-25 minutes
+- Human implementation time involved: about 10-15 minutes
+- Agent implementation time involved: about 50-55 minutes
+
 ### Post-implementation review and alignment
 
 Feature 001 needed a real post-implementation phase after the initial brief, spec, and plan work. That phase surfaced behavior that had to be made explicit in the implementation and then written back into `memory-bank/features/001/spec.md` and `plan.md` so the design and implementation docs matched the verified result.
@@ -34,6 +43,13 @@ Main clarifications discovered after implementation:
 - Partial-success behavior needed to be stated at provider-slice level, not only at whole-provider level: one provider can still contribute healthy items from one slice while warning on another slice.
 - `appStateRoot` needed clarification: it is part of AgentScope config and path handling in this feature, but not a provider discovery root.
 - Review added meaningful verification coverage, not just cosmetic clean-up: CLI misuse tests, JSON partial-success and empty-state checks, path coverage for app-state resolution, and provider scan-failure preservation tests.
+
+### Final evaluation of the agent result
+
+- Final quality assessment: good, about 8/10 after review and correction.
+- How close the generated planning documents were: the brief was close to the real need, and the spec and plan were directionally correct, but they left several implementation-defining details implicit.
+- What still had to be addressed during implementation and review: exact CLI flags and invalid-usage behavior, fixture roots, `doctor` exit semantics, provider-slice partial-success rules, `appStateRoot` classification, and additional verification coverage.
+- Bottom line: the agent produced a strong first pass and a good final result, but it still depended on review to turn implicit assumptions into explicit contracts.
 
 ### Prompt changes needed in `docs/`
 
@@ -146,9 +162,18 @@ Task 3 plan/code conflict:
 
 These numbers are approximate and based on the observed preparation window for `memory-bank/features/002/brief.md`, `spec.md`, and `plan.md`, plus the follow-up review and correction loop on the plan.
 
+### Required homework split
+
+The detailed tracked times above already include both my time and the agent's time. They are extracted into the homework-required categories below, without adding any extra time:
+
+- Human planning time involved: about 30-40 minutes
+- Agent planning time involved: about 5-15 minutes
+- Human implementation time involved: about 10-15 minutes
+- Agent implementation time involved: about 100-105 minutes
+
 ### Post-implementation review and alignment
 
-Feature 002 also needed a real post-implementation phase after the initial brief, spec, and plan work. That phase materially changed the final documented design. The biggest value was was tightening safety-critical execution semantics and then writing those clarified semantics back into `memory-bank/features/002/spec.md` and `plan.md` so the docs matched the verified implementation.
+Feature 002 also needed a real post-implementation phase after the initial brief, spec, and plan work. That phase materially changed the final documented design. The biggest value was tightening safety-critical execution semantics and then writing those clarified semantics back into `memory-bank/features/002/spec.md` and `plan.md` so the docs matched the verified implementation.
 
 What the post-implementation phase covered:
 
@@ -166,6 +191,13 @@ Main clarifications discovered after implementation:
 - Structured `--json` output needed to cover early validation failures too, not only happy-path or later blocked states.
 - The dry-run contract needed more precise wording: read-only for provider-managed state, with no backup or audit entries, while still allowing AgentScope to initialize its own state directories.
 - Review added meaningful coverage rather than just polish: stale-lock reclaim, rollback-failure surfacing, restore rollback, persisted backup reload, `--apply` no-op behavior, blob-id validation, and SQLite identifier validation.
+
+### Final evaluation of the agent result
+
+- Final quality assessment: good, about 7/10 after review and correction.
+- How close the generated planning documents were: the brief captured the problem well, but the first spec and plan drafts were only moderately close to the final implementation because several safety-critical execution rules were still implicit.
+- What still had to be addressed during implementation and review: audit timing, guarded-apply failure classification, rollback semantics for apply and restore, `--json` validation failures, dry-run scope, runtime constraints, selector uniqueness, and test injection details.
+- Bottom line: the final result is solid, but this feature showed that the agent was weaker on safety-critical detail than on high-level structure.
 
 ### Prompt changes needed in `docs/`
 
@@ -275,6 +307,15 @@ For Feature 002, the biggest source of churn was not unclear product scope. It w
 
 These numbers are approximate and based on the observed feature-003 planning and review loop around `memory-bank/features/003/brief.md`, `spec.md`, and `plan.md`.
 
+### Required homework split
+
+The detailed tracked times above already include both my time and the agent's time. They are extracted into the homework-required categories below, without adding any extra time:
+
+- Human planning time involved: about 30-40 minutes
+- Agent planning time involved: about 45-55 minutes
+- Human implementation time involved: about 10-15 minutes
+- Agent implementation time involved: about 75-80 minutes
+
 ### Post-implementation review and alignment
 
 Feature 003 also needed a real post-implementation phase after the initial brief, spec, and plan work. That phase did not change the feature goal, but it did change the final documented contract. The biggest value came from reviewing the implementation against `memory-bank/features/003/spec.md` and `plan.md`, fixing the issues found during review, and then writing the verified behavior back into the feature docs so they matched the shipped implementation rather than the earlier planning assumptions.
@@ -296,6 +337,13 @@ Main clarifications discovered after implementation:
 - Claude fixture validation needed to match runtime parsing strictness, especially for non-boolean `enabledPlugins` values.
 - Final verified tool coverage was broader than the original minimum and needed to be written back into the docs: apply and restore are verified for both project and global Claude tools.
 - The feature docs needed a final alignment pass so `spec.md` and `plan.md` reflected the shipped scope: project-only Claude skills, canonical configured-MCP behavior, stricter CLI validation, and review-driven hardening.
+
+### Final evaluation of the agent result
+
+- Final quality assessment: good, about 8/10 after review and correction.
+- How close the generated planning documents were: the brief was good, and the spec and plan were closer to the shipped result than in Feature 002, but they still missed some provider-specific lifecycle and data-shape details that became important during implementation.
+- What still had to be addressed during implementation and review: disabled-item lifecycle, real layer scope, provider-native approval-map shape, mutation preconditions, vault-path identity rules, malformed persisted-state handling, stricter fixture validation, and broader acceptance coverage.
+- Bottom line: the agent produced a good final result and improved relative to the earlier features, but it still needed review to make provider-specific contracts fully explicit.
 
 ### Prompt changes needed in `docs/`
 
