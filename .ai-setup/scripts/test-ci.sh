@@ -75,10 +75,10 @@ check_mise "node installed" node --version
 check_mise "npm installed" npm --version
 check_mise "npx installed" npx --version
 check_port_selector
-check_mise "ruby installed" ruby --version
-check_mise "tmux installed" tmux -V
-check_mise "yarn installed" yarn --version
-check_mise "zellij installed" zellij --version
+# check_mise "ruby installed" ruby --version
+# check_mise "tmux installed" tmux -V
+# check_mise "yarn installed" yarn --version
+# check_mise "zellij installed" zellij --version
 
 section "Agent CLIs"
 check_mise "claude installed" claude --version

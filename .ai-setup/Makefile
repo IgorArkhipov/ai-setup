@@ -41,18 +41,18 @@ version:
 	fi
 
 check:
-	@VERSION=$(VERSION) ./scripts/test-setup.sh
+	@VERSION=$(VERSION) ./.ai-setup/scripts/test-setup.sh
 
 extra-check:
 	@CLAUDE_MARKETPLACE_NAMES="$(CLAUDE_MARKETPLACE_NAMES)" \
 	CLAUDE_EXPECTED_PLUGINS="$(CLAUDE_PLUGINS)" \
-	./scripts/test-extras.sh
+	./.ai-setup/scripts/test-extras.sh
 
 check-context:
-	@./scripts/test-context.sh
+	@./.ai-setup/scripts/test-context.sh
 
 codex-context:
-	@./scripts/codex-context.sh
+	@./.ai-setup/scripts/codex-context.sh
 
 mise-package:
 	@set -e; \
