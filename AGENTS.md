@@ -31,6 +31,7 @@ Run these from `tools/agentscope`:
 - Prefer fixture-backed tests for provider discovery, CLI, and mutation behavior
 - Do not hand-edit `dist/`; regenerate it from source with `npm run build`
 - Update CI and README documentation when commands, coverage expectations, or project structure change
+- For feature-document workflows, use `docs/skills/README.md` and the focused docs in `docs/skills/` when generating or reviewing `brief`, `spec`, and `plan` documents
 
 ## Constraints
 
