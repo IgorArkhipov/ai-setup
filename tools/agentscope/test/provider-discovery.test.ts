@@ -117,15 +117,45 @@ describe("provider discovery", () => {
       "claude:global:tool:settings:safe-shell",
       "claude:global:tool:settings:demo-formatter",
       "claude:global:tool:settings-local:project-auditor",
-      "claude:project:tool:settings:github",
-      "claude:project:configured-mcp:settings:enabled:github",
-      "claude:project:tool:settings-local:local-shell",
-      "claude:project:configured-mcp:settings-local:enabled:github",
-      "claude:project:configured-mcp:settings-local:disabled:legacy-local",
-      "claude:project:configured-mcp:settings-local:all-project-mcp-servers",
       "claude:project:skill:example-claude-skill",
-      "claude:project:configured-mcp:mcp-json:github",
+      "claude:project:configured-mcp:github",
+      "claude:project:configured-mcp:all-project-mcp-servers",
+      "claude:project:tool:settings:github",
+      "claude:project:tool:settings-local:local-shell",
     ]);
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "claude:project:skill:example-claude-skill",
+        enabled: true,
+        mutability: "read-write",
+        sourcePath: path.join(
+          sandbox.projectRoot,
+          ".claude",
+          "skills",
+          "example-claude-skill",
+          "SKILL.md",
+        ),
+        statePath: path.join(
+          sandbox.projectRoot,
+          ".claude",
+          "skills",
+          "example-claude-skill",
+        ),
+      }),
+    );
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "claude:project:configured-mcp:github",
+        enabled: true,
+        mutability: "read-write",
+        sourcePath: path.join(sandbox.projectRoot, ".mcp.json"),
+        statePath: path.join(
+          sandbox.projectRoot,
+          ".claude",
+          "settings.local.json",
+        ),
+      }),
+    );
   });
 
   it("turns malformed Claude files into warnings", () => {

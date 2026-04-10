@@ -6,7 +6,7 @@ This directory is an isolated TypeScript sub-project.
 
 | Provider | Skills | Configured MCPs | Tools / Extensions | Reality check |
 | --- | --- | --- | --- | --- |
-| Claude Code | read-only | read-only | read-only | Fixture covers Claude settings JSON, project `.mcp.json`, and project `.claude/skills/*/SKILL.md`. |
+| Claude Code | read-write | read-write | read-write | Verified end-to-end against fixture sandboxes for project skills, project `.mcp.json` approvals, and settings-file tools. |
 | Codex | read-only | read-only | read-only | Fixture covers `config.toml` plugin and `mcp_servers` sections plus global and project skill roots. |
 | Cursor | read-only | read-only | read-only | Fixture covers `~/.cursor/skills-cursor`, `~/.cursor/mcp.json`, and profile `extensions.json` metadata. |
 
@@ -18,7 +18,7 @@ Sanitized examples live under `test/fixtures/` and are intentionally narrow. The
 
 - `node dist/cli.js providers`
 - `node dist/cli.js doctor --project-root <path> --app-state-root <path> --cursor-root <path>`
-- `node dist/cli.js list [--json] --project-root <path> --app-state-root <path> --cursor-root <path>`
+- `node dist/cli.js list [--json] [--provider <id>] [--layer <global|project|all>] --project-root <path> --app-state-root <path> --cursor-root <path>`
 - `node dist/cli.js toggle --provider <id> --kind <kind> --id <id> --layer <layer> [--json] [--apply] --project-root <path> --app-state-root <path> --cursor-root <path>`
 - `node dist/cli.js restore <backup-id> [--json] --project-root <path> --app-state-root <path> --cursor-root <path>`
 
@@ -36,6 +36,9 @@ AgentScope persists guarded mutation state under `appStateRoot`:
 - `backups/<backup-id>/manifest.json`
 - `backups/<backup-id>/blobs/*.bin`
 - `audit/log.jsonl`
+- `vault/<provider>/<layer>/<kind>/<safe-item-id>/entry.json` where `safe-item-id` is the URI-encoded item id
+- `vault/<provider>/<layer>/<kind>/<safe-item-id>/payload/` for path-backed entries
+- `vault/<provider>/<layer>/<kind>/<safe-item-id>/payload.json` for JSON-payload entries
 
 Successful apply writes create a backup manifest and append an audit event. Restore keeps the backup in place and appends a restore event. Dry runs and explicit no-ops do not create backups or audit entries.
 
@@ -44,7 +47,7 @@ Successful apply writes create a backup manifest and append an audit event. Rest
 - Minimum supported Node runtime: `>=25.9.0`
 - SQLite-backed mutations use the built-in `node:sqlite` module
 
-The shared mutation engine is ready for dry-run, apply, and restore flows, but Claude, Codex, and Cursor still return deterministic blocked decisions for real items until provider-specific write planning lands in a later feature.
+Claude is the first provider with real dry-run, apply, and restore coverage. Codex and Cursor still expose discovery-only inventory while provider-specific write planning remains unimplemented.
 
 ## Baseline Verification
 

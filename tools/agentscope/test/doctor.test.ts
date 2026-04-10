@@ -87,6 +87,13 @@ describe("doctor and providers commands", () => {
     expect(output.indexOf("Codex (codex)")).toBeLessThan(
       output.indexOf("Cursor (cursor)"),
     );
-    expect(output).toContain("skills:          read-only");
+    expect(output).toContain("Claude Code (claude)");
+    expect(output).toContain("Codex (codex)");
+    expect(output).toContain("Cursor (cursor)");
+    expect(output).toContain("skills:          verified");
+    expect(output).toContain("configured MCPs: verified");
+    expect(output).toContain("tools/extensions: verified");
+    expect(output).toContain("configured MCPs: read-only");
+    expect(output).toContain("tools/extensions: read-only");
   });
 });

@@ -123,7 +123,7 @@ describe("runToggle", () => {
     });
   });
 
-  it("blocks real read-only selections from production providers", () => {
+  it("supports real Claude dry-run planning for project skills", () => {
     const result = runToggle({
       cwd: runtimeRoot,
       homeDir: path.join(runtimeRoot, "home"),
@@ -136,9 +136,10 @@ describe("runToggle", () => {
       id: "claude:project:skill:example-claude-skill",
     });
 
-    expect(result.exitCode).toBe(1);
-    expect(result.output).toContain("status: blocked");
-    expect(result.output).toContain("read-only:");
+    expect(result.exitCode).toBe(0);
+    expect(result.output).toContain("status: dry-run");
+    expect(result.output).toContain("rename path");
+    expect(result.output).toContain(".claude/skills/example-claude-skill");
   });
 
   it("blocks real unsupported selections from production providers", () => {

@@ -1,7 +1,17 @@
 {
   "enableAllProjectMcpServers": false,
-  "enabledMcpjsonServers": ["github"],
-  "disabledMcpjsonServers": ["legacy-local"],
+  "enabledMcpjsonServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"]
+    }
+  },
+  "disabledMcpjsonServers": {
+    "legacy-local": {
+      "command": "npx",
+      "args": ["-y", "@example/legacy-local"]
+    }
+  },
   "enabledPlugins": {
     "local-shell": false
   }

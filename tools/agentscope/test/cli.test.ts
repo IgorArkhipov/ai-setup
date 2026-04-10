@@ -82,10 +82,10 @@ describe("cli", () => {
       },
     );
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(0);
     expect(stderr).not.toHaveBeenCalled();
     expect(stdout).toHaveBeenCalledWith(
-      expect.stringContaining("status: blocked"),
+      expect.stringContaining("status: dry-run"),
     );
   });
 
@@ -115,6 +115,75 @@ describe("cli", () => {
     expect(stderr).not.toHaveBeenCalled();
     expect(stdout).toHaveBeenCalledWith(
       expect.stringContaining("backup manifest not found"),
+    );
+  });
+
+  it("routes list filters through the registered command handler", () => {
+    const stdout = vi.fn<(message: string) => void>();
+    const stderr = vi.fn<(message: string) => void>();
+
+    const exitCode = runCli(
+      [
+        "list",
+        "--provider",
+        "claude",
+        "--layer",
+        "project",
+        "--json",
+        "--project-root",
+        path.join(runtimeRoot, "project"),
+        "--app-state-root",
+        path.join(runtimeRoot, "app-state"),
+        "--cursor-root",
+        path.join(runtimeRoot, "cursor", "User"),
+      ],
+      {
+        packageRoot,
+        stdout,
+        stderr,
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).not.toHaveBeenCalled();
+    expect(JSON.parse(stdout.mock.calls[0]?.[0] ?? "")).toMatchObject({
+      items: expect.arrayContaining([
+        expect.objectContaining({
+          provider: "claude",
+          layer: "project",
+        }),
+      ]),
+      warnings: [],
+    });
+  });
+
+  it("returns non-zero for an invalid list layer filter", () => {
+    const stdout = vi.fn<(message: string) => void>();
+    const stderr = vi.fn<(message: string) => void>();
+
+    const exitCode = runCli(
+      [
+        "list",
+        "--layer",
+        "workspace",
+        "--project-root",
+        path.join(runtimeRoot, "project"),
+        "--app-state-root",
+        path.join(runtimeRoot, "app-state"),
+        "--cursor-root",
+        path.join(runtimeRoot, "cursor", "User"),
+      ],
+      {
+        packageRoot,
+        stdout,
+        stderr,
+      },
+    );
+
+    expect(exitCode).toBe(1);
+    expect(stderr).not.toHaveBeenCalled();
+    expect(stdout).toHaveBeenCalledWith(
+      "invalid layer: expected global, project, or all",
     );
   });
 });

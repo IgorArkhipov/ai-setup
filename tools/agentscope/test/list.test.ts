@@ -52,7 +52,7 @@ describe("runList", () => {
       id: "claude:global:tool:settings-local:project-auditor",
       displayName: "project-auditor",
       enabled: true,
-      mutability: "read-only",
+      mutability: "read-write",
       sourcePath: expect.stringContaining(".claude/settings.local.json"),
       statePath: expect.stringContaining(".claude/settings.local.json"),
     });
@@ -135,5 +135,68 @@ describe("runList", () => {
         code: "missing-root",
       }),
     ]);
+  });
+
+  it("filters items and warnings by provider and layer before rendering", () => {
+    const result = runList({
+      ...runtimeOptions({
+        cursorRoot: path.join(runtimeRoot, "missing-cursor", "User"),
+      }),
+      provider: "claude",
+      layer: "project",
+      json: true,
+    });
+    const parsed = JSON.parse(result.output) as {
+      items: Array<{ provider: string; layer: string; id: string }>;
+      warnings: Array<{ provider: string }>;
+    };
+
+    expect(result.exitCode).toBe(0);
+    expect(parsed.items).not.toHaveLength(0);
+    expect(parsed.items.every((item) => item.provider === "claude")).toBe(true);
+    expect(parsed.items.every((item) => item.layer === "project")).toBe(true);
+    expect(parsed.items.map((item) => item.id)).toContain(
+      "claude:project:configured-mcp:github",
+    );
+    expect(parsed.items.map((item) => item.id)).not.toContain(
+      "claude:global:tool:settings-local:project-auditor",
+    );
+    expect(parsed.warnings).toEqual([]);
+  });
+
+  it("keeps both global and project items when layer is all", () => {
+    const result = runList({
+      ...runtimeOptions(),
+      provider: "claude",
+      layer: "all",
+      json: true,
+    });
+    const parsed = JSON.parse(result.output) as {
+      items: Array<{ layer: string; id: string }>;
+      warnings: Array<{ provider: string }>;
+    };
+
+    expect(result.exitCode).toBe(0);
+    expect(parsed.items.some((item) => item.layer === "global")).toBe(true);
+    expect(parsed.items.some((item) => item.layer === "project")).toBe(true);
+    expect(parsed.items.map((item) => item.id)).toContain(
+      "claude:global:tool:settings-local:project-auditor",
+    );
+    expect(parsed.items.map((item) => item.id)).toContain(
+      "claude:project:configured-mcp:github",
+    );
+    expect(parsed.warnings).toEqual([]);
+  });
+
+  it("rejects an invalid layer filter", () => {
+    const result = runList({
+      ...runtimeOptions(),
+      layer: "workspace",
+    });
+
+    expect(result).toEqual({
+      exitCode: 1,
+      output: "invalid layer: expected global, project, or all",
+    });
   });
 });

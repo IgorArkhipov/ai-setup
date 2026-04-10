@@ -99,6 +99,8 @@ function createCli(packageRoot: string, io: CliIo) {
   cli
     .command("list", "List discovered provider items")
     .option("--json", "Render JSON output")
+    .option("--provider <id>", "Filter to one provider")
+    .option("--layer <layer>", "Filter to global, project, or all")
     .option("--project-root <path>", "Override the project root")
     .option("--app-state-root <path>", "Override the app state root")
     .option("--cursor-root <path>", "Override the Cursor root")
@@ -106,6 +108,8 @@ function createCli(packageRoot: string, io: CliIo) {
       runHandled(() =>
         runList({
           json: options.json,
+          provider: options.provider,
+          layer: options.layer,
           projectRoot: options.projectRoot,
           appStateRoot: options.appStateRoot,
           cursorRoot: options.cursorRoot,

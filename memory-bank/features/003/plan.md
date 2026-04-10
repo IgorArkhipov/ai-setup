@@ -1,5 +1,5 @@
 ---
-status: ready
+status: implemented-verified
 ---
 
 # Claude Provider End-To-End Validation Implementation Plan
@@ -14,6 +14,13 @@ status: ready
 
 ---
 
+## Verified Outcome
+
+- Feature 003 is implemented and verified in `tools/agentscope` with the full `npm test` suite and `npm run build`.
+- Claude is now the first writable provider with verified discovery, dry-run, apply, and restore coverage for project skills, project configured MCPs, and global plus project tools.
+- The final implementation includes review-driven hardening beyond the original task wording: explicit `list --layer` validation, safe handling of malformed vault directory names, explicit blocking for unsupported toggle categories, stricter Claude fixture validation for non-boolean `enabledPlugins` entries, and extra verified coverage for `--layer all` plus global Claude tool apply and restore.
+- The checkbox tasks below are preserved as the original execution script; the alignment section at the end records the verified implementation deltas that landed after review.
+
 ## Orchestration And Dependencies
 
 **Recommended pattern:** single agent, strictly sequential across Tasks 1-5.
@@ -25,9 +32,9 @@ status: ready
 - Task 4 depends on the normalized Claude settings model from Task 1 and the grounded fixture/sandbox helpers from Task 2.
 - Task 5 should run only after all Claude item kinds are writable so the README, command surface, and final acceptance suite describe the shipped behavior instead of a partial state.
 
-## Grounding
+## Original Grounding
 
-Current project state in `tools/agentscope`:
+Historical pre-implementation project state in `tools/agentscope`:
 - `src/providers/claude.ts` already resolves `~/.claude/settings.json`, `~/.claude/settings.local.json`, `<project>/.claude/settings.json`, `<project>/.claude/settings.local.json`, `<project>/.claude/skills/*/SKILL.md`, and `<project>/.mcp.json`, but it still marks every Claude item `read-only` and returns only blocked toggle plans.
 - `src/core/mutation-engine.ts`, `src/core/mutation-io.ts`, `src/core/mutation-state.ts`, `src/commands/toggle.ts`, and `src/commands/restore.ts` already handle dry-run, guarded apply, backup persistence, audit logging, and restore for generic path and JSON operations.
 - `src/commands/list.ts` and `src/cli.ts` do not yet support the `--provider` and `--layer` filters that acceptance criterion 3 expects.
@@ -558,11 +565,17 @@ git commit -m "feat: validate claude as first writable provider"
 - States, error handling, and invariants: Tasks 1, 2, 3, 4, 5
 - Acceptance criteria 1-10: Tasks 1, 3, 4, 5
 
-## Review Revisions
+## Verified Implementation Alignment
 
 - Task 1 now keeps all Claude items `read-only` while it stabilizes IDs, `statePath` values, fixture shapes, and `list` filters. Skills, configured MCPs, and tools each become `read-write` only in the task where `planToggle(...)` gains real support for that item kind.
 - The feature spec and the plan now agree that disabled project skills remain discoverable with the same stable item ID and `enabled: false` state so they can be re-enabled through the toggle flow after disable or restart.
 - Claude has no global skill discovery root in this feature, so the skill-toggle work is scoped to project skills only even though vault metadata can still retain the `layer` field for determinism.
 - Task 4 now treats `enabledMcpjsonServers` and `disabledMcpjsonServers` as object-valued maps keyed by server id and explicitly bootstraps missing files or missing approval objects before entry-level mutations run.
 - Runtime `tools/agentscope/test/fixtures/runtime/project/.mcp.json` updates are now listed anywhere configured-MCP discovery or acceptance behavior changes.
-- No further architectural blockers remain: the existing shared mutation engine already supports the path and JSON operations this feature needs, so the remaining work is provider planning, vault metadata, CLI filtering, and verification rather than engine surgery.
+- No further architectural blockers remain: the existing shared mutation engine already supports the path and JSON operations this feature needs, so the remaining work was provider planning, vault metadata, CLI filtering, and verification rather than engine surgery.
+- Review-driven follow-up changes also touched files outside the original task breakdown, including `tools/agentscope/src/providers/registry.ts`, `tools/agentscope/test/provider-capabilities.test.ts`, `tools/agentscope/test/doctor.test.ts`, and `tools/agentscope/test/fixtures/capability-matrix.json`, so fixture validation and provider summaries stay aligned with the shipped writable Claude surface.
+- `list` validation is stricter than the original draft: the final implementation supports `--layer global|project|all` and rejects invalid layer values explicitly instead of returning an empty success result.
+- Vault storage is now explicitly defined as `vault/<provider>/<layer>/<kind>/<safe-item-id>/...`, where `safe-item-id` is URI-encoded on disk. Discovery ignores malformed encoded vault directory names rather than failing the whole Claude vault slice.
+- `claude.ts` now blocks unsupported internal toggle categories explicitly instead of relying only on compile-time exhaustiveness.
+- Verified tool coverage is broader than the original Task 5 minimum: the final suite covers apply and restore for both project and global Claude tools.
+- Final verification for the shipped implementation includes `npm test`, `npm run build`, an internal code-review pass, and a Claude Code MCP review, with no remaining blocking findings after the review-driven follow-up fixes.

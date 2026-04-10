@@ -266,8 +266,36 @@ For Feature 002, the biggest source of churn was not unclear product scope. It w
 - Plan drafting: about 35 minutes
 - Plan review, fixes, and re-verification: about 30 minutes
 - Total for Brief + Spec + Plan: about 85 minutes
+- Implementation: about 15 minutes
+- Post-implementation review against `spec.md` and `plan.md`: about 20 minutes
+- External second-opinion review and follow-up fixes: about 35 minutes
+- Verification reruns and feature-doc alignment updates: about 20 minutes
+- Total post-implementation review and alignment: about 75 minutes
+- Total tracked planning + implementation + review loop for Feature 003: about 175 minutes
 
 These numbers are approximate and based on the observed feature-003 planning and review loop around `memory-bank/features/003/brief.md`, `spec.md`, and `plan.md`.
+
+### Post-implementation review and alignment
+
+Feature 003 also needed a real post-implementation phase after the initial brief, spec, and plan work. That phase did not change the feature goal, but it did change the final documented contract. The biggest value came from reviewing the implementation against `memory-bank/features/003/spec.md` and `plan.md`, fixing the issues found during review, and then writing the verified behavior back into the feature docs so they matched the shipped implementation rather than the earlier planning assumptions.
+
+What the post-implementation phase covered:
+
+- Review the implementation against the original `spec.md` and `plan.md`
+- Run an external second-opinion review
+- Fix the issues found during review
+- Re-run tests and build verification after the fixes
+- Update the feature spec and plan so they describe the verified implementation rather than the original assumptions
+
+Main clarifications discovered after implementation:
+
+- Invalid `list --layer` values needed to be part of the public contract instead of silently producing an empty successful result.
+- Vault persistence needed an explicit on-disk identity rule: vault paths use a URI-encoded safe item id.
+- Corrupted or malformed vault directory names needed defined behavior: discovery should ignore only the malformed entry rather than fail the whole Claude vault slice.
+- Unsupported internal toggle categories needed explicit blocked behavior instead of relying only on compile-time exhaustiveness.
+- Claude fixture validation needed to match runtime parsing strictness, especially for non-boolean `enabledPlugins` values.
+- Final verified tool coverage was broader than the original minimum and needed to be written back into the docs: apply and restore are verified for both project and global Claude tools.
+- The feature docs needed a final alignment pass so `spec.md` and `plan.md` reflected the shipped scope: project-only Claude skills, canonical configured-MCP behavior, stricter CLI validation, and review-driven hardening.
 
 ### Prompt changes needed in `docs/`
 
@@ -301,6 +329,10 @@ What to change in the review prompt:
 - Add a check for provider-layer claims that have no corresponding discovery root in the same spec.
 - Add a check for canonical-source ambiguity when the same item may appear in both provider-owned config and AgentScope-managed state.
 - Add a check that every mutation-oriented requirement names the preconditions needed for the planned operation shape to succeed, such as missing object containers or missing target files.
+- Add a check that every enumerated CLI flag value has explicit invalid-input behavior, not just happy-path accepted values.
+- Add a check that any persisted recovery or vault state keyed by normalized ids names its on-disk encoding rule and corrupted-entry handling.
+- Add a check that fixture-validation expectations are at least as strict as the runtime parser assumptions when fixtures are part of acceptance coverage.
+- Add a check that the spec clearly separates verified shipped behavior from future-capable abstraction, especially when the model supports more than the currently implemented flow.
 
 #### `docs/plan.md`
 
@@ -311,6 +343,10 @@ What to change in the generation prompt:
 - Require runtime acceptance fixtures to be listed separately from provider fixtures whenever CLI tests depend on both.
 - Require any spec contradiction discovered during planning to be converted into an explicit resolution step or a required spec revision, not just a note at the bottom.
 - Require plans for provider-specific toggles to state whether disabled items remain discoverable and how they are addressed for re-enable after restart.
+- Require an explicit post-implementation review and doc-alignment step so verified behavior can be written back into the feature docs after implementation.
+- Require provider-capability or fixture-validation changes to include supporting files outside the main provider module when needed, such as registry validation, provider summary tests, or capability-matrix fixtures.
+- Require acceptance coverage for every writable layer or surface declared in scope, for example project and global tool coverage if both are meant to be writable.
+- Require persisted-state handling to include malformed or corrupted entry behavior, not only happy-path storage and restore behavior.
 
 What to change in the review prompt:
 
@@ -318,6 +354,10 @@ What to change in the review prompt:
 - Add a check for hidden mutation prerequisites, especially entry-level JSON mutations that assume parent objects already exist.
 - Add a check that every runtime fixture touched by acceptance tests appears in the task file lists, not only the provider fixture tree.
 - Add a check that review notes have been resolved into executable steps rather than left as commentary that implementers must interpret themselves.
+- Add a check that the plan includes an explicit place to record post-review implementation clarifications instead of leaving the original plan as the only source of truth.
+- Add a check that every writable surface declared in scope is actually covered by acceptance tests, including layer variants like project versus global.
+- Add a check that provider-validation changes pull in all affected verification surfaces, including fixture validators, capability summaries, and command-level tests.
+- Add a check that persisted-state handling covers malformed on-disk entries and specifies whether they are ignored, warned on, or fatal.
 
 ### Missing information in `memory-bank/features/003`
 

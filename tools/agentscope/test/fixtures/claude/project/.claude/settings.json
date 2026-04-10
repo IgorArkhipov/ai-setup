@@ -2,5 +2,10 @@
   "enabledPlugins": {
     "github": true
   },
-  "enabledMcpjsonServers": ["github"]
+  "enabledMcpjsonServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"]
+    }
+  }
 }

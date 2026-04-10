@@ -1,5 +1,7 @@
+import { cpSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
   listProviders,
   loadCapabilityMatrix,
@@ -7,6 +9,16 @@ import {
 } from "../src/providers/registry.js";
 
 const fixturesRoot = path.resolve(import.meta.dirname, "fixtures");
+const tempRoots: string[] = [];
+
+afterEach(() => {
+  while (tempRoots.length > 0) {
+    const root = tempRoots.pop();
+    if (root !== undefined) {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }
+});
 
 describe("provider-capabilities", () => {
   it("loads the capability matrix for all tracked providers", () => {
@@ -43,5 +55,30 @@ describe("provider-capabilities", () => {
     );
 
     expect(matrixProviderIds).toEqual(providerIds);
+  });
+
+  it("rejects Claude fixture plugin values that are not booleans", () => {
+    const tempRoot = mkdtempSync(path.join(os.tmpdir(), "agentscope-fixtures-"));
+    tempRoots.push(tempRoot);
+    cpSync(fixturesRoot, tempRoot, { recursive: true });
+    writeFileSync(
+      path.join(tempRoot, "claude", "global", "settings.json"),
+      JSON.stringify(
+        {
+          enabledPlugins: {
+            "safe-shell": "yes",
+          },
+        },
+        null,
+        2,
+      ),
+      "utf8",
+    );
+
+    expect(validateProviderFixtures(tempRoot).issues).toContainEqual({
+      providerId: "claude",
+      relativePath: "claude/global/settings.json",
+      message: "enabledPlugins.safe-shell must be a boolean",
+    });
   });
 });

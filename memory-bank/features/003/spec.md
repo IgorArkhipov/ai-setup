@@ -1,20 +1,27 @@
 ---
-status: ready
+status: implemented-verified
 ---
 
 # Spec: First End-To-End Provider Validation With Claude
 
 Brief: [Feature 003 brief](./brief.md)
 
+## Verified Outcome
+
+- Feature 003 is implemented and verified in `tools/agentscope`.
+- The verified implementation covers project Claude skills, project configured MCPs, and global plus project Claude tools.
+- Review-driven hardening is part of the accepted feature surface: invalid `list --layer` input now fails explicitly, malformed vault directory names are ignored safely during discovery, unsupported toggle categories block explicitly, and Claude fixture validation now rejects non-boolean `enabledPlugins` entries.
+- Verification for the accepted implementation includes `npm test`, `npm run build`, a code-review pass, and a Claude Code MCP review with no remaining blocking findings.
+
 ## Scope
 
 In scope:
 - Verify the Claude provider as the first fully validated AgentScope integration.
-- Claude discovery across skills, configured MCPs, and tools in both global and project layers.
-- Claude toggle planning with correct structured plans for each supported item kind.
-- Shared hidden backup/vault primitives for skill toggles.
-- Claude skill toggles via the vault flow for both global and project scopes.
-- Claude configured MCP and tool toggles via Claude settings JSON mutations.
+- Claude discovery across project-local skills, project configured MCPs, and global plus project tools.
+- Claude toggle planning with correct structured plans for each verified supported item kind.
+- Shared hidden backup/vault primitives for skill toggles, with deterministic metadata for both path-backed and JSON-payload entry shapes.
+- Claude skill toggles via the vault flow for project scope.
+- Claude configured MCP toggles via project Claude settings JSON mutations and Claude tool toggles via global or project Claude settings JSON mutations.
 - End-to-end verification: discover, plan, apply, verify, restore, verify.
 
 Out of scope:
@@ -55,10 +62,10 @@ Vault operations must:
 - move a file or directory from a live provider path into an AgentScope-managed vault location under the app-state root
 - preserve metadata (original path, provider, kind, layer, item ID) to make the operation deterministic and reversible
 - restore the original file or directory from the vault to the live provider path when re-enabling
-- work for whole directories (skills) and extracted config payloads (configured MCP definitions)
+- work for whole directories (skills) in the verified Claude flow, while the serialized vault-entry model also preserves a deterministic JSON-payload shape for future payload-backed uses
 - integrate with the existing backup manifest, advisory locking, and audit-log infrastructure
 
-Vault entries must remain restorable across process restarts until explicitly cleaned up.
+Vault entries must remain restorable across process restarts until explicitly cleaned up. Vault paths are derived from a URI-encoded safe item id under `appStateRoot/vault/...`.
 
 ### 4. Claude skill toggles
 
@@ -98,7 +105,7 @@ At least one Claude flow must be verified end-to-end:
 
 This verification must cover at least one configured MCP toggle and at least one skill toggle.
 
-The shared mutation engine must handle Claude provider plans without Claude-specific code in the engine itself.
+The shared mutation engine must handle Claude provider plans without Claude-specific code in the engine itself. The verified implementation also covers tool apply and restore for Claude settings-backed tools.
 
 ## States and error handling
 
@@ -118,15 +125,16 @@ Restore success: backup entry valid, advisory lock acquired, original Claude sta
 
 No-op: the requested target state already matches; command prints `no-op` and exits `0`.
 
-Blocked: the item is `read-only`, `unsupported`, unknown, or ambiguous; or fingerprint drifted; or lock unavailable; or vault entry missing for re-enable. Command exits non-zero without partial mutation.
+Blocked: the item is `read-only`, `unsupported`, unknown, or ambiguous; or fingerprint drifted; or lock unavailable; or vault entry missing for re-enable. Unsupported internal toggle categories must also block explicitly instead of returning no plan. Command exits non-zero without partial mutation.
 
-Fatal-error: invalid CLI usage; command exits non-zero without partial results.
+Fatal-error: invalid CLI usage, including an invalid `list --layer` value; command exits non-zero without partial results.
 
 Condition handling:
 - Unreadable or malformed Claude settings file: discovery emits a provider-scoped warning and continues for other slices.
 - Missing vault entry on re-enable: toggle is blocked with an explicit reason.
 - Missing Claude skills root: skill discovery returns zero items without a warning.
 - Absent `.mcp.json`: configured MCP discovery returns zero items without a warning.
+- Malformed vault directory names under the Claude vault slice: discovery ignores only the malformed entry and still loads healthy vault entries.
 
 ## Invariants
 
@@ -138,6 +146,7 @@ Condition handling:
 - Fingerprint drift blocks apply instead of guessing over concurrent user changes.
 - Failed mutation attempts do not leave Claude-managed files partially written.
 - Vault entries remain restorable across process restarts.
+- Vault paths use a URI-encoded safe item id so on-disk storage remains deterministic for stable discovery ids.
 - Claude toggle plans respect layer boundaries: a project-scoped item is toggled in project-scoped config, never global config.
 
 ## Implementation constraints
@@ -152,11 +161,18 @@ Condition handling:
 
 1. Claude discovery returns normalized items for skills, configured MCPs, and tools with correct `kind`, `category`, `layer`, `mutability`, `enabled`, `sourcePath`, and `statePath`.
 2. Claude items have stable IDs across repeated discovery runs when the underlying provider files have not changed.
-3. `agentscope list --provider claude --layer all --json` returns Claude items across both layers with a separate `warnings` array.
+3. `agentscope list --provider claude --layer all --json` returns Claude items across both layers with a separate `warnings` array, and invalid `--layer` values fail explicitly.
 4. `agentscope toggle claude skill <id> --layer project` without `--apply` prints a dry-run plan showing the vault move operation without mutating files. With `--apply`, it moves the skill directory into the vault, creates a backup, and returns a backup ID. Re-running discovery after disable shows the same skill ID with `enabled: false`; after restoring the backup, discovery shows the skill as present and enabled.
 5. `agentscope toggle claude mcp <id> --layer project --apply` mutates Claude settings JSON to toggle the configured MCP state, creates a backup, and returns a backup ID. Re-running discovery reflects the new state; after restoring, the original state is recovered.
-6. Claude tool toggles produce `replaceJsonValue` operations that set the tool's key in `enabledPlugins` to `false` (disable) or `true` (enable).
+6. Claude tool toggles produce `replaceJsonValue` operations that set the tool's key in `enabledPlugins` to `false` (disable) or `true` (enable), and the verified suite covers apply and restore for both project and global Claude tools.
 7. A `read-only` or `unsupported` Claude item cannot be applied and produces a non-zero exit with the blocking reason.
 8. If the current file fingerprint drifts between planning and apply, the mutation aborts and leaves Claude config unchanged.
 9. Vault entries persist across process restarts and remain restorable until explicitly cleaned up.
-10. Automated tests cover the full discover, plan, apply, verify, restore, verify cycle for at least one Claude configured MCP and at least one Claude skill.
+10. Automated tests cover the full discover, plan, apply, verify, restore, verify cycle for at least one Claude configured MCP and at least one Claude skill, with additional verified apply and restore coverage for Claude tools.
+
+## Verified Implementation Notes
+
+- Project-local Claude skills are the only skill discovery and vault-toggle surface in this feature. Global Claude skills are intentionally out of scope in the shipped implementation.
+- Configured MCP discovery is canonicalized from project `.mcp.json` plus Claude approval objects; tool discovery remains settings-backed in both global and project layers.
+- The final implementation tightened CLI and fixture validation beyond the original draft by rejecting invalid `list --layer` values and rejecting non-boolean `enabledPlugins` entries in Claude fixture validation.
+- Review-driven coverage additions now lock the clarified behavior in tests, including `--layer all`, invalid layer handling, malformed vault directory handling, explicit unknown-category blocking, and global Claude tool apply and restore.

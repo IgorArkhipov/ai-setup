@@ -5,10 +5,15 @@ import { acquireMutationLock } from "../src/core/mutation-lock.js";
 import { loadBackup } from "../src/core/mutation-state.js";
 import { runRestore } from "../src/commands/restore.js";
 import { runToggle } from "../src/commands/toggle.js";
+import { createClaudeSandbox } from "./support/claude-sandbox.js";
 import { createMutationSandbox } from "./support/mutation-sandbox.js";
 import { fakeToggleIds, fakeToggleProvider } from "./support/fake-toggle-provider.js";
 
-const sandboxes: Array<ReturnType<typeof createMutationSandbox>> = [];
+type RestoreSandbox =
+  | ReturnType<typeof createMutationSandbox>
+  | ReturnType<typeof createClaudeSandbox>;
+
+const sandboxes: RestoreSandbox[] = [];
 
 afterEach(() => {
   while (sandboxes.length > 0) {
@@ -16,7 +21,7 @@ afterEach(() => {
   }
 });
 
-function fakeOptions(sandbox: ReturnType<typeof createMutationSandbox>) {
+function fakeOptions(sandbox: RestoreSandbox) {
   return {
     cwd: sandbox.projectRoot,
     homeDir: sandbox.homeDir,
@@ -153,5 +158,29 @@ describe("runRestore", () => {
       output: expect.stringContaining("lock-contention"),
     });
     lock.release();
+  });
+
+  it("restores a real Claude skill backup", () => {
+    const sandbox = createClaudeSandbox();
+    sandboxes.push(sandbox);
+
+    const applied = runToggle({
+      ...fakeOptions(sandbox),
+      provider: "claude",
+      kind: "skill",
+      layer: "project",
+      id: "claude:project:skill:example-claude-skill",
+      apply: true,
+      now: () => new Date("2026-04-09T12:00:00.000Z"),
+      generateBackupId: () => "backup-claude-skill",
+    });
+    expect(applied.exitCode).toBe(0);
+
+    const restored = runRestore({
+      ...fakeOptions(sandbox),
+      backupId: "backup-claude-skill",
+    });
+    expect(restored.exitCode).toBe(0);
+    expect(restored.output).toContain("backup-claude-skill");
   });
 });

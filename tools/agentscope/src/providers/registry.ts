@@ -83,22 +83,30 @@ function validateClaudeSettings(raw: string, label: string): string[] {
   const doc = parseJsonObject(raw, label);
   const issues: string[] = [];
 
-  if (doc.enabledPlugins !== undefined && !isRecord(doc.enabledPlugins)) {
-    issues.push("enabledPlugins must be an object");
+  if (doc.enabledPlugins !== undefined) {
+    if (!isRecord(doc.enabledPlugins)) {
+      issues.push("enabledPlugins must be an object");
+    } else {
+      for (const [key, value] of Object.entries(doc.enabledPlugins)) {
+        if (typeof value !== "boolean") {
+          issues.push(`enabledPlugins.${key} must be a boolean`);
+        }
+      }
+    }
   }
 
   if (
     doc.enabledMcpjsonServers !== undefined &&
-    !Array.isArray(doc.enabledMcpjsonServers)
+    !isRecord(doc.enabledMcpjsonServers)
   ) {
-    issues.push("enabledMcpjsonServers must be an array");
+    issues.push("enabledMcpjsonServers must be an object");
   }
 
   if (
     doc.disabledMcpjsonServers !== undefined &&
-    !Array.isArray(doc.disabledMcpjsonServers)
+    !isRecord(doc.disabledMcpjsonServers)
   ) {
-    issues.push("disabledMcpjsonServers must be an array");
+    issues.push("disabledMcpjsonServers must be an object");
   }
 
   if (

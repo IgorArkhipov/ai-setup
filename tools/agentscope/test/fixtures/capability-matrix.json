@@ -2,9 +2,9 @@
   "version": 1,
   "providers": {
     "claude": {
-      "skills": "read-only",
-      "configuredMcps": "read-only",
-      "tools": "read-only"
+      "skills": "verified",
+      "configuredMcps": "verified",
+      "tools": "verified"
     },
     "codex": {
       "skills": "read-only",
@@ -18,7 +18,7 @@
     }
   },
   "notes": {
-    "claude": "Fixture baseline covers Claude settings JSON, project .mcp.json, and project skill roots.",
+    "claude": "Verified Claude toggles cover project skills, project .mcp.json approvals, and settings-file tools.",
     "codex": "Fixture baseline covers config.toml sections plus global and project skill roots.",
     "cursor": "Fixture baseline covers global skills, global mcp.json, and profile extension metadata."
   }
