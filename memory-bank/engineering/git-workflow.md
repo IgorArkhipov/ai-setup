@@ -2,7 +2,7 @@
 title: Git Workflow
 doc_kind: engineering
 doc_function: convention
-purpose: Template git workflow document. After copying, record the project's real branch names, commit rules, and PR expectations here.
+purpose: Repository git workflow for AgentScope changes: default branch, commit style, verification before review, and current worktree guidance.
 derived_from:
   - ../dna/governance.md
 status: active
@@ -13,26 +13,43 @@ audience: humans_and_agents
 
 ## Default Branch
 
-State explicitly which branch is considered primary: for example `main`, `master`, or a release branch.
+The repository's primary branch is `main`.
 
-## Commits
+## Branch And Commit Discipline
 
-- If the project requires issue references in commit messages, document that explicitly.
-- If auto-close keywords are allowed, list them.
-- If squash merge is required or forbidden, document that here.
+- There is no documented branch naming scheme enforced today.
+- There is no documented Conventional Commits or commitlint requirement.
+- Use short, specific, imperative commit subjects that describe the actual change.
+- Keep unrelated documentation, CI, and code changes separate when that separation materially improves reviewability.
+
+Recent history in this repository follows the pattern of direct subjects such as `Add ...`, `Align ...`, and `Adopt ...`; keep that tone unless the project later documents a stricter convention.
 
 ## Pull Requests
 
-- Before opening a PR, the project's canonical local checks should be green.
-- The PR title should be short and specific.
-- The PR body should usually record: what changed, how it was verified, and any remaining risks or manual steps.
+Before opening a PR for `tools/agentscope`, run the relevant local verification from `tools/agentscope`.
+
+Required baseline for most package changes:
+
+```bash
+npm run lint
+npm test
+npm run coverage
+npm run build
+```
+
+PR expectations:
+
+- the title is short and specific;
+- the body records what changed, how it was verified, and any remaining risks;
+- if command contracts, config paths, mutation behavior, or CI expectations changed, the PR also updates `tools/agentscope/README.md`, `memory-bank/`, and `.github/workflows/ci.yml` as needed;
+- do not rely on a local green run if GitHub Actions `CI` disagrees.
 
 ## Worktrees
 
-If the project uses worktrees, document:
+The repository does not currently define a specialized worktree workflow.
 
-- where they are created;
-- whether a bootstrap script is required after `git worktree add`;
-- which directories are forbidden as temporary work locations.
+If a worktree is used anyway:
 
-If worktrees are not used, this section can be removed during adaptation.
+- bootstrap it the same way as a normal checkout;
+- run package commands from `tools/agentscope`;
+- do not treat generated output such as `dist/` as a worktree-specific scratch area.

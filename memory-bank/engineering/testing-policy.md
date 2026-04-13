@@ -2,7 +2,7 @@
 title: Testing Policy
 doc_kind: engineering
 doc_function: canonical
-purpose: Describes the repository testing policy: required test case design, automated regression coverage requirements, and allowed manual-only gaps.
+purpose: Canonical testing policy for the `tools/agentscope` package: required automated coverage, fixture strategy, local verification commands, and the narrow cases where manual checks may supplement automation.
 derived_from:
   - ../dna/governance.md
   - ../flows/feature-flow.md
@@ -23,96 +23,139 @@ audience: humans_and_agents
 
 # Testing Policy
 
-## Project Adaptation
+## Scope
 
-After copying the template, fill in the project-specific testing stack:
+`tools/agentscope` is the active code project in this repository. Production code lives in `tools/agentscope/src/`; tests live in `tools/agentscope/test/`.
 
-- primary test framework;
-- test data strategy;
-- canonical local commands;
-- required CI jobs;
-- allowed manual-only exceptions.
+The package is a local CLI with fixture-backed provider discovery and guarded mutation logic. The testing policy therefore favors deterministic file fixtures and temporary sandboxes over live provider state.
 
-Example wording:
+## Canonical Test Stack
 
-- **Framework:** `pytest`, `rspec`, `go test`, `vitest`
-- **Data:** fixtures / factories / builders / seeded test database
-- **Local commands:** `make test`, `npm test`, `bundle exec rspec`
-- **CI jobs:** `unit`, `integration`, `e2e`
+- framework: `vitest`
+- runtime: Node.js test environment
+- coverage provider: V8 via `@vitest/coverage-v8`
+- committed test data: `tools/agentscope/test/fixtures/`
+- ephemeral write targets: temp directories and runtime sandboxes created during tests
+
+Coverage thresholds are defined in `tools/agentscope/vitest.config.ts` and currently require at least:
+
+- statements: `80`
+- branches: `71`
+- functions: `80`
+- lines: `80`
 
 ## Core Rules
 
-- Any behavior change that can be tested deterministically must receive automated regression coverage.
-- Any new or changed contract must receive contract-level automated verification.
-- Any bug fix must add a regression test for the reproducible scenario.
-- Required automated tests only close risk if they pass both locally and in CI.
-- Manual-only verification is allowed only as an explicit exception and must not replace automation where automation is realistic.
+- Any deterministic behavior change in `src/` must receive automated regression coverage in `test/`.
+- Any command-surface change must cover both exit behavior and rendered output when the output contract changes.
+- Any provider discovery change must update fixture-backed coverage for the affected provider roots, warnings, and normalized item shape.
+- Any guarded mutation, backup, audit, lock, or restore change must add or update automated tests for the affected safety path.
+- Any bug fix must include a regression test for the reproduced scenario.
+- Manual inspection of live provider state is not a substitute for fixture-backed automated coverage.
 
-## Ownership Split
+## Relationship To Feature Documents
 
-- The canonical test cases for a delivery unit are defined in `feature.md` via `SC-*`, feature-specific `NEG-*`, `CHK-*`, and `EVID-*`.
-- `implementation-plan.md` owns only the execution strategy: which test surfaces will be added or updated, and which gaps remain temporarily manual-only and why.
+Canonical lifecycle gates and identifier rules live in [../flows/feature-flow.md](../flows/feature-flow.md). This policy defines repository-wide testing expectations; feature documents define the delivery-unit-specific test inventory, and `feature-flow.md` defines when those testing artifacts must exist.
+
+- In the target feature-package model, `feature.md` owns the canonical test cases for one delivery unit through `SC-*`, feature-specific `NEG-*`, `CHK-*`, and `EVID-*`.
+- `implementation-plan.md` owns only the execution strategy: which suites or checks will be added, which verification surfaces are affected, and which gaps remain temporarily manual-only and why.
+- During the current migration period, existing legacy packages still use `spec.md` as the nearest canonical feature-intent document and `plan.md` as the execution document. Treat that pair as the temporary equivalent of `feature.md` and `implementation-plan.md` for test-case ownership.
+- Repository-level engineering policy must not redefine feature scope or acceptance criteria; it only constrains how those feature-specific checks are verified.
 
 ## Feature Flow Expectations
 
-Canonical lifecycle gates live in [../flows/feature-flow.md](../flows/feature-flow.md):
+Use [../flows/feature-flow.md](../flows/feature-flow.md) as the source of truth for lifecycle timing. The summary below is intentionally limited to testing-relevant gates.
 
-- by `Design Ready`, `feature.md` already records the test case inventory;
-- by `Plan Ready`, `implementation-plan.md` contains a `Test Strategy` with planned automated coverage and manual-only gaps;
-- by `Done`, required tests are added, local commands are green, and CI does not contradict local verification.
+- By `Design Ready`, the canonical feature-intent document already records the test case inventory and traceability for the slice.
+- By `Plan Ready`, the execution document records the test strategy: automated coverage surfaces, required local and CI suites, and any manual-only gaps with rationale.
+- By `Done`, automated tests for the changed behavior are added or updated, local verification is green, and CI does not contradict the recorded evidence.
+
+## Repository-Specific Coverage Expectations
+
+- `src/commands/*`
+  Changes should usually update command-level tests such as `cli.test.ts`, `list.test.ts`, `doctor.test.ts`, `toggle.test.ts`, or `restore.test.ts`.
+- `src/providers/*`
+  Changes should usually update provider-specific discovery or capability tests and, when fixtures change, keep `doctor` fixture validation green.
+- `src/core/config.ts` and `src/core/paths.ts`
+  Changes should update config and path resolution tests rather than relying on manual CLI checks only.
+- `src/core/mutation-*`
+  Changes must cover dry-run/apply/restore behavior, backup persistence, audit logging, fingerprint drift, and rollback semantics with sandboxed writable state.
+
+## Fixture And Sandbox Discipline
+
+- Prefer committed fixtures under `tools/agentscope/test/fixtures/` for provider file shapes and discovery baselines.
+- Prefer temporary sandboxes for tests that exercise writes, locks, backup directories, or runtime drift scenarios.
+- Do not point tests at real home-directory state or real provider configuration.
+- Do not depend on `.env` files; the package is configured through JSON files and CLI flags.
+
+## CI Expectations
+
+Repository CI currently enforces:
+
+- `lint` for GitHub Actions validation, shell formatting, shell linting, and Biome checks
+- `agentscope` for package install, build, and coverage
+- `smoke-bootstrap` for repository bootstrap smoke coverage on Ubuntu and macOS
+
+For `tools/agentscope` behavior changes, the package-specific minimum is to keep the `agentscope` job green. If the change affects shell scripts, CI wiring, or bootstrap flow, `lint` and `smoke-bootstrap` are also part of the required verification surface.
+
+## Local Verification Before Handoff
+
+Run commands from `tools/agentscope`.
+
+Minimum baseline for code changes:
+
+```bash
+npm test
+npm run build
+```
+
+Required baseline when behavior, contracts, or package scripts change:
+
+```bash
+npm run lint
+npm test
+npm run coverage
+npm run build
+```
+
+When the CLI contract changes, add at least one direct CLI check against fixture or sandbox roots after building.
 
 ## What Counts As Sufficient Coverage
 
-- The main changed behavior and the nearest regression path are covered.
-- New or changed contracts, events, schemas, or integration boundaries are covered.
-- Critical failure modes from `FM-*`, bug history, or acceptance risks are covered.
-- Feature-specific negative or edge scenarios are covered when they change the verdict.
-- Line coverage percentage alone is not sufficient; scenario-level and contract-level coverage are required.
+- The changed behavior and its nearest regression path are covered.
+- The affected command or provider contract is covered at the level users consume it: exit code, normalized data, or rendered output.
+- Failure modes relevant to the change are covered, especially for discovery warnings and guarded mutation rollback paths.
+- Coverage thresholds remain green, but threshold compliance alone is not sufficient without scenario-level assertions.
 
 ## When Manual-only Verification Is Allowed
 
-- The scenario depends on live infrastructure, external systems, hardware, a nondeterministic environment, or human UI judgment.
-- Every manual-only gap must include a reason, a manual procedure, and an owner follow-up.
-- If a manual-only gap leaves a critical path without regression protection, the feature is not complete.
+Manual checks are supplemental only when they cover something the automated suite does not model well yet, for example:
+
+- a quick sanity pass of the built CLI against fixture roots;
+- validating human-readable output formatting after an output-only change;
+- confirming behavior against a disposable sandbox that is too cumbersome to encode immediately as a fixture.
+
+Manual-only verification is not sufficient for:
+
+- deterministic parsing and normalization logic;
+- command exit behavior;
+- backup, lock, audit, fingerprint, or restore safety paths;
+- regressions that can be reproduced with committed fixtures or temp sandboxes.
 
 ## Simplify Review
 
-This is a separate verification pass after functional testing. Its goal is to ensure the implementation stays minimally complex.
+After tests pass, perform a separate simplify review.
 
-- It happens after tests pass, but before the closure gate.
-- Typical findings: premature abstractions, deep nesting, duplicated logic, dead code, and overengineering.
-- Three similar lines are better than a premature abstraction. An abstraction is justified only when it materially reduces risk or repetition.
+- keep command entrypoints thin;
+- avoid duplicating provider-specific parsing in `src/core`;
+- prefer explicit local helpers over abstractions that only serve one call site;
+- preserve the current separation between command surface, core runtime, provider adapters, and verification baseline.
 
 ## Verification Context Separation
 
-Different verification phases are separate passes:
-
-1. **Functional verification** - tests pass and acceptance scenarios are covered
-2. **Simplify review** - the code is minimally complex
-3. **Acceptance test** - end-to-end verification against `SC-*`
-
-For small features these can happen in one session, but simplify review must still be performed.
-
-## Project-Specific Conventions
-
-After adapting the template, add the downstream-specific rules here. Record:
-
-- where new tests should be added;
-- which helper or setup pattern is canonical;
-- how to work with the database, mocks, and fixtures;
-- which commands the agent must run before handoff.
-
-Example:
-
-- new unit tests live in `tests/unit/` or `spec/`;
-- integration tests must cover the changed contract;
-- expensive setup should use shared fixtures or builders;
-- text assertions should not duplicate hardcoded UI copy if translations are already owned centrally.
-
-## Checklist For Template Adoption
-
-- [ ] real local test commands are documented
-- [ ] required CI suites are listed
-- [ ] the deterministic test data pattern is documented
-- [ ] manual-only exceptions are described
-- [ ] the policy does not contradict [../flows/feature-flow.md](../flows/feature-flow.md)
+1. Functional verification
+   Tests and direct CLI checks prove the changed behavior.
+2. Simplify review
+   The implementation remains minimal and respects module boundaries.
+3. Acceptance check
+   The change satisfies the intended command, provider, or mutation workflow without weakening safety guarantees.

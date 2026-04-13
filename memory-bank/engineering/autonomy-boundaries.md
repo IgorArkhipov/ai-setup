@@ -2,7 +2,7 @@
 title: Autonomy Boundaries
 doc_kind: engineering
 doc_function: canonical
-purpose: Agent autonomy boundaries: what can be done without confirmation, where supervision is required, and when to escalate.
+purpose: Agent autonomy boundaries: what can be done without confirmation, which changes require a checkpoint, and when an agent must stop and ask.
 derived_from:
   - ../dna/governance.md
 canonical_for:
@@ -17,32 +17,40 @@ audience: humans_and_agents
 
 ## Autopilot - do without confirmation
 
-- edit code within the task scope
-- run local tests and linters
-- create branches and worktrees
-- read logs, metrics, and the error tracker
-- create and update internal documentation
-- create and update documentation in the memory-bank
+- edit code and tests within the scoped task, primarily under `tools/agentscope/src/` and `tools/agentscope/test/`
+- update governed documentation in `memory-bank/` when it is part of the requested change
+- run local verification such as `npm test`, `npm run coverage`, `npm run build`, and `npm run lint`
+- add or update committed fixtures and temporary sandboxes used by the automated test suite
+- regenerate `dist/` with `npm run build` when the build output must reflect source changes
+- create local branches or worktrees when they help complete the task
 
 ## Supervision - do it, but show a checkpoint
 
-- architectural decisions, new services, and contract changes: show the plan before starting
-- database schema changes and data migrations: show the migration before running it
-- code or file deletion: show what is being removed and why
-- a PR into the default branch: show the diff and test results
-- changes to configuration, routing, or the deployment contract: show the changes
-- decomposing a task into sub-issues: show the proposed breakdown
+- architectural changes that cross the documented boundaries between command surface, core runtime, provider adapters, and verification baseline
+- new dependencies or changes that alter the package runtime surface
+- changes to `.github/workflows/ci.yml`, release expectations, or repository verification policy
+- changes to configuration precedence, config file schema, or root resolution behavior
+- changes to guarded mutation semantics such as lock acquisition, backup persistence, fingerprint drift handling, audit logging, or restore behavior
+- deleting source files, tests, fixtures, or governed documents
 
 ## Escalation - stop and ask
 
-- unclear or contradictory business requirements
-- a choice between equally valid approaches with materially different trade-offs
-- any action in production or against live data
-- sending messages to users or external counterparties
-- changes to payment, security, auth, or compliance-sensitive integrations
-- conflicting patterns in the codebase: do not guess which one is correct
-- the task clearly exceeds the issue scope: do not expand it silently
+- the task would require reading or using `.env*` files
+- requirements conflict between code and active governed docs and the correct source of truth is unclear
+- the change would touch real provider-managed local state outside fixtures or disposable sandboxes
+- the change would run `toggle --apply` or `restore` against a non-test environment
+- a provider contract, supported root, or safety boundary appears to need expansion beyond what is documented
+- two implementation approaches are both plausible and have materially different user-facing or safety trade-offs
+- the task clearly expands beyond the requested scope
+
+## Live-State Safety Rule
+
+For this repository, fixture roots and temporary sandboxes are the default execution targets.
+
+- prefer `tools/agentscope/test/fixtures/` and disposable temp directories when exercising the CLI;
+- use explicit `--project-root`, `--app-state-root`, and `--cursor-root` overrides for local checks;
+- do not inspect or mutate real home-directory provider config unless the user explicitly requests that exact action.
 
 ## Escalation Rule
 
-If feedback or errors are not decreasing after 2 or 3 iterations, the problem may not be in the code. It may be in upstream requirements, the plan, or environmental constraints. In that case, the agent should stop the loop and propose returning to the previous stage.
+If verification failures are not converging after two or three meaningful attempts, stop iterating on code alone. Re-check the upstream docs, the plan, and the environment assumptions, then surface the blocker explicitly.
