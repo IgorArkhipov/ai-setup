@@ -1,8 +1,17 @@
 ---
-status: implemented-verified
+title: "FT-002 Legacy Plan"
+doc_kind: feature
+doc_function: archive
+purpose: "Archived pre-migration execution script for FT-002. Retained for historical detail only; use `implementation-plan.md` for the governed execution document."
+derived_from:
+  - implementation-plan.md
+status: archived
+audience: humans_and_agents
 ---
 
 # Safe And Reversible Configuration Changes Implementation Plan
+
+Archived migration note: this file is retained only as the original execution script. The active governed execution document is [`implementation-plan.md`](./implementation-plan.md).
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

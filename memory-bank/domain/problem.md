@@ -62,6 +62,6 @@ The downstream system boundary is the local machine. AgentScope reads provider-o
 
 - [`../../PROJECT.md`](../../PROJECT.md) - project-level summary of AgentScope scope and boundaries.
 - [`../../tools/agentscope/README.md`](../../tools/agentscope/README.md) - current command surface, mutation-state layout, provider capability matrix, and runtime constraints.
-- [`../features/001/spec.md`](../features/001/spec.md) - verified discovery foundation and normalized item model.
-- [`../features/002/spec.md`](../features/002/spec.md) - shared guarded mutation engine, backup, audit, and restore contracts.
-- [`../features/003/spec.md`](../features/003/spec.md) - first writable Claude provider integration and current verified mutation scope.
+- [`../features/FT-001/feature.md`](../features/FT-001/feature.md) - verified discovery foundation and normalized item model.
+- [`../features/FT-002/feature.md`](../features/FT-002/feature.md) - shared guarded mutation engine, backup, audit, and restore contracts.
+- [`../features/FT-003/feature.md`](../features/FT-003/feature.md) - first writable Claude provider integration and current verified mutation scope.

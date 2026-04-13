@@ -26,7 +26,7 @@ The detailed tracked times above already include both my time and the agent's ti
 
 ### Post-implementation review and alignment
 
-Feature 001 needed a real post-implementation phase after the initial brief, spec, and plan work. That phase surfaced behavior that had to be made explicit in the implementation and then written back into `memory-bank/features/001/spec.md` and `plan.md` so the design and implementation docs matched the verified result.
+Feature 001 needed a real post-implementation phase after the initial brief, spec, and plan work. That phase surfaced behavior that had to be made explicit in the implementation and then written back into `memory-bank/features/FT-001/spec.md` and `plan.md` so the design and implementation docs matched the verified result.
 
 What the post-implementation phase covered:
 
@@ -111,7 +111,7 @@ What to change in the review prompt:
 - Add a check that each config override or path helper mentioned in the plan is traced to real usage in the feature or clearly marked as support-only.
 - Add a check that the plan contains an explicit place to record verified implementation clarifications after review instead of leaving the original plan as the only source of truth.
 
-### Missing information in `memory-bank/features/001`
+### Missing information in `memory-bank/features/FT-001`
 
 Most of the review issues came from missing or implicit information in `plan.md`, plus one shared-model gap that was only fully resolved once the plan made it explicit.
 
@@ -160,7 +160,7 @@ Task 3 plan/code conflict:
 - Total post-implementation review and alignment: about 95 minutes
 - Total tracked planning + review loop for Feature 002: about 160 minutes.
 
-These numbers are approximate and based on the observed preparation window for `memory-bank/features/002/brief.md`, `spec.md`, and `plan.md`, plus the follow-up review and correction loop on the plan.
+These numbers are approximate and based on the observed preparation window for `memory-bank/features/FT-002/brief.md`, `spec.md`, and `plan.md`, plus the follow-up review and correction loop on the plan.
 
 ### Required homework split
 
@@ -173,7 +173,7 @@ The detailed tracked times above already include both my time and the agent's ti
 
 ### Post-implementation review and alignment
 
-Feature 002 also needed a real post-implementation phase after the initial brief, spec, and plan work. That phase materially changed the final documented design. The biggest value was tightening safety-critical execution semantics and then writing those clarified semantics back into `memory-bank/features/002/spec.md` and `plan.md` so the docs matched the verified implementation.
+Feature 002 also needed a real post-implementation phase after the initial brief, spec, and plan work. That phase materially changed the final documented design. The biggest value was tightening safety-critical execution semantics and then writing those clarified semantics back into `memory-bank/features/FT-002/spec.md` and `plan.md` so the docs matched the verified implementation.
 
 What the post-implementation phase covered:
 
@@ -268,7 +268,7 @@ What to change in the review prompt:
 - Add a check that command-level tests cover early validation failures under `--json`.
 - Add a check that post-implementation review has an explicit place to record verified deviations from the original plan so the plan does not remain frozen in pre-review form.
 
-### Missing information in `memory-bank/features/002`
+### Missing information in `memory-bank/features/FT-002`
 
 Most review churn came from missing or implicit information in `spec.md` and the first draft of `plan.md`. `brief.md` was mostly fine as a problem statement, but it did not force some of the implementation-defining safety details that the later documents had to make concrete.
 
@@ -305,7 +305,7 @@ For Feature 002, the biggest source of churn was not unclear product scope. It w
 - Total post-implementation review and alignment: about 75 minutes
 - Total tracked planning + implementation + review loop for Feature 003: about 175 minutes
 
-These numbers are approximate and based on the observed feature-003 planning and review loop around `memory-bank/features/003/brief.md`, `spec.md`, and `plan.md`.
+These numbers are approximate and based on the observed feature-003 planning and review loop around `memory-bank/features/FT-003/brief.md`, `spec.md`, and `plan.md`.
 
 ### Required homework split
 
@@ -318,7 +318,7 @@ The detailed tracked times above already include both my time and the agent's ti
 
 ### Post-implementation review and alignment
 
-Feature 003 also needed a real post-implementation phase after the initial brief, spec, and plan work. That phase did not change the feature goal, but it did change the final documented contract. The biggest value came from reviewing the implementation against `memory-bank/features/003/spec.md` and `plan.md`, fixing the issues found during review, and then writing the verified behavior back into the feature docs so they matched the shipped implementation rather than the earlier planning assumptions.
+Feature 003 also needed a real post-implementation phase after the initial brief, spec, and plan work. That phase did not change the feature goal, but it did change the final documented contract. The biggest value came from reviewing the implementation against `memory-bank/features/FT-003/spec.md` and `plan.md`, fixing the issues found during review, and then writing the verified behavior back into the feature docs so they matched the shipped implementation rather than the earlier planning assumptions.
 
 What the post-implementation phase covered:
 
@@ -407,7 +407,7 @@ What to change in the review prompt:
 - Add a check that provider-validation changes pull in all affected verification surfaces, including fixture validators, capability summaries, and command-level tests.
 - Add a check that persisted-state handling covers malformed on-disk entries and specifies whether they are ignored, warned on, or fatal.
 
-### Missing information in `memory-bank/features/003`
+### Missing information in `memory-bank/features/FT-003`
 
 Most of the review churn came from missing or implicit information in the first draft of `spec.md` and `plan.md`. `brief.md` was mostly fine as a problem statement, but it did not force some of the provider-specific lifecycle and data-shape decisions that later had to become explicit.
 

@@ -35,15 +35,12 @@ See `PROJECT.md` for the project description. Do not read or use `.env*` files.
 - If you discover a documentation conflict outside the current task scope, report it as a finding instead of silently repairing it.
 - Keep links annotated and preserve two-way navigation between docs and code.
 
-## Temporary Migration Note
+## Feature Package Note
 
-- The repository is not yet fully migrated to the new feature-package format.
-- Existing `memory-bank/features/*/brief.md`, `spec.md`, and `plan.md` are legacy artifacts.
-- Until migration is complete:
-  - treat `spec.md` as the nearest canonical feature-intent document
-  - treat `plan.md` as the execution document
-  - do not create new legacy `brief/spec/plan` packages for new work
-  - prefer the target framework shape `memory-bank/features/FT-XXX/{README.md,feature.md,implementation-plan.md}` for new feature packages
+- Use the governed feature-package shape `memory-bank/features/FT-XXX/{README.md,feature.md,implementation-plan.md}`.
+- Existing `brief.md`, `spec.md`, and `plan.md` files inside a feature package are archival migration history only.
+- Treat `feature.md` as the canonical feature-intent document and `implementation-plan.md` as the execution document.
+- Do not create new legacy `brief/spec/plan` packages for new work.
 
 ## Stack
 

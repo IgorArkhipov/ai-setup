@@ -1,8 +1,17 @@
 ---
-status: ready
+title: "FT-003 Legacy Brief"
+doc_kind: feature
+doc_function: archive
+purpose: "Archived pre-migration brief for FT-003. Retained for history only; use `feature.md` for the active canonical feature contract."
+derived_from:
+  - feature.md
+status: archived
+audience: humans_and_agents
 ---
 
 # Feature 003: First End-To-End Provider Validation With Claude
+
+Archived migration note: this file is retained only as pre-migration context. The active canonical owner is [`feature.md`](./feature.md).
 
 ## What problem are we solving?
 

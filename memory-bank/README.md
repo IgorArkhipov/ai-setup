@@ -3,6 +3,17 @@ title: Documentation Index
 doc_kind: project
 doc_function: index
 purpose: Root navigation for the memory-bank. Read this first to understand the structure and the main adaptation points for the current project.
+derived_from:
+  - dna/governance.md
+  - domain/README.md
+  - prd/README.md
+  - use-cases/README.md
+  - ops/README.md
+  - engineering/README.md
+  - dna/README.md
+  - flows/README.md
+  - adr/README.md
+  - features/README.md
 status: active
 audience: humans_and_agents
 ---

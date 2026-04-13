@@ -59,7 +59,7 @@ Canonical lifecycle gates and identifier rules live in [../flows/feature-flow.md
 
 - In the target feature-package model, `feature.md` owns the canonical test cases for one delivery unit through `SC-*`, feature-specific `NEG-*`, `CHK-*`, and `EVID-*`.
 - `implementation-plan.md` owns only the execution strategy: which suites or checks will be added, which verification surfaces are affected, and which gaps remain temporarily manual-only and why.
-- During the current migration period, existing legacy packages still use `spec.md` as the nearest canonical feature-intent document and `plan.md` as the execution document. Treat that pair as the temporary equivalent of `feature.md` and `implementation-plan.md` for test-case ownership.
+- Archived legacy `brief.md`, `spec.md`, and `plan.md` files may remain inside a feature package for historical context, but the active owners are always the sibling `feature.md` and `implementation-plan.md`.
 - Repository-level engineering policy must not redefine feature scope or acceptance criteria; it only constrains how those feature-specific checks are verified.
 
 ## Feature Flow Expectations

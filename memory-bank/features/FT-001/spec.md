@@ -1,10 +1,19 @@
 ---
-status: implemented-verified
+title: "FT-001 Legacy Spec"
+doc_kind: feature
+doc_function: archive
+purpose: "Archived pre-migration spec for FT-001. Retained for detailed historical design only; use `feature.md` for the active canonical feature contract."
+derived_from:
+  - feature.md
+status: archived
+audience: humans_and_agents
 ---
 
 # Spec: Trusted Multi-Provider Discovery Foundation
 
-Brief: [Feature 001 brief](./brief.md)
+Archived migration note: this file is retained only as pre-migration detail. The active canonical owner is [`feature.md`](./feature.md).
+
+Brief: [Feature 001 legacy brief](./brief.md)
 
 ## Scope
 
