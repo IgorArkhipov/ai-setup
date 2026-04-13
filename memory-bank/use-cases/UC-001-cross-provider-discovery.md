@@ -25,7 +25,7 @@ Developer or operator using AgentScope to inspect local agent configuration.
 
 ## Trigger
 
-The actor needs to understand which supported provider items exist locally, which are enabled, and whether any provider slice is unreadable or malformed.
+The actor needs a normalized inventory of supported provider items, including enabled state and any provider-scoped warnings for unreadable or malformed slices.
 
 ## Preconditions
 
@@ -35,7 +35,7 @@ The actor needs to understand which supported provider items exist locally, whic
 
 ## Main Flow
 
-1. The actor runs an AgentScope discovery command such as `providers`, `doctor`, or `list`.
+1. The actor runs the AgentScope inventory flow, currently `agentscope list`, with any desired provider or layer filters.
 2. AgentScope inspects supported provider roots and normalizes discovered items into one common model.
 3. AgentScope returns discovered items in deterministic order together with provider-scoped warnings for any malformed or unreadable slice.
 
@@ -43,7 +43,7 @@ The actor needs to understand which supported provider items exist locally, whic
 
 - `ALT-01` A provider has no items for the requested slice; AgentScope returns an explicit empty result rather than blank output.
 - `EX-01` A provider file is malformed or unreadable; AgentScope records a warning for that provider slice while preserving healthy results from other slices.
-- `EX-02` The CLI input is invalid; AgentScope exits non-zero without printing misleading partial output.
+- `EX-02` The inventory request is invalid; AgentScope exits non-zero without printing misleading partial output.
 
 ## Postconditions
 

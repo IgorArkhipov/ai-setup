@@ -2,7 +2,7 @@
 title: "FT-003 Legacy Plan"
 doc_kind: feature
 doc_function: archive
-purpose: "Archived pre-migration execution script for FT-003. Retained for historical detail only; use `implementation-plan.md` for the governed execution document."
+purpose: "Archived pre-migration execution script for FT-003. Retained for historical detail only; use `implementation-plan.md` for the governed execution record."
 derived_from:
   - implementation-plan.md
 status: archived
@@ -11,7 +11,7 @@ audience: humans_and_agents
 
 # Claude Provider End-To-End Validation Implementation Plan
 
-Archived migration note: this file is retained only as the original execution script. The active governed execution document is [`implementation-plan.md`](./implementation-plan.md).
+Archived migration note: this file is retained only as the original execution script. The governed execution record is [`implementation-plan.md`](./implementation-plan.md), which is active during execution and archived after completion.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

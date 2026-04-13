@@ -23,7 +23,7 @@ Requirements, design, blocker state, and acceptance criteria are defined in the 
 
 Create this document only after the sibling `feature.md` has been moved to `status: active`. While the plan is still forming, `implementation-plan.md` itself may remain in `status: draft`; before the feature moves to `delivery_status: in_progress`, the plan must become `status: active`.
 
-When the feature reaches `delivery_status: done` or `delivery_status: cancelled`, `implementation-plan.md` should be archived if it is no longer needed as a working execution document.
+When the feature reaches `delivery_status: done` or `delivery_status: cancelled`, `implementation-plan.md` should be archived if it is no longer needed as a working execution document. In that state it remains the retained execution record for the feature package, but it is no longer an active owner.
 
 The document must be executable without extra interpretation. If a step cannot be tied to canonical IDs, an artifact, a check, or an explicit manual procedure, then it is underspecified. The plan must be grounded in the current state of the repository: first record relevant modules, local patterns, open questions, and the execution environment, then describe the sequence of changes.
 

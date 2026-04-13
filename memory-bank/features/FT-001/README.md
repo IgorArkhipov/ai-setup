@@ -14,7 +14,7 @@ audience: humans_and_agents
 
 ## About This Section
 
-This feature package stores the canonical documentation for the trusted multi-provider discovery foundation. The governed `feature.md` and `implementation-plan.md` files are the active owners; the legacy `brief.md`, `spec.md`, and `plan.md` files are retained only as archived migration history.
+This feature package stores the canonical documentation for the trusted multi-provider discovery foundation. `feature.md` is the canonical active owner. `implementation-plan.md` is the governed execution document retained here as the archived execution record for the completed feature, and the legacy `brief.md`, `spec.md`, and `plan.md` files remain only as migration history.
 
 ## Annotated Index
 
@@ -31,4 +31,4 @@ This feature package stores the canonical documentation for the trusted multi-pr
   Archived pre-migration spec retained for historical detail only. Use `feature.md` as the canonical owner.
 
 - [`plan.md`](plan.md)
-  Archived pre-migration implementation script retained for historical detail only. Use `implementation-plan.md` as the governed execution document.
+  Archived pre-migration implementation script retained for historical detail only. Use `implementation-plan.md` for the governed execution record of this completed feature.
