@@ -2,7 +2,7 @@
 title: Stages And Non-Local Environments
 doc_kind: engineering
 doc_function: canonical
-purpose: Template document for access to production-like environments. Read this when adapting access rules, smoke checks, logs, and runtime operations for a project.
+purpose: Canonical description of non-local execution surfaces for AgentScope. Read this when you need to know whether the repository has deployed environments, where CI runs, and how remote verification works today.
 derived_from:
   - ../dna/governance.md
 status: active
@@ -11,80 +11,66 @@ audience: humans_and_agents
 
 # Stages And Non-Local Environments
 
-Describe not only production here, but also staging, beta, preview, sandbox, or any other non-local environment if they exist.
+`tools/agentscope` does not currently have staging, preview, or production deployments. The only authoritative non-local execution surface is GitHub Actions CI defined in [../../.github/workflows/ci.yml](../../.github/workflows/ci.yml).
 
 ## Environment Inventory
 
 | Environment | Purpose | Access path | Notes |
 | --- | --- | --- | --- |
-| `production` | Real users and live traffic | Command, jump host, or UI | Strictest restrictions |
-| `staging` | Pre-release verification | Command, URL, or namespace | May be used for smoke tests |
-| `sandbox` | Integration checks and unsafe experiments | Optional | If it exists |
+| `github-actions-lint` | Repository lint and static checks | GitHub Actions `CI` workflow, `lint` job | Validates workflow files, shell scripts, and Biome checks |
+| `github-actions-agentscope` | Package build and coverage verification | GitHub Actions `CI` workflow, `agentscope` job | Runs inside `tools/agentscope` on Node `25.9.0` |
+| `github-actions-smoke-bootstrap` | Cross-platform repo bootstrap smoke test | GitHub Actions `CI` workflow, `smoke-bootstrap` job | Runs on `ubuntu-latest` and `macos-latest`; exercises the repository bootstrap scripts rather than an AgentScope deployment |
 
 ## Common Operations
 
-Only list operations that are actually allowed and their canonical entry points.
+Canonical non-local checks are CI-centric, not runtime-environment-centric.
 
 ```bash
-# Examples:
-make console ENV=staging
-make logs ENV=production
-kubectl -n staging logs deploy/app
-ssh <bastion>
-psql "$DATABASE_URL"
+gh run view <run-id> --log
+gh run watch <run-id>
 ```
 
-For each operation, record:
+Rules:
 
-- who is allowed to run it;
-- which approval gates are required;
-- where the boundary lies between read-only and mutating access.
+- treat GitHub Actions logs as the source of truth for non-local verification;
+- do not assume SSH, Kubernetes, or remote shell access exists for this package;
+- if a CI failure needs deeper diagnosis, reproduce it locally from `tools/agentscope` before proposing workflow changes.
 
 ## Credentials And Access
 
-Describe:
+Current access model:
 
-- where secrets are stored;
-- how access is granted;
-- which env vars or secret stores are used;
-- what counts as an unacceptable bypass of the access process.
-
-Never store real production credentials in the template.
+- there are no documented production credentials because there is no deployed production environment for AgentScope;
+- CI receives repository-scoped GitHub tokens through Actions for workflow operations;
+- agents must not invent undocumented shared environments or secret stores;
+- local provider files in a contributor's home directory are user-owned state, not shared staging infrastructure.
 
 ## Version And Health Checks
 
-Document the safe ways to check:
+There is no hosted health endpoint.
 
-- the currently deployed version;
-- the health endpoint;
-- the smoke URL;
-- the primary operational dashboards.
+Safe checks today:
 
-Example:
-
-```bash
-curl -fsS https://<stage-host>/health
-kubectl -n <namespace> get deploy <app>
-```
+- inspect the package version in [../../tools/agentscope/package.json](../../tools/agentscope/package.json);
+- inspect CI job status in GitHub Actions;
+- reproduce the build locally with `npm run build`;
+- reproduce the package verification suite locally with `npm run coverage`.
 
 ## Logs And Observability
 
-Describe the canonical paths to:
+Current observability surface:
 
-- application logs;
-- metrics;
-- traces;
-- the error tracker;
-- dashboards for core services.
+- GitHub Actions step logs are the canonical remote logs.
+- Local command output from `doctor`, `list`, `toggle`, and `restore` is the canonical operator-facing runtime signal.
+- There is no metrics, tracing, or hosted dashboard stack documented for this package yet.
 
 ## Test Data And Smoke Targets
 
-If the project uses staging or demo tenants, seed users, or test accounts, list them here together with usage rules.
+Smoke checks in CI use repository fixtures and bootstrap scripts:
 
-## Adoption Checklist
+- `tools/agentscope/test/fixtures/` for package-level verification
+- `./.ai-setup/scripts/test-ci.sh` for repository bootstrap smoke coverage
 
-- [ ] all non-local environments are listed
-- [ ] canonical access paths are documented
-- [ ] safe health and version checks are described
-- [ ] observability entry points are listed
-- [ ] fake or irrelevant examples are removed
+There are no shared demo tenants, seeded remote users, or non-local test accounts documented for AgentScope.
+
+If the project later gains a published service, dashboard backend, preview environment, or remote MCP endpoint, this document must be updated before that environment is treated as a supported operational target.

@@ -2,7 +2,7 @@
 title: Runbooks Index
 doc_kind: engineering
 doc_function: index
-purpose: Entry point for operational runbooks. Read this when you need to create a step-by-step guide for a recurring ops task or an incident.
+purpose: Entry point for AgentScope operational runbooks. Read this when a repeatable operator task or failure mode needs a step-by-step documented procedure.
 derived_from:
   - ../../dna/governance.md
 status: active
@@ -11,7 +11,14 @@ audience: humans_and_agents
 
 # Runbooks Index
 
-This directory stores runbooks for repeatable operational tasks.
+No project-specific runbooks are committed yet.
+
+That is acceptable today because `tools/agentscope` is a local CLI package with no deployed service, on-call rotation, or production incident surface. Add a runbook here once a task becomes both repeatable and operationally significant, for example:
+
+- repeated mutation lock contention triage;
+- backup restore failure recovery;
+- provider fixture drift diagnosis in CI;
+- recovery from malformed provider-local config discovered by `doctor`.
 
 A runbook should answer:
 
@@ -32,4 +39,4 @@ A runbook should answer:
 6. Rollback
 7. Escalation
 
-If the project has no runbooks yet, the directory may contain only this index.
+When the first runbook is added, link it from this index and keep the trigger plus owning surface explicit.

@@ -2,7 +2,7 @@
 title: Configuration Guide
 doc_kind: engineering
 doc_function: canonical
-purpose: Template for documenting the configuration ownership model. Read this when describing the project's env contract, naming conventions, and config sources.
+purpose: Canonical configuration guide for AgentScope. Read this when changing config precedence, default roots, CLI overrides, or the boundary between AgentScope-managed state and provider-managed files.
 derived_from:
   - ../dna/governance.md
 status: active
@@ -11,83 +11,112 @@ audience: humans_and_agents
 
 # Configuration Guide
 
-This document does not need to list every environment variable one by one. Its job is to explain where the canonical configuration schema lives and how the downstream project documents important settings.
+AgentScope is not `.env`-driven. Its configuration contract is file-based JSON plus explicit CLI overrides, with provider-specific file formats parsed by provider adapters rather than by the top-level config loader.
+
+Related context:
+
+- canonical ownership model: [../domain/architecture.md](../domain/architecture.md)
+- config loader: [../../tools/agentscope/src/core/config.ts](../../tools/agentscope/src/core/config.ts)
+- path defaults: [../../tools/agentscope/src/core/paths.ts](../../tools/agentscope/src/core/paths.ts)
 
 ## Configuration Architecture
 
-Describe the real configuration model of the project.
+Configuration ownership is split across three layers:
 
-Examples:
+1. `src/core/config.ts`
+   Owns JSON parsing, schema version checks, config precedence, and the exported `AgentScopeConfig` shape.
+2. `src/core/paths.ts`
+   Owns default path resolution, `~` expansion, path normalization, and relative-path handling.
+3. `src/providers/*.ts`
+   Own provider-specific formats such as Claude settings JSON, Codex `config.toml`, and Cursor `mcp.json` and extension metadata.
 
-- typed config class;
-- `.env` + runtime env vars;
-- YAML/JSON/TOML files with environment overlays;
-- secret manager;
-- Helm values / Terraform variables / deployment manifests.
+Current precedence:
+
+1. built-in defaults
+2. `~/.config/agentscope/config.json`
+3. `<project-root>/.agentscope.json`
+4. explicit CLI flags
 
 ### File Layout
 
 ```text
-config/
-├── application.yml
-├── environments/
-├── secrets/
-└── ...
+~/.config/agentscope/
+├── config.json
+├── audit/log.jsonl
+├── backups/<backup-id>/
+├── locks/mutation.lock
+└── vault/<provider>/<layer>/<kind>/<safe-item-id>/
+
+<project-root>/
+└── .agentscope.json
 ```
 
 ### Ownership Rules
 
-Record:
+Canonical config document shape:
 
-1. which file or module owns the configuration schema;
-2. where defaults are defined;
-3. where environment-specific overrides live;
-4. how secrets are documented without exposing values.
-
-```ruby
-# Example configuration access API:
-Config.database_url
-Settings.feature_flags.checkout_v2
-ENV.fetch("APP_PORT")
+```json
+{
+  "version": 1,
+  "projectRoot": "/absolute/or/relative/path",
+  "appStateRoot": "/absolute/or/relative/path",
+  "cursorRoot": "/absolute/or/relative/path"
+}
 ```
-
-## Naming Convention For Env Vars
-
-| YAML structure | Env variable |
-| --- | --- |
-| `database.url` | `APP_DATABASE__URL` |
-| `feature_checkout_v2` | `APP_FEATURE_CHECKOUT_V2` |
-| `smtp.password` | `APP_SMTP__PASSWORD` |
-| `storage.bucket` | `APP_STORAGE__BUCKET` |
 
 Rules:
 
-- choose one canonical prefix, or document explicitly that there is no prefix;
-- if nesting is used, define the separator;
-- document the rules for lists, booleans, and secrets;
-- if the project forbids interpolation inside config files, state it explicitly.
+- `version` is optional but, when present, must be integer `1`;
+- schema versions greater than `1` fail explicitly;
+- unknown additive keys are ignored by the current loader;
+- `projectRoot` defaults to the current working directory;
+- `appStateRoot` defaults to `~/.config/agentscope`;
+- `cursorRoot` defaults to `~/Library/Application Support/Cursor/User`;
+- relative paths are resolved from the current working directory;
+- `~` is expanded against the active home directory.
 
-## Documenting Important Variables
+## CLI Overrides
 
-If the project needs a catalog of important variables, do not list everything. Focus on meaningful runtime contracts.
+The command surface supports the same three override points on all stateful commands:
 
-| Variable | Description | Default | Owner |
-| --- | --- | --- | --- |
-| `APP_DATABASE__URL` | Primary database connection | none | platform |
-| `APP_REDIS__URL` | Cache or queue | `redis://localhost:6379/0` | platform |
-| `APP_PUBLIC_BASE_URL` | Base URL used for link generation | `http://localhost:3000` | product/platform |
-| `APP_FEATURE_X_ENABLED` | Feature flag | `false` | owning team |
+```bash
+--project-root <path>
+--app-state-root <path>
+--cursor-root <path>
+```
+
+These flags are available on:
+
+- `doctor`
+- `list`
+- `toggle`
+- `restore`
+
+Use them whenever you need deterministic fixture-backed runs or when you want to keep experimentation out of your real home-directory state.
+
+## AgentScope-Owned State
+
+Only `appStateRoot` is owned by AgentScope itself. It persists:
+
+- advisory lock state in `locks/`
+- backups in `backups/`
+- audit entries in `audit/log.jsonl`
+- vault state for disabled or displaced provider items in `vault/`
+
+This state is operational data, not checked-in source.
+
+## Provider-Owned Inputs
+
+AgentScope reads or mutates provider-owned state through adapters. Current documented roots are:
+
+- Claude Code: `~/.claude/settings*.json`, `<project>/.claude/settings*.json`, `<project>/.claude/skills/*/SKILL.md`, `<project>/.mcp.json`
+- Codex: `~/.codex/config.toml`, `~/.codex/skills/`, `<project>/.codex/skills/`
+- Cursor: `~/.cursor/mcp.json`, `~/.cursor/skills-cursor/`, `<cursor-root>/profiles/*/extensions.json`
+
+Do not duplicate those provider schemas here. This document owns the AgentScope config contract and root resolution rules, not every downstream provider key.
 
 ## Secrets
 
-- Never commit real secret values into the repository.
-- Document only how secrets are stored, issued, and rotated.
-- If part of the configuration comes from a secret manager, state that explicitly.
-
-## Adoption Checklist
-
-- [ ] the configuration schema owner is described
-- [ ] the naming convention is documented
-- [ ] important runtime and env contracts are listed
-- [ ] secret handling is described
-- [ ] references to nonexistent downstream catalogs are removed
+- AgentScope does not currently define its own secret catalog or secret manager integration.
+- Do not commit real provider credentials or personal config data into fixtures or docs.
+- Do not read or rely on `.env*` files for this repository; they are outside the supported AgentScope config contract.
