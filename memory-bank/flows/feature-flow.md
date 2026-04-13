@@ -82,6 +82,7 @@ Each gate is a set of verifiable predicates. A transition is allowed if and only
 - [ ] every `REQ-*` traces to at least one `SC-*` through the traceability matrix
 - [ ] the `Verify` section contains at least one `CHK-*` and at least one `EVID-*`
 - [ ] if the deliverable cannot be accepted without negative or edge coverage, there is at least one `NEG-*`
+- [ ] any material constraints, invariants, failure modes, or important behavior states are captured explicitly instead of being left implicit
 
 ### Design Ready → Plan Ready
 
@@ -90,6 +91,7 @@ Each gate is a set of verifiable predicates. A transition is allowed if and only
 - [ ] `implementation-plan.md` → `status: active`
 - [ ] `implementation-plan.md` contains at least one `PRE-*`, one `STEP-*`, one `CHK-*`, and one `EVID-*`
 - [ ] the discovery context in `implementation-plan.md` contains relevant paths, local reference patterns, unresolved questions (`OQ-*`), test surfaces, and execution environment
+- [ ] `implementation-plan.md` records execution as specific, dependency-ordered, atomic steps grounded against real repository paths rather than generic prose
 
 ### Plan Ready → Execution
 
@@ -126,6 +128,8 @@ Each gate is a set of verifiable predicates. A transition is allowed if and only
 7. If a numeric target threshold belongs to only one delivery unit, its canonical owner is the corresponding `feature.md`. Promote such a KPI into a project-level document only after it becomes a shared upstream fact for multiple features.
 8. A good `implementation-plan.md` starts with discovery context: relevant paths, local reference patterns, unresolved questions, test surfaces, and execution environment should be recorded before sequencing changes.
 9. For risky, irreversible, or externally effective actions, `implementation-plan.md` must describe explicit human approval gates rather than hiding them inside prose.
+10. A good `feature.md` keeps ambiguity low: if a requirement, constraint, state, or failure mode matters to delivery or acceptance, it should be named explicitly rather than implied through vague adjectives.
+11. A good `implementation-plan.md` names concrete touchpoints and keeps steps atomic enough to execute, verify, and stop safely if the plan needs to pause or escalate.
 
 ## Test Ownership Summary
 
@@ -137,6 +141,7 @@ Canonical testing policy lives in [../engineering/testing-policy.md](../engineer
 4. **By Design Ready**, `feature.md` already records the test case inventory: at least one `SC-*` and traceability to `REQ-*`. **By Done**, automated tests have been added and required suites are green both locally and in CI.
 5. **Simplify review** is a separate pass after functional testing and before closure. Its goal is to ensure the code is minimally complex. Three similar lines are better than a premature abstraction. Complexity is justified only when tied to `CON-*`, `FM-*`, or `DEC-*`.
 6. **Verification context separation** means functional verification, simplify review, and acceptance testing are three logically separate passes. The agent should form conclusions after each pass before starting the next one. For short features these may happen in one session, but simplify review must not be skipped.
+7. **Executable plan quality** means the implementation plan is concrete enough to run: affected paths are named, dependency order is explicit, and required test, migration, documentation, or rollout work is not omitted when it belongs to the change surface.
 
 ## Stable Identifiers
 

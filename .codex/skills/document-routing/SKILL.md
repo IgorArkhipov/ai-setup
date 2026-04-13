@@ -1,0 +1,1 @@
+../../../.prompts/skills/document-routing.md

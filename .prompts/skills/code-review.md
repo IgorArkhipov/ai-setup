@@ -14,32 +14,32 @@ Context:
 
 Output exactly in this format:
 
-1) Assumptions
+1. Assumptions
 - Explicit assumptions without which the conclusions are invalid.
 
-2) Invariants and Contracts
+2. Invariants and Contracts
 - Which system properties must remain true after the change.
 
-3) Execution Path Tracing
+3. Execution Path Tracing
 - Key happy paths and error paths.
 - Where behavior changed and where it did not.
 
-4) Risks and Regressions
-- List of risks (severity: high/medium/low).
+4. Risks and Regressions
+- List of risks with severity: `high`, `medium`, or `low`.
 - For each one: why the risk is real and where the code shows it.
 
-5) Behavioral Equivalence Verdict
-- Equivalent / Not equivalent / Insufficient data.
-- If not equivalent: minimal counterexample (input -> expected divergence).
+5. Behavioral Equivalence Verdict
+- `Equivalent` / `Not equivalent` / `Insufficient data`.
+- If not equivalent: minimal counterexample (`input -> expected divergence`).
 
-6) What to Cover with Tests
+6. What to Cover with Tests
 - Top 5 checks that would reduce uncertainty.
 
-7) Confidence
-- Score 0..1 and briefly: what prevents a higher confidence score.
+7. Confidence
+- Score `0..1` and briefly: what prevents a higher confidence score.
 
 Rules:
 - Do not invent facts that are not present in the diff or code.
 - Do not run tests, execute code, or rely on runtime experiments.
-- If data is missing, explicitly mark it as "Insufficient data".
+- If data is missing, explicitly mark it as `Insufficient data`.
 - Write briefly and to the point.
