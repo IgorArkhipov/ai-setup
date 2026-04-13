@@ -1,69 +1,57 @@
 ---
-title: Frontend
+title: Command Surface
 doc_kind: domain
 doc_function: canonical
-purpose: Template for describing UI surfaces, the design system, and the i18n layer. Read this when working on web, mobile, or internal UI.
+purpose: Canonical description of the current AgentScope presentation layer. Read this when changing CLI interaction, machine-readable output, or any future interface that sits on top of the same headless core.
 derived_from:
   - ../dna/governance.md
 status: active
 audience: humans_and_agents
+canonical_for:
+  - ui_surfaces
+  - interaction_patterns
+  - presentation_rules
 ---
 
-# Frontend
+# Command Surface
 
-This document should describe the real UI surfaces of the downstream project. If the system has no separate frontend layer, reduce this file to the smallest useful set of rules.
+`tools/agentscope` does not currently ship a separate web, mobile, or desktop frontend. The only implemented presentation layer today is the command-line interface plus its human-readable and JSON renderers.
 
 ## UI Surfaces
 
-Describe the main interfaces of the system.
+- CLI entrypoint in [`../../tools/agentscope/src/cli.ts`](../../tools/agentscope/src/cli.ts) using `cac`
+- Human-readable renderers in [`../../tools/agentscope/src/core/output.ts`](../../tools/agentscope/src/core/output.ts) and [`../../tools/agentscope/src/core/mutation-output.ts`](../../tools/agentscope/src/core/mutation-output.ts)
+- Machine-readable JSON output from the same command flows for `list`, `toggle`, and `restore`
 
-Example:
+There is no separate dashboard code in `tools/agentscope` today. If a dashboard or MCP-facing surface is added later, it should be treated as another thin presentation layer over the same discovery and mutation core, not as a second implementation path.
 
-- public web;
-- internal back office;
-- mobile app;
-- embedded widgets;
-- shared component library.
+## Component And Presentation Rules
 
-For each surface, it is useful to record:
-
-- where the code lives;
-- which stack it uses;
-- where the backend boundary sits;
-- which layer is the canonical owner for design decisions.
-
-## Component And Styling Rules
-
-Describe the project rules for UI components:
-
-- whether there is a shared design system;
-- where shared components live;
-- whether ad hoc UI can be created without a common component;
-- which layer owns theme tokens, spacing, typography, and state styles.
-
-Example rules:
-
-- new UI elements should first look for a home in `packages/ui`;
-- local CSS is allowed only inside a feature boundary;
-- complex interactivity requires an ADR or an explicit architectural decision.
+- Command handlers own argument validation and exit codes, then delegate to shared renderers.
+- Human-readable output must stay deterministic, line-oriented, and easy to scan in a terminal.
+- JSON output is part of the public automation surface and must describe the same state as the human output.
+- Presentation logic belongs in renderer modules, not in provider adapters or low-level mutation code.
+- Avoid ANSI-heavy formatting or TUI-specific assumptions until the project actually ships a terminal dashboard.
 
 ## Interaction Patterns
 
-Describe the canonical interaction model here: server-rendered UI, SPA, islands, an HTMX/Turbo-like approach, native mobile, and so on.
+The current interaction model is subcommand-oriented:
 
-If no project-specific choice exists yet, start from template guidance like this:
+- `providers` reports the capability matrix
+- `doctor` validates committed fixture assumptions and live provider inputs
+- `list` returns normalized discovery inventory
+- `toggle` plans by default and applies only with `--apply`
+- `restore` restores one saved backup by id
 
-- new features should use the current primary interactive stack;
-- do not mix two competing patterns without an explicit reason;
-- if the project is migrating between stacks, document the migration rule and allowed exceptions.
+Interaction rules:
+
+- dry-run is the default for state-changing workflows;
+- real writes must remain explicit and reversible;
+- future interfaces should call the same headless discovery and mutation paths so safety behavior stays identical across surfaces.
 
 ## Localization
 
-Document:
+AgentScope currently has no localization layer.
 
-- where translations come from;
-- how they reach the UI;
-- where they are cached or versioned;
-- how new keys are added and who owns fallback behavior.
-
-If the project has multiple translation sources, document priority and merge order.
+- User-facing output is English-only and lives in command and renderer modules.
+- If localization is added later, string ownership should move into a dedicated presentation layer instead of spreading literals across provider or core mutation code.

@@ -1,17 +1,15 @@
 ---
-title: Template Documentation Index
+title: Documentation Index
 doc_kind: project
 doc_function: index
-purpose: Root navigation for the template memory-bank. Read this first to understand the structure and the main adaptation points for a specific project.
+purpose: Root navigation for the memory-bank. Read this first to understand the structure and the main adaptation points for the current project.
 status: active
 audience: humans_and_agents
 ---
 
 # Documentation Index
 
-The `memory-bank/` directory contains a portable template for software project documentation. After copying it into a downstream repository, adapt `domain/`, `engineering/`, and `ops/` to match the real stack, processes, and constraints of that project.
-
-Concrete instantiated examples live in the top-level `examples/` directory.
+The `memory-bank/` directory contains all software project documentation.
 
 ## Annotated Index
 
