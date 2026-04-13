@@ -5,6 +5,7 @@ doc_function: canonical
 purpose: "Captures the stable project-level scenario where a user inspects local AI-agent configuration across supported providers without mutating provider-managed state."
 derived_from:
   - ../domain/problem.md
+  - ../prd/PRD-001-local-discovery-and-safe-mutation-foundation.md
 status: active
 audience: humans_and_agents
 must_not_define:
@@ -61,6 +62,6 @@ The actor needs a normalized inventory of supported provider items, including en
 
 | Upstream / Downstream | References |
 | --- | --- |
-| PRD | `none` |
+| PRD | `PRD-001` |
 | Features | `FT-001`, `FT-003` |
 | ADR | `none` |

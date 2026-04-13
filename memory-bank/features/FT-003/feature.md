@@ -5,6 +5,7 @@ doc_function: canonical
 purpose: "Canonical feature document for the first fully validated writable provider in AgentScope: Claude discovery, toggle planning, apply, restore, and vault-backed skill disable and enable flows."
 derived_from:
   - ../../domain/problem.md
+  - ../../prd/PRD-001-local-discovery-and-safe-mutation-foundation.md
   - ../../use-cases/UC-001-cross-provider-discovery.md
   - ../../use-cases/UC-002-safe-toggle-and-restore.md
   - ../FT-001/feature.md

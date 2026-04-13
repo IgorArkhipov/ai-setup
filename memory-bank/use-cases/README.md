@@ -32,8 +32,8 @@ A use case is needed for a scenario that exists at product level, repeats over t
 
 | UC ID | Title | Status | Primary actor | Upstream PRD | Implemented by | Last updated |
 | --- | --- | --- | --- | --- | --- | --- |
-| [`UC-001`](UC-001-cross-provider-discovery.md) | Cross-Provider Discovery | `active` | Developer or operator | `none` | `FT-001`, `FT-003` | 2026-04-12 |
-| [`UC-002`](UC-002-safe-toggle-and-restore.md) | Safe Toggle And Restore | `active` | Developer or operator | `none` | `FT-002`, `FT-003` | 2026-04-12 |
+| [`UC-001`](UC-001-cross-provider-discovery.md) | Cross-Provider Discovery | `active` | Developer or operator | `PRD-001` | `FT-001`, `FT-003` | 2026-04-12 |
+| [`UC-002`](UC-002-safe-toggle-and-restore.md) | Safe Toggle And Restore | `active` | Developer or operator | `PRD-001` | `FT-002`, `FT-003` | 2026-04-12 |
 
 ## Naming
 

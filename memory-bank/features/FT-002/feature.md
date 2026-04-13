@@ -5,6 +5,7 @@ doc_function: canonical
 purpose: "Canonical feature document for the shared AgentScope mutation engine: dry-run planning, guarded apply, persistent backup and audit state, and restore semantics."
 derived_from:
   - ../../domain/problem.md
+  - ../../prd/PRD-001-local-discovery-and-safe-mutation-foundation.md
   - ../../use-cases/UC-002-safe-toggle-and-restore.md
   - ../FT-001/feature.md
 status: active

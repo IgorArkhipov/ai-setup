@@ -5,6 +5,7 @@ doc_function: canonical
 purpose: "Canonical feature document for the first AgentScope discovery slice: normalized cross-provider inventory, config/path resolution, and warning-preserving CLI discovery commands."
 derived_from:
   - ../../domain/problem.md
+  - ../../prd/PRD-001-local-discovery-and-safe-mutation-foundation.md
   - ../../use-cases/UC-001-cross-provider-discovery.md
 status: active
 delivery_status: done

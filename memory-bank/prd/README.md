@@ -39,6 +39,12 @@ A PRD is needed when the work lives at the level of a product initiative or capa
 - Replace `XXX` with the stable identifier used by the project: initiative ID, epic ID, or another stable key
 - One PRD may be upstream for multiple feature packages
 
+## Registry
+
+| PRD ID | Title | Status | Downstream features | Last updated |
+| --- | --- | --- | --- | --- |
+| [`PRD-001`](PRD-001-local-discovery-and-safe-mutation-foundation.md) | Local Discovery And Safe Mutation Foundation | `active` | `FT-001`, `FT-002`, `FT-003` | 2026-04-12 |
+
 ## Template
 
 - Use the template [`../flows/templates/prd/PRD-XXX.md`](../flows/templates/prd/PRD-XXX.md)

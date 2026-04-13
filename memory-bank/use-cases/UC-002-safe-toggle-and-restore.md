@@ -5,6 +5,7 @@ doc_function: canonical
 purpose: "Captures the stable project-level scenario where a user dry-runs, applies, and restores supported configuration changes without leaving provider-managed state partially mutated."
 derived_from:
   - ../domain/problem.md
+  - ../prd/PRD-001-local-discovery-and-safe-mutation-foundation.md
 status: active
 audience: humans_and_agents
 must_not_define:
@@ -62,6 +63,6 @@ The actor wants to enable or disable one supported item, or recover a previous c
 
 | Upstream / Downstream | References |
 | --- | --- |
-| PRD | `none` |
+| PRD | `PRD-001` |
 | Features | `FT-002`, `FT-003` |
 | ADR | `none` |
