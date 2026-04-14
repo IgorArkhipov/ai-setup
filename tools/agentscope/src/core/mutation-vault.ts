@@ -2,7 +2,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { DiscoveryLayer } from "./models.js";
 
-export type VaultProvider = "claude" | "codex";
+export type VaultProvider = "claude" | "codex" | "cursor";
 export type VaultEntryKind = "skill" | "configured-mcp";
 export type VaultPayloadKind = "path" | "json-payload" | "text-payload";
 
@@ -92,8 +92,8 @@ function validateEntry(raw: string, entryPath: string): VaultEntry {
     throw new Error(`${entryPath} version must be 1`);
   }
 
-  if (provider !== "claude" && provider !== "codex") {
-    throw new Error(`${entryPath} provider must be claude or codex`);
+  if (provider !== "claude" && provider !== "codex" && provider !== "cursor") {
+    throw new Error(`${entryPath} provider must be claude, codex, or cursor`);
   }
 
   if (kind !== "skill" && kind !== "configured-mcp") {

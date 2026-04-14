@@ -1,16 +1,22 @@
+import { writeFileSync } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { runToggle } from "../src/commands/toggle.js";
 import type { ProviderModule } from "../src/core/discovery.js";
+import { createCursorSandbox } from "./support/cursor-sandbox.js";
 import { fakeToggleIds, fakeToggleProvider } from "./support/fake-toggle-provider.js";
 import { createMutationSandbox } from "./support/mutation-sandbox.js";
 
 const sandboxes: Array<ReturnType<typeof createMutationSandbox>> = [];
+const cursorSandboxes: Array<ReturnType<typeof createCursorSandbox>> = [];
 const runtimeRoot = path.resolve(import.meta.dirname, "fixtures", "runtime");
 
 afterEach(() => {
   while (sandboxes.length > 0) {
     sandboxes.pop()?.cleanup();
+  }
+  while (cursorSandboxes.length > 0) {
+    cursorSandboxes.pop()?.cleanup();
   }
 });
 
@@ -159,6 +165,70 @@ describe("runToggle", () => {
     expect(result.output).toContain("/vault/codex/global/skill/");
   });
 
+  it("supports real Cursor dry-run planning for global skills", () => {
+    const sandbox = createCursorSandbox();
+    cursorSandboxes.push(sandbox);
+
+    const result = runToggle({
+      cwd: sandbox.projectRoot,
+      homeDir: sandbox.homeDir,
+      projectRoot: sandbox.projectRoot,
+      appStateRoot: sandbox.appStateRoot,
+      cursorRoot: sandbox.cursorRoot,
+      provider: "cursor",
+      kind: "skill",
+      layer: "global",
+      id: "cursor:global:skill:example-cursor-skill",
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.output).toContain("status: dry-run");
+    expect(result.output).toContain("rename path");
+    expect(result.output).toContain(".cursor/skills-cursor/example-cursor-skill");
+    expect(result.output).toContain("/vault/cursor/global/skill/");
+  });
+
+  it("supports real Cursor dry-run planning for live disabled configured MCPs", () => {
+    const sandbox = createCursorSandbox();
+    cursorSandboxes.push(sandbox);
+
+    writeFileSync(
+      sandbox.homePath(".cursor/mcp.json"),
+      JSON.stringify(
+        {
+          mcpServers: {
+            filesystem: {
+              command: "npx",
+              disabled: true,
+            },
+          },
+        },
+        null,
+        2,
+      ),
+      "utf8",
+    );
+    sandbox.setWorkspaceDisabledServers(["user-filesystem"]);
+
+    const result = runToggle({
+      cwd: sandbox.projectRoot,
+      homeDir: sandbox.homeDir,
+      projectRoot: sandbox.projectRoot,
+      appStateRoot: sandbox.appStateRoot,
+      cursorRoot: sandbox.cursorRoot,
+      provider: "cursor",
+      kind: "mcp",
+      layer: "global",
+      id: "cursor:global:configured-mcp:mcp-json:filesystem",
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.output).toContain("status: dry-run");
+    expect(result.output).toContain(".cursor/mcp.json");
+    expect(result.output).toContain("replace SQLite value");
+    expect(result.output).toContain("state.vscdb");
+  });
+
   it("blocks real unsupported selections from production providers", () => {
     const result = runToggle({
       cwd: runtimeRoot,
@@ -170,6 +240,27 @@ describe("runToggle", () => {
       kind: "plugin",
       layer: "global",
       id: "codex:global:tool:plugin:safe-shell",
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.output).toContain("status: blocked");
+    expect(result.output).toContain("unsupported:");
+  });
+
+  it("blocks real unsupported Cursor extensions from production providers", () => {
+    const sandbox = createCursorSandbox();
+    cursorSandboxes.push(sandbox);
+
+    const result = runToggle({
+      cwd: sandbox.projectRoot,
+      homeDir: sandbox.homeDir,
+      projectRoot: sandbox.projectRoot,
+      appStateRoot: sandbox.appStateRoot,
+      cursorRoot: sandbox.cursorRoot,
+      provider: "cursor",
+      kind: "plugin",
+      layer: "global",
+      id: "cursor:global:tool:extension:cursor.example-extension",
     });
 
     expect(result.exitCode).toBe(1);

@@ -11,7 +11,7 @@ This directory is an isolated TypeScript sub-project.
 | --- | --- | --- | --- | --- |
 | Claude Code | read-write | read-write | read-write | Verified end-to-end against fixture sandboxes for project skills, project `.mcp.json` approvals, and settings-file tools. |
 | Codex | read-write | read-write | unsupported | Verified end-to-end against fixture sandboxes for global and project skills plus global `config.toml` `mcp_servers` sections. Plugins remain visible but unsupported. |
-| Cursor | read-only | read-only | read-only | Fixture covers `~/.cursor/skills-cursor`, `~/.cursor/mcp.json`, and profile `extensions.json` metadata. |
+| Cursor | read-write | read-write | unsupported | Verified end-to-end against fixture sandboxes for global `skills-cursor` skills plus global `mcp.json` servers, including optional workspace disabled-server reconciliation. Extensions remain visible but unsupported. |
 
 ## Fixtures
 
@@ -50,7 +50,9 @@ Successful apply writes create a backup manifest and append an audit event. Rest
 - Minimum supported Node runtime: `>=25.9.0`
 - SQLite-backed mutations use the built-in `node:sqlite` module
 
-Claude and Codex have real dry-run, apply, and restore coverage for their supported writable slices. Codex plugins and all Cursor items still expose discovery-only or explicitly unsupported inventory until provider-specific write planning is implemented safely.
+Claude, Codex, and Cursor have real dry-run, apply, and restore coverage for their supported writable slices. Codex plugins and Cursor extensions remain visible but explicitly unsupported inventory until provider-specific write planning is implemented safely.
+
+For Cursor configured MCPs, AgentScope accepts the observed `mcp.json` trailing-comma JSON shape during discovery and toggle planning, then rewrites the managed document as deterministic JSON on apply. When a matching Cursor workspace database exists for the selected project, AgentScope also reconciles the `cursor/disabledMcpServers` `ItemTable` key so the visible MCP state stays aligned with `mcp.json`.
 
 For Codex configured MCPs, re-enable restores the disabled section content into the current `config.toml`, appending it at end-of-file when needed. AgentScope only re-enables Codex MCP sections that it previously disabled into the vault; a live `[mcp_servers.*]` section with `enabled = false` remains a discovered Codex state and is reported as blocked instead of being rewritten implicitly. Use `restore` when exact byte-for-byte recovery of the original file layout matters.
 

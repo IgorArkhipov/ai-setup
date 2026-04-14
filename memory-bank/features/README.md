@@ -35,3 +35,4 @@ The `memory-bank/features/` directory stores instantiated feature packages in th
 | `FT-002` | Safe And Reversible Configuration Changes | `active` | `done` | [`FT-002/feature.md`](FT-002/feature.md) | [`FT-002/implementation-plan.md`](FT-002/implementation-plan.md) | `UC-002` | 2026-04-12 |
 | `FT-003` | First End-To-End Provider Validation With Claude | `active` | `done` | [`FT-003/feature.md`](FT-003/feature.md) | [`FT-003/implementation-plan.md`](FT-003/implementation-plan.md) | `UC-001`, `UC-002` | 2026-04-12 |
 | `FT-004` | Verified Codex Skill And Configured MCP Toggles | `active` | `done` | [`FT-004/feature.md`](FT-004/feature.md) | [`FT-004/implementation-plan.md`](FT-004/implementation-plan.md) | `UC-001`, `UC-002` | 2026-04-13 |
+| `FT-005` | Verified Cursor Skill And Configured MCP Toggles | `active` | `done` | [`FT-005/feature.md`](FT-005/feature.md) | [`FT-005/implementation-plan.md`](FT-005/implementation-plan.md) | `UC-001`, `UC-002` | 2026-04-13 |

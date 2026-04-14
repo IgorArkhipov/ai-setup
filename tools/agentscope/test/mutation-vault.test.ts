@@ -74,6 +74,18 @@ describe("mutation vault", () => {
     expect(codexDescriptor.entryPath).toContain(
       "/vault/codex/global/configured-mcp/codex%3Aglobal%3Aconfigured-mcp%3Aconfig%3Agithub/entry.json",
     );
+
+    const cursorDescriptor = vaultDescriptor({
+      appStateRoot,
+      provider: "cursor",
+      layer: "global",
+      kind: "configured-mcp",
+      itemId: "cursor:global:configured-mcp:mcp-json:filesystem",
+    });
+
+    expect(cursorDescriptor.entryPath).toContain(
+      "/vault/cursor/global/configured-mcp/cursor%3Aglobal%3Aconfigured-mcp%3Amcp-json%3Afilesystem/entry.json",
+    );
   });
 
   it("maps payload-backed descriptors to the correct vaulted storage location", () => {

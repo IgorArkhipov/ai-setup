@@ -41,7 +41,7 @@ Minimum rules:
 | --- | --- | --- |
 | Claude Code local config | `src/providers/claude.ts` | Reads `~/.claude/settings*.json`, `<project>/.claude/settings*.json`, `<project>/.claude/skills/*/SKILL.md`, and `<project>/.mcp.json`; verified write planning exists only for Claude skill, configured-MCP, and tool toggles |
 | Codex local config | `src/providers/codex.ts` | Reads `~/.codex/config.toml`, `~/.codex/skills/`, and `<project>/.codex/skills/`; verified write planning exists for global and project skill toggles plus global configured-MCP toggles, while plugins remain unsupported |
-| Cursor local config | `src/providers/cursor.ts` | Reads `~/.cursor/mcp.json`, `~/.cursor/skills-cursor/`, and `<cursor-root>/profiles/*/extensions.json`; discovery only, no write planning yet |
+| Cursor local config | `src/providers/cursor.ts` | Reads `~/.cursor/mcp.json`, `~/.cursor/skills-cursor/`, `<cursor-root>/profiles/*/extensions.json`, and the current workspace disabled-server SQLite state when available; verified write planning exists for global skill toggles plus global configured-MCP toggles, while extensions remain unsupported |
 | AgentScope state root | `src/core/mutation-state.ts`, `mutation-lock.ts`, `mutation-vault.ts` | Owns `locks/`, `backups/`, `audit/`, and `vault/` under `appStateRoot`; this is the only place AgentScope persists its own operational state |
 | Local SQLite-backed stores | `src/core/mutation-io.ts` | Mutations use `node:sqlite` with identifier validation and explicit transactions; SQLite values are treated as binary-safe mutation targets |
 

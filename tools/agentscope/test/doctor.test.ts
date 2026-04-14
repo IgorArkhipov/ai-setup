@@ -92,8 +92,8 @@ describe("doctor and providers commands", () => {
     expect(codexBlock).toContain("skills:          verified");
     expect(codexBlock).toContain("configured MCPs: verified");
     expect(codexBlock).toContain("tools/extensions: unsupported");
-    expect(cursorBlock).toContain("skills:          read-only");
-    expect(cursorBlock).toContain("configured MCPs: read-only");
-    expect(cursorBlock).toContain("tools/extensions: read-only");
+    expect(cursorBlock).toContain("skills:          verified");
+    expect(cursorBlock).toContain("configured MCPs: verified");
+    expect(cursorBlock).toContain("tools/extensions: unsupported");
   });
 });

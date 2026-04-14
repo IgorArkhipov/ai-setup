@@ -1,6 +1,8 @@
 import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { DatabaseSync } from "node:sqlite";
+import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import type { AgentScopeConfig } from "../src/core/config.js";
 import { serializeVaultEntry, vaultDescriptor } from "../src/core/mutation-vault.js";
@@ -48,6 +50,43 @@ function createSandbox(): {
 function copyFixture(relativePath: string, targetPath: string): void {
   mkdirSync(path.dirname(targetPath), { recursive: true });
   cpSync(path.join(fixturesRoot, relativePath), targetPath, { recursive: true });
+}
+
+function writeCursorWorkspaceState(
+  sandbox: ReturnType<typeof createSandbox>,
+  rawValue: string,
+): string {
+  const workspaceRoot = path.join(sandbox.cursorRoot, "workspaceStorage", "sandbox-workspace");
+  const databasePath = path.join(workspaceRoot, "state.vscdb");
+
+  mkdirSync(workspaceRoot, { recursive: true });
+  writeFileSync(
+    path.join(workspaceRoot, "workspace.json"),
+    JSON.stringify(
+      {
+        folder: pathToFileURL(sandbox.projectRoot).toString(),
+      },
+      null,
+      2,
+    ),
+    "utf8",
+  );
+
+  const database = new DatabaseSync(databasePath);
+  try {
+    database.exec(
+      "CREATE TABLE IF NOT EXISTS ItemTable (key TEXT PRIMARY KEY, value BLOB NOT NULL)",
+    );
+    database
+      .prepare(
+        "INSERT INTO ItemTable (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+      )
+      .run("cursor/disabledMcpServers", rawValue);
+  } finally {
+    database.close();
+  }
+
+  return databasePath;
 }
 
 afterEach(() => {
@@ -552,6 +591,262 @@ describe("provider discovery", () => {
     ]);
   });
 
+  it("discovers disabled Cursor skills and configured MCPs from vault state", () => {
+    const sandbox = createSandbox();
+
+    const skillDescriptor = vaultDescriptor({
+      appStateRoot: sandbox.config.appStateRoot,
+      provider: "cursor",
+      layer: "global",
+      kind: "skill",
+      itemId: "cursor:global:skill:example-cursor-skill",
+    });
+    mkdirSync(skillDescriptor.rootPath, { recursive: true });
+    copyFixture("cursor/global/skills-cursor/example-cursor-skill", skillDescriptor.vaultedPath);
+    writeFileSync(
+      skillDescriptor.entryPath,
+      serializeVaultEntry({
+        version: 1,
+        provider: "cursor",
+        kind: "skill",
+        layer: "global",
+        itemId: "cursor:global:skill:example-cursor-skill",
+        displayName: "example-cursor-skill",
+        originalPath: path.join(
+          sandbox.homeDir,
+          ".cursor",
+          "skills-cursor",
+          "example-cursor-skill",
+        ),
+        vaultedPath: skillDescriptor.vaultedPath,
+        payloadKind: "path",
+      }),
+    );
+
+    const mcpDescriptor = vaultDescriptor({
+      appStateRoot: sandbox.config.appStateRoot,
+      provider: "cursor",
+      layer: "global",
+      kind: "configured-mcp",
+      itemId: "cursor:global:configured-mcp:mcp-json:filesystem",
+    });
+    mkdirSync(mcpDescriptor.rootPath, { recursive: true });
+    writeFileSync(
+      mcpDescriptor.payloadPath,
+      JSON.stringify(
+        {
+          command: "npx",
+        },
+        null,
+        2,
+      ),
+      "utf8",
+    );
+    writeFileSync(
+      mcpDescriptor.entryPath,
+      serializeVaultEntry({
+        version: 1,
+        provider: "cursor",
+        kind: "configured-mcp",
+        layer: "global",
+        itemId: "cursor:global:configured-mcp:mcp-json:filesystem",
+        displayName: "filesystem",
+        originalPath: path.join(sandbox.homeDir, ".cursor", "mcp.json"),
+        vaultedPath: mcpDescriptor.payloadPath,
+        payloadKind: "json-payload",
+      }),
+    );
+
+    const result = cursorProvider.discover({
+      config: sandbox.config,
+      homeDir: sandbox.homeDir,
+    });
+
+    expect(result.warnings).toEqual([]);
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "cursor:global:skill:example-cursor-skill",
+        enabled: false,
+        mutability: "read-write",
+        statePath: skillDescriptor.entryPath,
+      }),
+    );
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "cursor:global:configured-mcp:mcp-json:filesystem",
+        enabled: false,
+        mutability: "read-write",
+        statePath: mcpDescriptor.entryPath,
+      }),
+    );
+  });
+
+  it("warns when live and vaulted Cursor skill state conflict", () => {
+    const sandbox = createSandbox();
+
+    copyFixture(
+      "cursor/global/skills-cursor",
+      path.join(sandbox.homeDir, ".cursor", "skills-cursor"),
+    );
+
+    const descriptor = vaultDescriptor({
+      appStateRoot: sandbox.config.appStateRoot,
+      provider: "cursor",
+      layer: "global",
+      kind: "skill",
+      itemId: "cursor:global:skill:example-cursor-skill",
+    });
+    mkdirSync(descriptor.rootPath, { recursive: true });
+    copyFixture("cursor/global/skills-cursor/example-cursor-skill", descriptor.vaultedPath);
+    writeFileSync(
+      descriptor.entryPath,
+      serializeVaultEntry({
+        version: 1,
+        provider: "cursor",
+        kind: "skill",
+        layer: "global",
+        itemId: "cursor:global:skill:example-cursor-skill",
+        displayName: "example-cursor-skill",
+        originalPath: path.join(
+          sandbox.homeDir,
+          ".cursor",
+          "skills-cursor",
+          "example-cursor-skill",
+        ),
+        vaultedPath: descriptor.vaultedPath,
+        payloadKind: "path",
+      }),
+    );
+
+    const result = cursorProvider.discover({
+      config: sandbox.config,
+      homeDir: sandbox.homeDir,
+    });
+
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "cursor:global:skill:example-cursor-skill",
+        enabled: true,
+      }),
+    );
+    expect(result.warnings).toContainEqual({
+      provider: "cursor",
+      layer: "global",
+      code: "conflicting-state",
+      message: expect.stringContaining("live and vaulted copies both exist"),
+    });
+  });
+
+  it("warns on invalid Cursor configured MCP vault payloads", () => {
+    const sandbox = createSandbox();
+
+    const wrongKindDescriptor = vaultDescriptor({
+      appStateRoot: sandbox.config.appStateRoot,
+      provider: "cursor",
+      layer: "global",
+      kind: "configured-mcp",
+      itemId: "cursor:global:configured-mcp:mcp-json:wrong-kind",
+    });
+    mkdirSync(wrongKindDescriptor.rootPath, { recursive: true });
+    writeFileSync(
+      wrongKindDescriptor.entryPath,
+      serializeVaultEntry({
+        version: 1,
+        provider: "cursor",
+        kind: "configured-mcp",
+        layer: "global",
+        itemId: "cursor:global:configured-mcp:mcp-json:wrong-kind",
+        displayName: "wrong-kind",
+        originalPath: path.join(sandbox.homeDir, ".cursor", "mcp.json"),
+        vaultedPath: wrongKindDescriptor.payloadPath,
+        payloadKind: "text-payload",
+      }),
+    );
+
+    const invalidPayloadDescriptor = vaultDescriptor({
+      appStateRoot: sandbox.config.appStateRoot,
+      provider: "cursor",
+      layer: "global",
+      kind: "configured-mcp",
+      itemId: "cursor:global:configured-mcp:mcp-json:invalid-payload",
+    });
+    mkdirSync(invalidPayloadDescriptor.rootPath, { recursive: true });
+    writeFileSync(invalidPayloadDescriptor.payloadPath, "[]", "utf8");
+    writeFileSync(
+      invalidPayloadDescriptor.entryPath,
+      serializeVaultEntry({
+        version: 1,
+        provider: "cursor",
+        kind: "configured-mcp",
+        layer: "global",
+        itemId: "cursor:global:configured-mcp:mcp-json:invalid-payload",
+        displayName: "invalid-payload",
+        originalPath: path.join(sandbox.homeDir, ".cursor", "mcp.json"),
+        vaultedPath: invalidPayloadDescriptor.payloadPath,
+        payloadKind: "json-payload",
+      }),
+    );
+
+    const result = cursorProvider.discover({
+      config: sandbox.config,
+      homeDir: sandbox.homeDir,
+    });
+
+    expect(result.items.map((item) => item.id)).not.toContain(
+      "cursor:global:configured-mcp:mcp-json:wrong-kind",
+    );
+    expect(result.items.map((item) => item.id)).not.toContain(
+      "cursor:global:configured-mcp:mcp-json:invalid-payload",
+    );
+    expect(result.warnings).toContainEqual({
+      provider: "cursor",
+      layer: "global",
+      code: "invalid-shape",
+      message: expect.stringContaining("payloadKind json-payload"),
+    });
+    expect(result.warnings).toContainEqual({
+      provider: "cursor",
+      layer: "global",
+      code: "invalid-shape",
+      message: expect.stringContaining("must contain a JSON object payload"),
+    });
+  });
+
+  it("parses Cursor mcp.json with trailing commas and respects workspace disabled state", () => {
+    const sandbox = createSandbox();
+
+    mkdirSync(path.join(sandbox.homeDir, ".cursor"), { recursive: true });
+    writeFileSync(
+      path.join(sandbox.homeDir, ".cursor", "mcp.json"),
+      [
+        "{",
+        '  "mcpServers": {',
+        '    "filesystem": {',
+        '      "command": "npx",',
+        "    },",
+        "  },",
+        "}",
+      ].join("\n"),
+      "utf8",
+    );
+    const databasePath = writeCursorWorkspaceState(sandbox, JSON.stringify(["user-filesystem"]));
+
+    const result = cursorProvider.discover({
+      config: sandbox.config,
+      homeDir: sandbox.homeDir,
+    });
+
+    expect(result.warnings).toEqual([]);
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "cursor:global:configured-mcp:mcp-json:filesystem",
+        enabled: false,
+        mutability: "read-write",
+        statePath: databasePath,
+      }),
+    );
+  });
+
   it("returns no Cursor tool items and no warning when no extension metadata exists", () => {
     const sandbox = createSandbox();
 
@@ -617,6 +912,28 @@ describe("provider discovery", () => {
       "json-parse-error",
       "invalid-shape",
     ]);
+  });
+
+  it("warns when Cursor workspace disabled-server state is malformed", () => {
+    const sandbox = createSandbox();
+
+    copyFixture("cursor/global/mcp.json", path.join(sandbox.homeDir, ".cursor", "mcp.json"));
+    writeCursorWorkspaceState(sandbox, '{"broken":true}');
+
+    const result = cursorProvider.discover({
+      config: sandbox.config,
+      homeDir: sandbox.homeDir,
+    });
+
+    expect(result.items.map((item) => item.id)).toContain(
+      "cursor:global:configured-mcp:mcp-json:filesystem",
+    );
+    expect(result.warnings).toContainEqual({
+      provider: "cursor",
+      layer: "global",
+      code: "invalid-shape",
+      message: expect.stringContaining("cursor/disabledMcpServers"),
+    });
   });
 
   it("keeps Cursor MCP and extension items when the skills root cannot be scanned", () => {

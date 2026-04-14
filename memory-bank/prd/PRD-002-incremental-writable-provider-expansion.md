@@ -18,7 +18,7 @@ must_not_define:
 
 ## Problem
 
-AgentScope's foundation is now proven for discovery, guarded mutation, and one real writable provider. The remaining gap is product consistency: Codex and Cursor are still read-only, so users cannot safely manage the local agent surfaces they already see in discovery. Relative to [`../domain/problem.md`](../domain/problem.md), this initiative narrows the next product step to incremental writable-provider expansion without broadening AgentScope into a dashboard, remote control plane, or installation manager.
+AgentScope's foundation is now proven for discovery, guarded mutation, and one-provider-at-a-time writable expansion. This initiative closed the product-consistency gap that existed when Codex and Cursor were still read-only, so users can now manage the supported local agent surfaces they see in discovery through the same guarded workflow. Relative to [`../domain/problem.md`](../domain/problem.md), the initiative remained intentionally narrow and did not broaden AgentScope into a dashboard, remote control plane, or installation manager.
 
 ## Users And Jobs
 
@@ -75,11 +75,11 @@ This initiative defines the next expansion of AgentScope's safe local mutation c
 - `RISK-01` Product trust drops if provider-specific writable support reuses the shared mutation engine incorrectly and corrupts provider-managed files.
 - `RISK-02` Product trust drops if disabled provider items disappear from discovery after they move into AgentScope-managed vault state.
 - `RISK-03` Users may assume writable parity across all categories of a provider if unsupported categories stay visible but are not documented clearly.
-- `OQ-01` Whether Cursor writable support should stay a follow-up feature under this initiative after Codex, or whether new product constraints discovered during Codex work require a narrower follow-on PRD.
+- `OQ-01` Answered by `FT-005`: Cursor writable support stayed a follow-up feature under this initiative, and no narrower follow-on PRD was required.
 
 ## Downstream Features
 
 | Feature | Why it exists | Status |
 | --- | --- | --- |
 | `FT-004` | Add verified Codex skill and configured-MCP toggles through the shared guarded mutation workflow while keeping plugins unsupported | `done` |
-| `FT-005` | Add the next verified writable provider slice after Codex using the same incremental safety contract | `planned` |
+| `FT-005` | Add the next verified writable provider slice after Codex using the same incremental safety contract | `done` |

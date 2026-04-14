@@ -72,6 +72,53 @@ function parseJsonObject(raw: string, label: string): Record<string, unknown> {
   return parsed;
 }
 
+function stripTrailingCommas(contents: string): string {
+  let result = "";
+  let inString = false;
+  let escaped = false;
+
+  for (let index = 0; index < contents.length; index += 1) {
+    const char = contents[index];
+    if (char === undefined) {
+      break;
+    }
+
+    if (inString) {
+      result += char;
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      inString = true;
+      result += char;
+      continue;
+    }
+
+    if (char === ",") {
+      let lookahead = index + 1;
+      while (lookahead < contents.length && /\s/.test(contents[lookahead] ?? "")) {
+        lookahead += 1;
+      }
+
+      const next = contents[lookahead];
+      if (next === "}" || next === "]") {
+        continue;
+      }
+    }
+
+    result += char;
+  }
+
+  return result;
+}
+
 function validateClaudeSettings(raw: string, label: string): string[] {
   const doc = parseJsonObject(raw, label);
   const issues: string[] = [];
@@ -150,7 +197,12 @@ function validateSkillMarkdown(raw: string): string[] {
 }
 
 function validateCursorMcp(raw: string): string[] {
-  const doc = parseJsonObject(raw, "Cursor mcp.json");
+  let doc: Record<string, unknown>;
+  try {
+    doc = parseJsonObject(raw, "Cursor mcp.json");
+  } catch {
+    doc = parseJsonObject(stripTrailingCommas(raw), "Cursor mcp.json");
+  }
 
   if (!isRecord(doc.mcpServers)) {
     return ["mcpServers must be an object"];

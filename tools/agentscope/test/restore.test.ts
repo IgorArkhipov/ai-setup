@@ -7,13 +7,15 @@ import { acquireMutationLock } from "../src/core/mutation-lock.js";
 import { loadBackup } from "../src/core/mutation-state.js";
 import { createClaudeSandbox } from "./support/claude-sandbox.js";
 import { createCodexSandbox } from "./support/codex-sandbox.js";
+import { createCursorSandbox } from "./support/cursor-sandbox.js";
 import { fakeToggleIds, fakeToggleProvider } from "./support/fake-toggle-provider.js";
 import { createMutationSandbox } from "./support/mutation-sandbox.js";
 
 type RestoreSandbox =
   | ReturnType<typeof createMutationSandbox>
   | ReturnType<typeof createClaudeSandbox>
-  | ReturnType<typeof createCodexSandbox>;
+  | ReturnType<typeof createCodexSandbox>
+  | ReturnType<typeof createCursorSandbox>;
 
 const sandboxes: RestoreSandbox[] = [];
 
@@ -207,5 +209,75 @@ describe("runRestore", () => {
     expect(restored.exitCode).toBe(0);
     expect(restored.output).toContain("backup-codex-mcp");
     expect(sandbox.readHomeText(".codex/config.toml")).toBe(originalConfig);
+  });
+
+  it("restores a real Cursor skill backup", () => {
+    const sandbox = createCursorSandbox();
+    sandboxes.push(sandbox);
+
+    const applied = runToggle({
+      ...fakeOptions(sandbox),
+      provider: "cursor",
+      kind: "skill",
+      layer: "global",
+      id: "cursor:global:skill:example-cursor-skill",
+      apply: true,
+      now: () => new Date("2026-04-13T18:18:00.000Z"),
+      generateBackupId: () => "backup-cursor-skill-disable",
+    });
+    expect(applied.exitCode).toBe(0);
+
+    const restored = runRestore({
+      ...fakeOptions(sandbox),
+      backupId: "backup-cursor-skill-disable",
+    });
+    expect(restored.exitCode).toBe(0);
+    expect(restored.output).toContain("backup-cursor-skill-disable");
+    expect(sandbox.readHomeText(".cursor/skills-cursor/example-cursor-skill/SKILL.md")).toContain(
+      "# Example Cursor Skill",
+    );
+  });
+
+  it("restores a real Cursor configured MCP backup including workspace state", () => {
+    const sandbox = createCursorSandbox();
+    sandboxes.push(sandbox);
+
+    const originalConfig = JSON.stringify(
+      {
+        mcpServers: {
+          filesystem: {
+            command: "npx",
+            disabled: true,
+          },
+        },
+      },
+      null,
+      2,
+    );
+    writeFileSync(sandbox.homePath(".cursor/mcp.json"), `${originalConfig}\n`, "utf8");
+    sandbox.setWorkspaceDisabledServers(["user-filesystem"]);
+
+    const applied = runToggle({
+      ...fakeOptions(sandbox),
+      provider: "cursor",
+      kind: "mcp",
+      layer: "global",
+      id: "cursor:global:configured-mcp:mcp-json:filesystem",
+      apply: true,
+      now: () => new Date("2026-04-13T18:20:00.000Z"),
+      generateBackupId: () => "backup-cursor-mcp-enable",
+    });
+    expect(applied.exitCode).toBe(0);
+    expect(sandbox.readHomeText(".cursor/mcp.json")).not.toContain('"disabled": true');
+    expect(sandbox.readWorkspaceDisabledServers()).toEqual([]);
+
+    const restored = runRestore({
+      ...fakeOptions(sandbox),
+      backupId: "backup-cursor-mcp-enable",
+    });
+    expect(restored.exitCode).toBe(0);
+    expect(restored.output).toContain("backup-cursor-mcp-enable");
+    expect(sandbox.readHomeText(".cursor/mcp.json")).toBe(`${originalConfig}\n`);
+    expect(sandbox.readWorkspaceDisabledServers()).toEqual(["user-filesystem"]);
   });
 });
