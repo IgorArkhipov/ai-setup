@@ -44,6 +44,7 @@ A PRD is needed when the work lives at the level of a product initiative or capa
 | PRD ID | Title | Status | Downstream features | Last updated |
 | --- | --- | --- | --- | --- |
 | [`PRD-001`](PRD-001-local-discovery-and-safe-mutation-foundation.md) | Local Discovery And Safe Mutation Foundation | `active` | `FT-001`, `FT-002`, `FT-003` | 2026-04-12 |
+| [`PRD-002`](PRD-002-incremental-writable-provider-expansion.md) | Incremental Writable Provider Expansion | `active` | `FT-004`, `FT-005` | 2026-04-13 |
 
 ## Template
 

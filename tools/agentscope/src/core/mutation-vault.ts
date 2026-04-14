@@ -2,9 +2,9 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { DiscoveryLayer } from "./models.js";
 
-export type VaultProvider = "claude";
+export type VaultProvider = "claude" | "codex";
 export type VaultEntryKind = "skill" | "configured-mcp";
-export type VaultPayloadKind = "path" | "json-payload";
+export type VaultPayloadKind = "path" | "json-payload" | "text-payload";
 
 export interface VaultEntry {
   version: 1;
@@ -14,6 +14,8 @@ export interface VaultEntry {
   itemId: string;
   displayName: string;
   originalPath: string;
+  // Path where the disabled payload lives inside the vault.
+  // `path` payloads use a directory here; text/json payloads use a file path.
   vaultedPath: string;
   payloadKind: VaultPayloadKind;
 }
@@ -29,7 +31,10 @@ export interface VaultDescriptorInput {
 export interface VaultDescriptor {
   rootPath: string;
   entryPath: string;
+  // Canonical file path for text/json payloads stored inside the vault.
   payloadPath: string;
+  // Canonical path location for the vaulted payload.
+  // This is a directory for `path` payloads and a file path for text/json payloads.
   vaultedPath: string;
 }
 
@@ -87,8 +92,8 @@ function validateEntry(raw: string, entryPath: string): VaultEntry {
     throw new Error(`${entryPath} version must be 1`);
   }
 
-  if (provider !== "claude") {
-    throw new Error(`${entryPath} provider must be claude`);
+  if (provider !== "claude" && provider !== "codex") {
+    throw new Error(`${entryPath} provider must be claude or codex`);
   }
 
   if (kind !== "skill" && kind !== "configured-mcp") {
@@ -108,8 +113,8 @@ function validateEntry(raw: string, entryPath: string): VaultEntry {
     throw new Error(`${entryPath} string fields are invalid`);
   }
 
-  if (payloadKind !== "path" && payloadKind !== "json-payload") {
-    throw new Error(`${entryPath} payloadKind must be path or json-payload`);
+  if (payloadKind !== "path" && payloadKind !== "json-payload" && payloadKind !== "text-payload") {
+    throw new Error(`${entryPath} payloadKind must be path, json-payload, or text-payload`);
   }
 
   return {
@@ -137,6 +142,13 @@ export function vaultDescriptor(input: VaultDescriptorInput): VaultDescriptor {
     payloadPath: path.join(rootPath, "payload.json"),
     vaultedPath: path.join(rootPath, "payload"),
   };
+}
+
+export function vaultPayloadLocation(
+  descriptor: VaultDescriptor,
+  payloadKind: VaultPayloadKind,
+): string {
+  return payloadKind === "path" ? descriptor.vaultedPath : descriptor.payloadPath;
 }
 
 export function serializeVaultEntry(entry: VaultEntry): Uint8Array {

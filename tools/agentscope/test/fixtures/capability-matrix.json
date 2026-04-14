@@ -7,9 +7,9 @@
       "tools": "verified"
     },
     "codex": {
-      "skills": "read-only",
-      "configuredMcps": "read-only",
-      "tools": "read-only"
+      "skills": "verified",
+      "configuredMcps": "verified",
+      "tools": "unsupported"
     },
     "cursor": {
       "skills": "read-only",
@@ -19,7 +19,7 @@
   },
   "notes": {
     "claude": "Verified Claude toggles cover project skills, project .mcp.json approvals, and settings-file tools.",
-    "codex": "Fixture baseline covers config.toml sections plus global and project skill roots.",
+    "codex": "Verified Codex toggles cover global and project skills plus global config.toml mcp_servers sections; plugins remain unsupported.",
     "cursor": "Fixture baseline covers global skills, global mcp.json, and profile extension metadata."
   }
 }

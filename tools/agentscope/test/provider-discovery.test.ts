@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { AgentScopeConfig } from "../src/core/config.js";
+import { serializeVaultEntry, vaultDescriptor } from "../src/core/mutation-vault.js";
 import { claudeProvider } from "../src/providers/claude.js";
 import { codexProvider } from "../src/providers/codex.js";
 import { cursorProvider } from "../src/providers/cursor.js";
@@ -180,11 +181,93 @@ describe("provider discovery", () => {
 
     expect(result.warnings).toEqual([]);
     expect(result.items.map((item) => `${item.id}:${item.mutability}`)).toEqual([
-      "codex:global:skill:example-skill:read-only",
-      "codex:project:skill:example-project-skill:read-only",
-      "codex:global:configured-mcp:config:github:read-only",
+      "codex:global:skill:example-skill:read-write",
+      "codex:project:skill:example-project-skill:read-write",
+      "codex:global:configured-mcp:config:github:read-write",
       "codex:global:tool:plugin:safe-shell:unsupported",
     ]);
+  });
+
+  it("discovers disabled Codex skills and configured MCPs from vault state", () => {
+    const sandbox = createSandbox();
+
+    copyFixture("codex/global/config.toml", path.join(sandbox.homeDir, ".codex", "config.toml"));
+    copyFixture("codex/project/.codex/skills", path.join(sandbox.projectRoot, ".codex", "skills"));
+
+    const skillDescriptor = vaultDescriptor({
+      appStateRoot: sandbox.config.appStateRoot,
+      provider: "codex",
+      layer: "global",
+      kind: "skill",
+      itemId: "codex:global:skill:example-skill",
+    });
+    mkdirSync(skillDescriptor.rootPath, { recursive: true });
+    copyFixture("codex/global/skills/.system/example-skill", skillDescriptor.vaultedPath);
+    writeFileSync(
+      skillDescriptor.entryPath,
+      serializeVaultEntry({
+        version: 1,
+        provider: "codex",
+        kind: "skill",
+        layer: "global",
+        itemId: "codex:global:skill:example-skill",
+        displayName: "example-skill",
+        originalPath: path.join(sandbox.homeDir, ".codex", "skills", ".system", "example-skill"),
+        vaultedPath: skillDescriptor.vaultedPath,
+        payloadKind: "path",
+      }),
+    );
+
+    const mcpDescriptor = vaultDescriptor({
+      appStateRoot: sandbox.config.appStateRoot,
+      provider: "codex",
+      layer: "global",
+      kind: "configured-mcp",
+      itemId: "codex:global:configured-mcp:config:disabled-github",
+    });
+    mkdirSync(mcpDescriptor.rootPath, { recursive: true });
+    writeFileSync(
+      mcpDescriptor.payloadPath,
+      ["[mcp_servers.disabled-github]", 'command = "npx"'].join("\n"),
+      "utf8",
+    );
+    writeFileSync(
+      mcpDescriptor.entryPath,
+      serializeVaultEntry({
+        version: 1,
+        provider: "codex",
+        kind: "configured-mcp",
+        layer: "global",
+        itemId: "codex:global:configured-mcp:config:disabled-github",
+        displayName: "disabled-github",
+        originalPath: path.join(sandbox.homeDir, ".codex", "config.toml"),
+        vaultedPath: mcpDescriptor.payloadPath,
+        payloadKind: "text-payload",
+      }),
+    );
+
+    const result = codexProvider.discover({
+      config: sandbox.config,
+      homeDir: sandbox.homeDir,
+    });
+
+    expect(result.warnings).toEqual([]);
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "codex:global:skill:example-skill",
+        enabled: false,
+        mutability: "read-write",
+        statePath: skillDescriptor.entryPath,
+      }),
+    );
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "codex:global:configured-mcp:config:disabled-github",
+        enabled: false,
+        mutability: "read-write",
+        statePath: mcpDescriptor.entryPath,
+      }),
+    );
   });
 
   it("turns malformed Codex config into warnings", () => {
@@ -251,6 +334,173 @@ describe("provider discovery", () => {
         message: expect.stringContaining(path.join(sandbox.homeDir, ".codex", "skills")),
       },
     ]);
+  });
+
+  it("warns when Codex live and vaulted entries conflict", () => {
+    const sandbox = createSandbox();
+
+    copyFixture("codex/global/config.toml", path.join(sandbox.homeDir, ".codex", "config.toml"));
+    copyFixture("codex/global/skills", path.join(sandbox.homeDir, ".codex", "skills"));
+
+    const skillDescriptor = vaultDescriptor({
+      appStateRoot: sandbox.config.appStateRoot,
+      provider: "codex",
+      layer: "global",
+      kind: "skill",
+      itemId: "codex:global:skill:example-skill",
+    });
+    mkdirSync(skillDescriptor.rootPath, { recursive: true });
+    copyFixture("codex/global/skills/.system/example-skill", skillDescriptor.vaultedPath);
+    writeFileSync(
+      skillDescriptor.entryPath,
+      serializeVaultEntry({
+        version: 1,
+        provider: "codex",
+        kind: "skill",
+        layer: "global",
+        itemId: "codex:global:skill:example-skill",
+        displayName: "example-skill",
+        originalPath: path.join(sandbox.homeDir, ".codex", "skills", ".system", "example-skill"),
+        vaultedPath: skillDescriptor.vaultedPath,
+        payloadKind: "path",
+      }),
+    );
+
+    const result = codexProvider.discover({
+      config: sandbox.config,
+      homeDir: sandbox.homeDir,
+    });
+
+    expect(
+      result.items.filter((item) => item.id === "codex:global:skill:example-skill"),
+    ).toHaveLength(1);
+    expect(result.warnings).toContainEqual({
+      provider: "codex",
+      layer: "global",
+      code: "conflicting-state",
+      message: expect.stringContaining("live and vaulted copies both exist"),
+    });
+  });
+
+  it("warns when a vaulted Codex skill is missing its payload directory", () => {
+    const sandbox = createSandbox();
+
+    const skillDescriptor = vaultDescriptor({
+      appStateRoot: sandbox.config.appStateRoot,
+      provider: "codex",
+      layer: "global",
+      kind: "skill",
+      itemId: "codex:global:skill:example-skill",
+    });
+    mkdirSync(skillDescriptor.rootPath, { recursive: true });
+    writeFileSync(
+      skillDescriptor.entryPath,
+      serializeVaultEntry({
+        version: 1,
+        provider: "codex",
+        kind: "skill",
+        layer: "global",
+        itemId: "codex:global:skill:example-skill",
+        displayName: "example-skill",
+        originalPath: path.join(sandbox.homeDir, ".codex", "skills", ".system", "example-skill"),
+        vaultedPath: skillDescriptor.vaultedPath,
+        payloadKind: "path",
+      }),
+    );
+
+    const result = codexProvider.discover({
+      config: sandbox.config,
+      homeDir: sandbox.homeDir,
+    });
+
+    expect(result.items.map((item) => item.id)).not.toContain("codex:global:skill:example-skill");
+    expect(result.warnings).toContainEqual({
+      provider: "codex",
+      layer: "global",
+      code: "missing-vault-payload",
+      message: expect.stringContaining(skillDescriptor.vaultedPath),
+    });
+  });
+
+  it("warns when vaulted Codex configured MCP entries use an invalid payload kind or payload shape", () => {
+    const sandbox = createSandbox();
+
+    const wrongKindDescriptor = vaultDescriptor({
+      appStateRoot: sandbox.config.appStateRoot,
+      provider: "codex",
+      layer: "global",
+      kind: "configured-mcp",
+      itemId: "codex:global:configured-mcp:config:wrong-kind",
+    });
+    mkdirSync(wrongKindDescriptor.rootPath, { recursive: true });
+    writeFileSync(
+      wrongKindDescriptor.entryPath,
+      serializeVaultEntry({
+        version: 1,
+        provider: "codex",
+        kind: "configured-mcp",
+        layer: "global",
+        itemId: "codex:global:configured-mcp:config:wrong-kind",
+        displayName: "wrong-kind",
+        originalPath: path.join(sandbox.homeDir, ".codex", "config.toml"),
+        vaultedPath: wrongKindDescriptor.payloadPath,
+        payloadKind: "json-payload",
+      }),
+    );
+
+    const invalidPayloadDescriptor = vaultDescriptor({
+      appStateRoot: sandbox.config.appStateRoot,
+      provider: "codex",
+      layer: "global",
+      kind: "configured-mcp",
+      itemId: "codex:global:configured-mcp:config:invalid-payload",
+    });
+    mkdirSync(invalidPayloadDescriptor.rootPath, { recursive: true });
+    writeFileSync(
+      invalidPayloadDescriptor.payloadPath,
+      "[plugins.invalid-payload]\nenabled = true\n",
+      "utf8",
+    );
+    writeFileSync(
+      invalidPayloadDescriptor.entryPath,
+      serializeVaultEntry({
+        version: 1,
+        provider: "codex",
+        kind: "configured-mcp",
+        layer: "global",
+        itemId: "codex:global:configured-mcp:config:invalid-payload",
+        displayName: "invalid-payload",
+        originalPath: path.join(sandbox.homeDir, ".codex", "config.toml"),
+        vaultedPath: invalidPayloadDescriptor.payloadPath,
+        payloadKind: "text-payload",
+      }),
+    );
+
+    const result = codexProvider.discover({
+      config: sandbox.config,
+      homeDir: sandbox.homeDir,
+    });
+
+    expect(result.items.map((item) => item.id)).not.toContain(
+      "codex:global:configured-mcp:config:wrong-kind",
+    );
+    expect(result.items.map((item) => item.id)).not.toContain(
+      "codex:global:configured-mcp:config:invalid-payload",
+    );
+    expect(result.warnings).toContainEqual({
+      provider: "codex",
+      layer: "global",
+      code: "invalid-shape",
+      message: expect.stringContaining("payloadKind text-payload"),
+    });
+    expect(result.warnings).toContainEqual({
+      provider: "codex",
+      layer: "global",
+      code: "invalid-shape",
+      message: expect.stringContaining(
+        "must contain exactly one matching [mcp_servers.invalid-payload] section",
+      ),
+    });
   });
 
   it("discovers Cursor skills, configured MCPs, and extensions from the configured root", () => {

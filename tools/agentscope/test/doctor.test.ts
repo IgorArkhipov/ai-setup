@@ -80,16 +80,20 @@ describe("doctor and providers commands", () => {
 
   it("prints the supported providers in deterministic order", () => {
     const output = renderProviders(fixturesRoot);
+    const claudeBlock = output.match(/Claude Code \(claude\)[\s\S]*?(?=\n\n[A-Z]|\s*$)/)?.[0];
+    const codexBlock = output.match(/Codex \(codex\)[\s\S]*?(?=\n\n[A-Z]|\s*$)/)?.[0];
+    const cursorBlock = output.match(/Cursor \(cursor\)[\s\S]*?(?=\n\n[A-Z]|\s*$)/)?.[0];
 
     expect(output.indexOf("Claude Code (claude)")).toBeLessThan(output.indexOf("Codex (codex)"));
     expect(output.indexOf("Codex (codex)")).toBeLessThan(output.indexOf("Cursor (cursor)"));
-    expect(output).toContain("Claude Code (claude)");
-    expect(output).toContain("Codex (codex)");
-    expect(output).toContain("Cursor (cursor)");
-    expect(output).toContain("skills:          verified");
-    expect(output).toContain("configured MCPs: verified");
-    expect(output).toContain("tools/extensions: verified");
-    expect(output).toContain("configured MCPs: read-only");
-    expect(output).toContain("tools/extensions: read-only");
+    expect(claudeBlock).toContain("skills:          verified");
+    expect(claudeBlock).toContain("configured MCPs: verified");
+    expect(claudeBlock).toContain("tools/extensions: verified");
+    expect(codexBlock).toContain("skills:          verified");
+    expect(codexBlock).toContain("configured MCPs: verified");
+    expect(codexBlock).toContain("tools/extensions: unsupported");
+    expect(cursorBlock).toContain("skills:          read-only");
+    expect(cursorBlock).toContain("configured MCPs: read-only");
+    expect(cursorBlock).toContain("tools/extensions: read-only");
   });
 });

@@ -7,6 +7,7 @@ import {
   serializeVaultEntry,
   type VaultEntry,
   vaultDescriptor,
+  vaultPayloadLocation,
 } from "../src/core/mutation-vault.js";
 import { createClaudeSandbox } from "./support/claude-sandbox.js";
 
@@ -61,6 +62,32 @@ describe("mutation vault", () => {
     expect(descriptor.vaultedPath).toContain(
       "/vault/claude/project/skill/claude%3Aproject%3Askill%3Aexample-claude-skill/payload",
     );
+
+    const codexDescriptor = vaultDescriptor({
+      appStateRoot,
+      provider: "codex",
+      layer: "global",
+      kind: "configured-mcp",
+      itemId: "codex:global:configured-mcp:config:github",
+    });
+
+    expect(codexDescriptor.entryPath).toContain(
+      "/vault/codex/global/configured-mcp/codex%3Aglobal%3Aconfigured-mcp%3Aconfig%3Agithub/entry.json",
+    );
+  });
+
+  it("maps payload-backed descriptors to the correct vaulted storage location", () => {
+    const descriptor = vaultDescriptor({
+      appStateRoot: "/tmp/agentscope-state",
+      provider: "codex",
+      layer: "global",
+      kind: "configured-mcp",
+      itemId: "codex:global:configured-mcp:config:github",
+    });
+
+    expect(vaultPayloadLocation(descriptor, "path")).toBe(descriptor.vaultedPath);
+    expect(vaultPayloadLocation(descriptor, "json-payload")).toBe(descriptor.payloadPath);
+    expect(vaultPayloadLocation(descriptor, "text-payload")).toBe(descriptor.payloadPath);
   });
 
   it("serializes and reloads manifests across a fresh process boundary", () => {
@@ -126,6 +153,17 @@ describe("mutation vault", () => {
       vaultedPath: "/workspace/state/vault/claude/project/configured-mcp/github/payload.json",
       payloadKind: "json-payload",
     };
+    const textPayloadEntry: VaultEntry = {
+      version: 1,
+      provider: "codex",
+      kind: "configured-mcp",
+      layer: "global",
+      itemId: "codex:global:configured-mcp:config:github",
+      displayName: "github",
+      originalPath: "/workspace/home/.codex/config.toml",
+      vaultedPath: "/workspace/state/vault/codex/global/configured-mcp/github/payload.json",
+      payloadKind: "text-payload",
+    };
 
     expect(Buffer.from(serializeVaultEntry(pathEntry)).toString("utf8")).toMatchInlineSnapshot(`
       "{
@@ -152,6 +190,22 @@ describe("mutation vault", () => {
         "originalPath": "/workspace/project/.mcp.json",
         "vaultedPath": "/workspace/state/vault/claude/project/configured-mcp/github/payload.json",
         "payloadKind": "json-payload"
+      }
+      "
+    `);
+    expect(
+      Buffer.from(serializeVaultEntry(textPayloadEntry)).toString("utf8"),
+    ).toMatchInlineSnapshot(`
+      "{
+        "version": 1,
+        "provider": "codex",
+        "kind": "configured-mcp",
+        "layer": "global",
+        "itemId": "codex:global:configured-mcp:config:github",
+        "displayName": "github",
+        "originalPath": "/workspace/home/.codex/config.toml",
+        "vaultedPath": "/workspace/state/vault/codex/global/configured-mcp/github/payload.json",
+        "payloadKind": "text-payload"
       }
       "
     `);

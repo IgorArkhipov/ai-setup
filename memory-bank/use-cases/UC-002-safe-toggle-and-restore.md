@@ -6,6 +6,7 @@ purpose: "Captures the stable project-level scenario where a user dry-runs, appl
 derived_from:
   - ../domain/problem.md
   - ../prd/PRD-001-local-discovery-and-safe-mutation-foundation.md
+  - ../prd/PRD-002-incremental-writable-provider-expansion.md
 status: active
 audience: humans_and_agents
 must_not_define:
@@ -63,6 +64,6 @@ The actor wants to enable or disable one supported item, or recover a previous c
 
 | Upstream / Downstream | References |
 | --- | --- |
-| PRD | `PRD-001` |
-| Features | `FT-002`, `FT-003` |
+| PRD | `PRD-001`, `PRD-002` |
+| Features | `FT-002`, `FT-003`, `FT-004` |
 | ADR | `none` |

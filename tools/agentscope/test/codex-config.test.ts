@@ -56,4 +56,98 @@ enabled = true
       mcpServers: [],
     });
   });
+
+  it("ignores header-like lines inside multiline strings", () => {
+    const parsed = parseCodexConfig(`
+[mcp_servers.github]
+enabled = true
+display_name = "GitHub"
+
+[profiles.example]
+banner = """
+[mcp_servers.fake]
+[plugins.fake]
+"""
+
+[plugins.safe-shell]
+enabled = true
+name = "Safe Shell"
+`);
+
+    expect(parsed).toEqual({
+      plugins: [
+        {
+          id: "safe-shell",
+          enabled: true,
+          displayName: "Safe Shell",
+        },
+      ],
+      mcpServers: [
+        {
+          id: "github",
+          enabled: true,
+          displayName: "GitHub",
+        },
+      ],
+    });
+  });
+
+  it("ignores header-like lines inside literal multiline strings", () => {
+    const parsed = parseCodexConfig(`
+[mcp_servers.github]
+enabled = true
+
+[profiles.example]
+banner = '''
+[mcp_servers.fake]
+[plugins.fake]
+'''
+
+[plugins.safe-shell]
+enabled = true
+`);
+
+    expect(parsed).toEqual({
+      plugins: [
+        {
+          id: "safe-shell",
+          enabled: true,
+        },
+      ],
+      mcpServers: [
+        {
+          id: "github",
+          enabled: true,
+        },
+      ],
+    });
+  });
+
+  it("ignores array-of-tables headers outside the supported Codex sections", () => {
+    const parsed = parseCodexConfig(`
+[mcp_servers.github]
+enabled = true
+
+[[profiles.example]]
+label = "first"
+
+[plugins.safe-shell]
+enabled = true
+`);
+
+    expect(parsed).toEqual({
+      plugins: [
+        {
+          id: "safe-shell",
+          enabled: true,
+        },
+      ],
+      mcpServers: [
+        {
+          id: "github",
+          enabled: true,
+        },
+      ],
+    });
+  });
 });

@@ -10,7 +10,7 @@ This directory is an isolated TypeScript sub-project.
 | Provider | Skills | Configured MCPs | Tools / Extensions | Reality check |
 | --- | --- | --- | --- | --- |
 | Claude Code | read-write | read-write | read-write | Verified end-to-end against fixture sandboxes for project skills, project `.mcp.json` approvals, and settings-file tools. |
-| Codex | read-only | read-only | read-only | Fixture covers `config.toml` plugin and `mcp_servers` sections plus global and project skill roots. |
+| Codex | read-write | read-write | unsupported | Verified end-to-end against fixture sandboxes for global and project skills plus global `config.toml` `mcp_servers` sections. Plugins remain visible but unsupported. |
 | Cursor | read-only | read-only | read-only | Fixture covers `~/.cursor/skills-cursor`, `~/.cursor/mcp.json`, and profile `extensions.json` metadata. |
 
 ## Fixtures
@@ -50,7 +50,9 @@ Successful apply writes create a backup manifest and append an audit event. Rest
 - Minimum supported Node runtime: `>=25.9.0`
 - SQLite-backed mutations use the built-in `node:sqlite` module
 
-Claude is the first provider with real dry-run, apply, and restore coverage. Codex and Cursor still expose discovery-only inventory while provider-specific write planning remains unimplemented.
+Claude and Codex have real dry-run, apply, and restore coverage for their supported writable slices. Codex plugins and all Cursor items still expose discovery-only or explicitly unsupported inventory until provider-specific write planning is implemented safely.
+
+For Codex configured MCPs, re-enable restores the disabled section content into the current `config.toml`, appending it at end-of-file when needed. AgentScope only re-enables Codex MCP sections that it previously disabled into the vault; a live `[mcp_servers.*]` section with `enabled = false` remains a discovered Codex state and is reported as blocked instead of being rewritten implicitly. Use `restore` when exact byte-for-byte recovery of the original file layout matters.
 
 ## Baseline Verification
 

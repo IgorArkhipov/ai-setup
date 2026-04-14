@@ -139,6 +139,26 @@ describe("runToggle", () => {
     expect(result.output).toContain(".claude/skills/example-claude-skill");
   });
 
+  it("supports real Codex dry-run planning for global skills", () => {
+    const result = runToggle({
+      cwd: runtimeRoot,
+      homeDir: path.join(runtimeRoot, "home"),
+      projectRoot: path.join(runtimeRoot, "project"),
+      appStateRoot: path.join(runtimeRoot, "app-state"),
+      cursorRoot: path.join(runtimeRoot, "cursor", "User"),
+      provider: "codex",
+      kind: "skill",
+      layer: "global",
+      id: "codex:global:skill:example-skill",
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.output).toContain("status: dry-run");
+    expect(result.output).toContain("rename path");
+    expect(result.output).toContain(".codex/skills/.system/example-skill");
+    expect(result.output).toContain("/vault/codex/global/skill/");
+  });
+
   it("blocks real unsupported selections from production providers", () => {
     const result = runToggle({
       cwd: runtimeRoot,

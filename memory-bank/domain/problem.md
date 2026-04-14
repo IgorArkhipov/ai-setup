@@ -31,7 +31,7 @@ AgentScope is a standalone TypeScript tool in [`tools/agentscope/`](../../tools/
 
 The product exists because local agent configuration is fragmented across provider-specific JSON, TOML, directory layouts, and profile metadata. Without a common layer, users have to remember several file locations, interpret incompatible config shapes, and edit provider state manually. That increases the chance of hidden drift, unsafe edits, and provider-specific mistakes.
 
-AgentScope stays intentionally narrow. It is a local discovery and safe-mutation tool, not a cloud control plane or a package installer. In the current implementation, it exposes a CLI with `providers`, `doctor`, `list`, `toggle`, and `restore`, plus a guarded mutation engine that can apply and roll back verified changes. Claude is the first writable provider; Codex and Cursor remain discovery-only.
+AgentScope stays intentionally narrow. It is a local discovery and safe-mutation tool, not a cloud control plane or a package installer. In the current implementation, it exposes a CLI with `providers`, `doctor`, `list`, `toggle`, and `restore`, plus a guarded mutation engine that can apply and roll back verified changes. Claude and Codex are verified writable providers for their supported slices; Cursor remains discovery-only.
 
 The downstream system boundary is the local machine. AgentScope reads provider-owned files from explicit provider roots and writes only through its guarded mutation path. It also owns its own application state under the AgentScope app-state root for locks, backups, audit history, and vault metadata. Plugin installation, remote orchestration, and undocumented provider roots are outside the current product boundary.
 
@@ -54,7 +54,7 @@ The downstream system boundary is the local machine. AgentScope reads provider-o
 - `PCON-01` AgentScope is local-first and file-backed. It must operate against explicit provider roots and local app-state paths, not remote APIs or hidden provider internals.
 - `PCON-02` Discovery must be non-destructive. Provider read or parse failures become warnings in `list` so healthy providers and healthy slices remain visible.
 - `PCON-03` Real writes must go through the shared guarded mutation engine with advisory locking, source fingerprint checks, persistent backups, audit logging, and rollback or restore behavior.
-- `PCON-04` The current writable surface is intentionally narrow: Claude project skills, Claude configured MCP approvals, and Claude tools. Codex and Cursor are still read-only in the current implementation.
+- `PCON-04` The current writable surface is intentionally narrow: Claude project skills, Claude configured MCP approvals, Claude tools, Codex global and project skills, and Codex global configured MCPs. Codex plugins and all Cursor items are still read-only or unsupported in the current implementation.
 - `PCON-05` AgentScope manages configuration through JSON and TOML files plus provider-owned directories. `.env` files are not part of the product contract for this repository and must not become an implicit configuration source.
 - `PCON-06` The current package is CLI-first. A dashboard or stdio MCP surface may exist as future product intent, but it is not implemented in `tools/agentscope` today and must not become an undocumented second control path.
 
@@ -65,3 +65,4 @@ The downstream system boundary is the local machine. AgentScope reads provider-o
 - [`../features/FT-001/feature.md`](../features/FT-001/feature.md) - verified discovery foundation and normalized item model.
 - [`../features/FT-002/feature.md`](../features/FT-002/feature.md) - shared guarded mutation engine, backup, audit, and restore contracts.
 - [`../features/FT-003/feature.md`](../features/FT-003/feature.md) - first writable Claude provider integration and current verified mutation scope.
+- [`../features/FT-004/feature.md`](../features/FT-004/feature.md) - verified Codex writable provider slice for skills and configured MCPs.

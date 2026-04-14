@@ -6,12 +6,14 @@ import { runToggle } from "../src/commands/toggle.js";
 import { acquireMutationLock } from "../src/core/mutation-lock.js";
 import { loadBackup } from "../src/core/mutation-state.js";
 import { createClaudeSandbox } from "./support/claude-sandbox.js";
+import { createCodexSandbox } from "./support/codex-sandbox.js";
 import { fakeToggleIds, fakeToggleProvider } from "./support/fake-toggle-provider.js";
 import { createMutationSandbox } from "./support/mutation-sandbox.js";
 
 type RestoreSandbox =
   | ReturnType<typeof createMutationSandbox>
-  | ReturnType<typeof createClaudeSandbox>;
+  | ReturnType<typeof createClaudeSandbox>
+  | ReturnType<typeof createCodexSandbox>;
 
 const sandboxes: RestoreSandbox[] = [];
 
@@ -178,5 +180,32 @@ describe("runRestore", () => {
     });
     expect(restored.exitCode).toBe(0);
     expect(restored.output).toContain("backup-claude-skill");
+  });
+
+  it("restores a real Codex configured MCP backup", () => {
+    const sandbox = createCodexSandbox();
+    sandboxes.push(sandbox);
+
+    const originalConfig = sandbox.readHomeText(".codex/config.toml");
+    const applied = runToggle({
+      ...fakeOptions(sandbox),
+      provider: "codex",
+      kind: "mcp",
+      layer: "global",
+      id: "codex:global:configured-mcp:config:github",
+      apply: true,
+      now: () => new Date("2026-04-13T12:30:00.000Z"),
+      generateBackupId: () => "backup-codex-mcp",
+    });
+    expect(applied.exitCode).toBe(0);
+    expect(sandbox.readHomeText(".codex/config.toml")).not.toBe(originalConfig);
+
+    const restored = runRestore({
+      ...fakeOptions(sandbox),
+      backupId: "backup-codex-mcp",
+    });
+    expect(restored.exitCode).toBe(0);
+    expect(restored.output).toContain("backup-codex-mcp");
+    expect(sandbox.readHomeText(".codex/config.toml")).toBe(originalConfig);
   });
 });
