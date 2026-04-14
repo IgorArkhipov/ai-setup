@@ -31,6 +31,26 @@ export interface DiscoveryResult {
   warnings: DiscoveryWarning[];
 }
 
+export interface InventoryBucketSummary {
+  available: number;
+  active: number;
+}
+
+export interface ProviderInventorySummary {
+  provider: DiscoveryProvider;
+  totalAvailable: number;
+  totalActive: number;
+  warningCount: number;
+  kinds: Record<DiscoveryKind, InventoryBucketSummary>;
+  categories: Record<DiscoveryCategory, InventoryBucketSummary>;
+  layers: Record<DiscoveryLayer, InventoryBucketSummary>;
+}
+
+export interface DiscoveryInventorySummary {
+  providers: ProviderInventorySummary[];
+}
+
 export const providerOrder: DiscoveryProvider[] = ["claude", "codex", "cursor"];
+export const kindOrder: DiscoveryKind[] = ["skill", "mcp", "plugin"];
 export const layerOrder: DiscoveryLayer[] = ["global", "project"];
 export const categoryOrder: DiscoveryCategory[] = ["skill", "configured-mcp", "tool"];

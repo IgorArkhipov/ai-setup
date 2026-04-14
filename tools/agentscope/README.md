@@ -21,11 +21,14 @@ Sanitized examples live under `test/fixtures/` and are intentionally narrow. The
 
 - `node dist/cli.js providers`
 - `node dist/cli.js doctor --project-root <path> --app-state-root <path> --cursor-root <path>`
+- `node dist/cli.js snapshot [--json] --project-root <path> --app-state-root <path> --cursor-root <path>`
 - `node dist/cli.js list [--json] [--provider <id>] [--layer <global|project|all>] --project-root <path> --app-state-root <path> --cursor-root <path>`
 - `node dist/cli.js toggle --provider <id> --kind <kind> --id <id> --layer <layer> [--json] [--apply] --project-root <path> --app-state-root <path> --cursor-root <path>`
 - `node dist/cli.js restore <backup-id> [--json] --project-root <path> --app-state-root <path> --cursor-root <path>`
 
 `doctor` treats committed fixture drift as fatal. Provider-local read and parse problems are reported separately so discovery can stay visible in `list`.
+
+`snapshot` captures the current normalized discovery result into a project-scoped `latest.json` plus bounded history under `appStateRoot/snapshots/`. It persists provider warnings alongside the discovered items and returns a non-zero exit code when warnings are present, but it does not mutate any provider-managed files. If existing snapshot history for a project is malformed, AgentScope fails fast before writing a new snapshot; remove the malformed history file manually before retrying.
 
 `toggle` is dry-run by default. It prints the selected item, target enabled state, planned operations, affected paths or stores, and an explicit line stating that no writes were performed. Add `--apply` to route the plan through the guarded mutation engine.
 
@@ -39,11 +42,13 @@ AgentScope persists guarded mutation state under `appStateRoot`:
 - `backups/<backup-id>/manifest.json`
 - `backups/<backup-id>/blobs/*.bin`
 - `audit/log.jsonl`
+- `snapshots/<project-key>/latest.json`
+- `snapshots/<project-key>/history/<snapshot-id>.json`
 - `vault/<provider>/<layer>/<kind>/<safe-item-id>/entry.json` where `safe-item-id` is the URI-encoded item id
 - `vault/<provider>/<layer>/<kind>/<safe-item-id>/payload/` for path-backed entries
 - `vault/<provider>/<layer>/<kind>/<safe-item-id>/payload.json` for JSON-payload entries
 
-Successful apply writes create a backup manifest and append an audit event. Restore keeps the backup in place and appends a restore event. Dry runs and explicit no-ops do not create backups or audit entries.
+Successful apply writes create a backup manifest and append an audit event. Restore keeps the backup in place and appends a restore event. Snapshot capture writes only under `snapshots/`. Dry runs and explicit no-ops do not create backups or audit entries.
 
 ## Runtime
 

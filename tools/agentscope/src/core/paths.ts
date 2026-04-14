@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import path from "node:path";
 
 export interface PathResolutionOptions {
@@ -52,4 +53,34 @@ export function resolveCursorRoot(
   return options.configuredCursorRoot === undefined
     ? defaultCursorRoot(options.homeDir)
     : normalizeAbsolutePath(options.configuredCursorRoot, options);
+}
+
+function sanitizeProjectKeySegment(input: string): string {
+  const slug = input
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return slug.length > 0 ? slug : "project";
+}
+
+export function getProjectSnapshotKey(projectRoot: string): string {
+  const resolved = path.resolve(projectRoot);
+  const baseName = path.basename(resolved);
+  const slug = sanitizeProjectKeySegment(baseName);
+  const hash = createHash("sha256").update(resolved).digest("hex").slice(0, 16);
+
+  return `${slug}-${hash}`;
+}
+
+export function getProjectSnapshotsDir(appStateRoot: string, projectRoot: string): string {
+  return path.join(appStateRoot, "snapshots", getProjectSnapshotKey(projectRoot));
+}
+
+export function getSnapshotHistoryDir(appStateRoot: string, projectRoot: string): string {
+  return path.join(getProjectSnapshotsDir(appStateRoot, projectRoot), "history");
+}
+
+export function getLatestSnapshotPath(appStateRoot: string, projectRoot: string): string {
+  return path.join(getProjectSnapshotsDir(appStateRoot, projectRoot), "latest.json");
 }

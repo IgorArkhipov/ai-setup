@@ -1,4 +1,5 @@
 import type { DiscoveryResult } from "./models.js";
+import type { WriteDiscoverySnapshotResult } from "./snapshots.js";
 
 function renderWarningLabel(warning: DiscoveryResult["warnings"][number]): string {
   const layer = warning.layer === undefined ? "" : ` ${warning.layer}`;
@@ -46,4 +47,37 @@ export function renderListJson(result: DiscoveryResult): string {
     null,
     2,
   );
+}
+
+function renderProviderSnapshotSummary(
+  provider: WriteDiscoverySnapshotResult["snapshot"]["inventory"]["providers"][number],
+): string {
+  return `  - ${provider.provider}: available=${provider.totalAvailable}, active=${provider.totalActive}, warnings=${provider.warningCount}`;
+}
+
+export function renderSnapshotHuman(result: WriteDiscoverySnapshotResult): string {
+  const lines = [
+    `Snapshot saved: ${result.snapshot.id}`,
+    `Latest path: ${result.latestPath}`,
+    `History path: ${result.historyPath}`,
+    `Captured at: ${result.snapshot.capturedAt}`,
+    `Project root: ${result.snapshot.projectRoot}`,
+    "Inventory semantics: available=discovered in the current scope, active=currently enabled within that scope.",
+    "Providers:",
+    ...result.snapshot.inventory.providers.map(renderProviderSnapshotSummary),
+  ];
+
+  if (result.snapshot.warnings.length > 0) {
+    lines.push("");
+    lines.push("Warnings:");
+    for (const warning of result.snapshot.warnings) {
+      lines.push(`- ${renderWarningLabel(warning)}`);
+    }
+  }
+
+  return lines.join("\n");
+}
+
+export function renderSnapshotJson(result: WriteDiscoverySnapshotResult): string {
+  return JSON.stringify(result, null, 2);
 }

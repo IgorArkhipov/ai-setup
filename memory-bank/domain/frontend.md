@@ -21,7 +21,7 @@ canonical_for:
 
 - CLI entrypoint in [`../../tools/agentscope/src/cli.ts`](../../tools/agentscope/src/cli.ts) using `cac`
 - Human-readable renderers in [`../../tools/agentscope/src/core/output.ts`](../../tools/agentscope/src/core/output.ts) and [`../../tools/agentscope/src/core/mutation-output.ts`](../../tools/agentscope/src/core/mutation-output.ts)
-- Machine-readable JSON output from the same command flows for `list`, `toggle`, and `restore`
+- Machine-readable JSON output from the same command flows for `snapshot`, `list`, `toggle`, and `restore`
 
 There is no separate dashboard code in `tools/agentscope` today. If a dashboard or MCP-facing surface is added later, it should be treated as another thin presentation layer over the same discovery and mutation core, not as a second implementation path.
 
@@ -39,6 +39,7 @@ The current interaction model is subcommand-oriented:
 
 - `providers` reports the capability matrix
 - `doctor` validates committed fixture assumptions and live provider inputs
+- `snapshot` persists the current normalized discovery inventory into project-scoped app-state history
 - `list` returns normalized discovery inventory
 - `toggle` plans by default and applies only with `--apply`
 - `restore` restores one saved backup by id

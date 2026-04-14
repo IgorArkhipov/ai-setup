@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   defaultCursorRoot,
   expandHomePath,
+  getLatestSnapshotPath,
+  getProjectSnapshotKey,
+  getProjectSnapshotsDir,
+  getSnapshotHistoryDir,
   normalizeAbsolutePath,
   resolveAppStateRoot,
   resolveCursorRoot,
@@ -70,5 +74,24 @@ describe("paths", () => {
         homeDir,
       }),
     ).toBe("/Users/tester/Library/Cursor");
+  });
+
+  it("derives a stable project snapshot key from the absolute project root", () => {
+    expect(getProjectSnapshotKey("/workspace/project")).toBe(
+      getProjectSnapshotKey("/workspace/project"),
+    );
+    expect(getProjectSnapshotKey("/workspace/project")).not.toBe(
+      getProjectSnapshotKey("/workspace/other-project"),
+    );
+  });
+
+  it("derives project-scoped snapshot paths under the app-state root", () => {
+    expect(getProjectSnapshotsDir("/state", "/workspace/project")).toContain("/state/snapshots/");
+    expect(getSnapshotHistoryDir("/state", "/workspace/project")).toBe(
+      `${getProjectSnapshotsDir("/state", "/workspace/project")}/history`,
+    );
+    expect(getLatestSnapshotPath("/state", "/workspace/project")).toBe(
+      `${getProjectSnapshotsDir("/state", "/workspace/project")}/latest.json`,
+    );
   });
 });

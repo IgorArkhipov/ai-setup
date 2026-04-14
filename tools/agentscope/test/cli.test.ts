@@ -1,3 +1,5 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { runCli } from "../src/cli.js";
@@ -149,6 +151,45 @@ describe("cli", () => {
       ]),
       warnings: [],
     });
+  });
+
+  it("routes snapshot through the registered command handler", () => {
+    const stdout = vi.fn<(message: string) => void>();
+    const stderr = vi.fn<(message: string) => void>();
+    const appStateRoot = mkdtempSync(path.join(tmpdir(), "agentscope-cli-snapshot-"));
+
+    try {
+      const exitCode = runCli(
+        [
+          "snapshot",
+          "--json",
+          "--project-root",
+          path.join(runtimeRoot, "project"),
+          "--app-state-root",
+          appStateRoot,
+          "--cursor-root",
+          path.join(runtimeRoot, "cursor", "User"),
+        ],
+        {
+          packageRoot,
+          stdout,
+          stderr,
+        },
+      );
+
+      expect(exitCode).toBe(0);
+      expect(stderr).not.toHaveBeenCalled();
+      expect(JSON.parse(stdout.mock.calls[0]?.[0] ?? "")).toMatchObject({
+        snapshot: expect.objectContaining({
+          version: 1,
+          projectRoot: path.join(runtimeRoot, "project"),
+        }),
+        latestPath: expect.stringContaining("latest.json"),
+        historyPath: expect.stringContaining(".json"),
+      });
+    } finally {
+      rmSync(appStateRoot, { recursive: true, force: true });
+    }
   });
 
   it("returns non-zero for an invalid list layer filter", () => {

@@ -8,6 +8,7 @@ import { runDoctor } from "./commands/doctor.js";
 import { runList } from "./commands/list.js";
 import { renderProviders } from "./commands/providers.js";
 import { runRestore } from "./commands/restore.js";
+import { runSnapshot } from "./commands/snapshot.js";
 import { runToggle } from "./commands/toggle.js";
 
 interface CliIo {
@@ -85,6 +86,23 @@ function createCli(packageRoot: string, io: CliIo) {
     .action((options) => {
       runHandled(() =>
         runDoctor(packageRoot, fixturesRoot, {
+          projectRoot: options.projectRoot,
+          appStateRoot: options.appStateRoot,
+          cursorRoot: options.cursorRoot,
+        }),
+      );
+    });
+
+  cli
+    .command("snapshot", "Persist the current discovery inventory as a project snapshot")
+    .option("--json", "Render JSON output")
+    .option("--project-root <path>", "Override the project root")
+    .option("--app-state-root <path>", "Override the app state root")
+    .option("--cursor-root <path>", "Override the Cursor root")
+    .action((options) => {
+      runHandled(() =>
+        runSnapshot({
+          json: options.json,
           projectRoot: options.projectRoot,
           appStateRoot: options.appStateRoot,
           cursorRoot: options.cursorRoot,

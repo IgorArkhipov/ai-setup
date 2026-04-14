@@ -2,7 +2,11 @@ import type { ProviderId } from "../providers/registry.js";
 import type { AgentScopeConfig } from "./config.js";
 import {
   categoryOrder,
+  type DiscoveryCategory,
+  type DiscoveryInventorySummary,
   type DiscoveryItem,
+  type DiscoveryKind,
+  type DiscoveryLayer,
   type DiscoveryResult,
   type DiscoveryWarning,
   layerOrder,
@@ -50,6 +54,79 @@ export function sortDiscoveryWarnings(warnings: DiscoveryWarning[]): DiscoveryWa
       left.message.localeCompare(right.message)
     );
   });
+}
+
+function emptyBucket() {
+  return {
+    available: 0,
+    active: 0,
+  };
+}
+
+function emptyKindSummary(): Record<DiscoveryKind, ReturnType<typeof emptyBucket>> {
+  return {
+    skill: emptyBucket(),
+    mcp: emptyBucket(),
+    plugin: emptyBucket(),
+  };
+}
+
+function emptyCategorySummary(): Record<DiscoveryCategory, ReturnType<typeof emptyBucket>> {
+  return {
+    skill: emptyBucket(),
+    "configured-mcp": emptyBucket(),
+    tool: emptyBucket(),
+  };
+}
+
+function emptyLayerSummary(): Record<DiscoveryLayer, ReturnType<typeof emptyBucket>> {
+  return {
+    global: emptyBucket(),
+    project: emptyBucket(),
+  };
+}
+
+export function buildDiscoveryInventorySummary(
+  items: DiscoveryItem[],
+  warnings: DiscoveryWarning[],
+): DiscoveryInventorySummary {
+  const sortedItems = sortDiscoveryItems(items);
+
+  return {
+    providers: providerOrder.map((provider) => {
+      const summary = {
+        provider,
+        totalAvailable: 0,
+        totalActive: 0,
+        warningCount: warnings.filter((warning) => warning.provider === provider).length,
+        kinds: emptyKindSummary(),
+        categories: emptyCategorySummary(),
+        layers: emptyLayerSummary(),
+      };
+
+      for (const item of sortedItems) {
+        if (item.provider !== provider) {
+          continue;
+        }
+
+        summary.totalAvailable += 1;
+        summary.kinds[item.kind].available += 1;
+        summary.categories[item.category].available += 1;
+        summary.layers[item.layer].available += 1;
+
+        if (!item.enabled) {
+          continue;
+        }
+
+        summary.totalActive += 1;
+        summary.kinds[item.kind].active += 1;
+        summary.categories[item.category].active += 1;
+        summary.layers[item.layer].active += 1;
+      }
+
+      return summary;
+    }),
+  };
 }
 
 export function runDiscovery(
