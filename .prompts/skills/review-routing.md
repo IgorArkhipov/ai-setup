@@ -1,3 +1,9 @@
+---
+name: Review Routing
+description: Choose the correct governed review prompt for an existing document.
+when_to_use: Use this skill when a governed document already exists and the agent must select the right review gate before proceeding.
+---
+
 # Review Routing
 
 Use this skill when a governed document exists and needs the correct review gate.

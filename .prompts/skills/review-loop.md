@@ -1,3 +1,9 @@
+---
+name: Review Loop
+description: Re-run the correct governed review after fixes and trigger independent re-review when the risk warrants it.
+when_to_use: Use this skill after an initial governed review has run and the document was fixed, changed materially, or still needs independent confirmation.
+---
+
 # Review Loop
 
 Use this skill after an initial governed review has run.

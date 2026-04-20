@@ -1,3 +1,9 @@
+---
+name: ADR Generation
+description: Draft or update an ADR and immediately route it through the governed ADR review flow.
+when_to_use: Use this skill when a durable architecture or engineering decision must be recorded explicitly.
+---
+
 # ADR Generation
 
 Use this skill when a durable architecture or engineering decision must be recorded explicitly.

@@ -1,3 +1,9 @@
+---
+name: ADR Review
+description: Review a governed ADR before downstream work treats it as canonical input.
+when_to_use: Use this skill when an ADR exists and needs a governed review gate before acceptance.
+---
+
 # ADR Review
 
 Use this skill to review a governed ADR before it becomes canonical input for downstream work.

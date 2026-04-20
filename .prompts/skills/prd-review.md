@@ -1,3 +1,9 @@
+---
+name: PRD Review
+description: Review a governed PRD before feature work or other downstream artifacts depend on it.
+when_to_use: Use this skill when a PRD exists and needs an explicit governed review gate for scope, users, value, and measurable outcomes.
+---
+
 # PRD Review
 
 Use this skill to review a governed PRD before downstream feature work depends on it.

@@ -1,3 +1,9 @@
+---
+name: Code Review
+description: Perform static behavioral review of a code change without executing code or running tests.
+when_to_use: Use this skill when you want a diff- or file-based code review focused on behavior, contracts, risks, and test gaps.
+---
+
 # Code Review
 
 Use this prompt for static code review when you want a behavioral analysis of a change without running tests or executing code.

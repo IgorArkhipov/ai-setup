@@ -1,3 +1,9 @@
+---
+name: Context Priming
+description: Preload the minimum repository and governed-document context before documentation work starts.
+when_to_use: Use this skill when the agent needs repository and documentation context before routing, drafting, or reviewing governed docs.
+---
+
 # Context Priming
 
 Use this skill when the agent needs direct preload prompts before documentation work starts.

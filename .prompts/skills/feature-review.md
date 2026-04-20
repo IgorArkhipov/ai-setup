@@ -1,3 +1,9 @@
+---
+name: Feature Review
+description: Review a canonical feature document before planning or implementation depends on it.
+when_to_use: Use this skill when a governed `feature.md` exists and needs review for template fit, traceability, and lifecycle readiness.
+---
+
 # Feature Review
 
 Use this skill to review a canonical `feature.md` before planning or execution depends on it.

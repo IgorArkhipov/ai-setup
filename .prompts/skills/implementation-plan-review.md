@@ -1,3 +1,9 @@
+---
+name: Implementation-Plan Review
+description: Review `implementation-plan.md` before execution starts or resumes.
+when_to_use: Use this skill when an implementation plan exists and must be checked for grounding, sequencing, and boundary discipline.
+---
+
 # Implementation-Plan Review
 
 Use this skill to review `implementation-plan.md` before execution starts or resumes.

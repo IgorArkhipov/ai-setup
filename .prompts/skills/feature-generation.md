@@ -1,3 +1,9 @@
+---
+name: Feature Generation
+description: Bootstrap or update a governed feature package and immediately run the matching feature review.
+when_to_use: Use this skill when the work belongs in a governed feature package rather than a PRD, use case, ADR, or implementation plan.
+---
+
 # Feature Generation
 
 Use this skill when the work belongs in a governed feature package.

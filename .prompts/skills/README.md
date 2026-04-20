@@ -1,8 +1,20 @@
+---
+name: Prompt Skills Index
+description: Index and maintenance rules for the governed prompt-skill collection in this directory.
+when_to_use: Use this file when the agent needs an overview of the available prompt skills or needs to add or maintain a skill in this directory.
+---
+
 # Prompt Skills
 
 This directory is the orchestration layer for governed documentation work.
 
 It follows the current project structure and `memory-bank` flows directly. There are no `brief`, `spec`, or `plan` document types in the governed model.
+
+Each executable skill file in this directory should start with YAML frontmatter containing:
+
+- `name`: the human-readable skill name;
+- `description`: a one-line summary of what the skill does;
+- `when_to_use`: explicit instruction to AI agents about when to select the skill.
 
 ## Skills
 

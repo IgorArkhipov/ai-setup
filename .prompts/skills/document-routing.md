@@ -1,3 +1,9 @@
+---
+name: Document Routing
+description: Choose the smallest governed document type that should own the requested work.
+when_to_use: Use this skill when the next governed document is not obvious and the agent must route the task before drafting.
+---
+
 # Document Routing
 
 Use this skill when the next governed document is not obvious yet.

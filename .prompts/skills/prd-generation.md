@@ -1,3 +1,9 @@
+---
+name: PRD Generation
+description: Draft or update a PRD for initiative-level work and immediately route it through PRD review.
+when_to_use: Use this skill when the work needs product framing above feature scope before decomposition into downstream features.
+---
+
 # PRD Generation
 
 Use this skill when the work is initiative-level and needs product framing before decomposition into features.

@@ -1,3 +1,9 @@
+---
+name: Use-Case Review
+description: Review a governed use case before multiple features or workflows rely on it.
+when_to_use: Use this skill when a use case exists and needs review for scenario boundaries, actors, flows, and traceability.
+---
+
 # Use-Case Review
 
 Use this skill to review a governed use case before multiple features rely on it.

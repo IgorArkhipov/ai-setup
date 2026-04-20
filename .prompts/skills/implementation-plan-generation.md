@@ -1,3 +1,9 @@
+---
+name: Implementation-Plan Generation
+description: Draft or update a governed implementation plan from a design-ready feature document, then review it.
+when_to_use: Use this skill when a sibling `feature.md` is already design-ready and execution sequencing needs its own governed owner.
+---
+
 # Implementation-Plan Generation
 
 Use this skill when a sibling `feature.md` is already design-ready and execution sequencing needs a governed owner.
