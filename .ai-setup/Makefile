@@ -96,17 +96,27 @@ agents:
 
 agents-cli:
 	@$(NPM) install -g @playwright/cli@latest
-	@if command -v ccbox >/dev/null 2>&1; then \
+	@set -e; \
+	PATH="$(HOME)/.local/bin:/usr/local/bin:/opt/homebrew/bin:$$PATH"; \
+	export PATH; \
+	mkdir -p "$(HOME)/.local/bin"; \
+	if command -v ccbox >/dev/null 2>&1; then \
 		echo "Install ccbox - already exists"; \
 	elif command -v brew >/dev/null 2>&1; then \
 		brew tap diskd-ai/ccbox && brew install ccbox; \
 		echo "Install ccbox - installed via brew"; \
 	elif command -v curl >/dev/null 2>&1; then \
-		curl -fsSL -H 'Cache-Control: no-cache' -o - https://raw.githubusercontent.com/diskd-ai/ccbox/main/scripts/install.sh | /bin/bash; \
+		installer="$$(mktemp)"; \
+		trap 'rm -f "$$installer"' EXIT; \
+		curl -fsSL -H 'Cache-Control: no-cache' -o "$$installer" https://raw.githubusercontent.com/diskd-ai/ccbox/main/scripts/install.sh; \
+		/bin/bash "$$installer"; \
 		echo "Install ccbox - installed via script"; \
 	else \
-		echo "⚠️  ccbox: need either brew or curl to install"; \
-	fi
+		echo "❌ ccbox: need either brew or curl to install"; \
+		exit 1; \
+	fi; \
+	command -v ccbox >/dev/null 2>&1; \
+	ccbox --version >/dev/null
 
 # --- Skills for agents ---
 

@@ -15,4 +15,5 @@ audience: humans_and_agents
 - [Stages And Non-Local Environments](stages.md) - the current non-local surface for this repository, which is GitHub Actions CI rather than a deployed service environment.
 - [Release And Deployment](release.md) - the current release reality for AgentScope: build-and-verify for a private package with no production deployment target.
 - [Configuration](config.md) - the layered AgentScope config model, CLI overrides, default roots, and separation between AgentScope-owned state and provider-owned files.
+- [Logging And Detection](logging.md) - operational guidance for repo-local AgentScope command logs under `./tmp/logs`, including how agents should detect missing, empty, and present logs.
 - [Runbooks](runbooks/README.md) - the index for repeatable operational procedures; no project-specific runbooks are committed yet.

@@ -1,0 +1,33 @@
+- description: "Discovers the governed logging guide from ops chat context"
+  vars:
+    question: "Where should I look for AgentScope logs? I do not see a tmp/logs directory in this checkout."
+    ops_index: file://../memory-bank/ops/README.md
+    logging_guide: file://../memory-bank/ops/logging.md
+  assert:
+    - type: icontains
+      value: "memory-bank/ops/logging.md"
+    - type: icontains
+      value: "./tmp/logs"
+    - type: icontains
+      value: "may not exist"
+    - type: icontains
+      value: "~/.config/agentscope/audit/log.jsonl"
+    - type: icontains
+      value: ".env"
+
+- description: "Distinguishes repo-local runtime logs from AgentScope audit state"
+  vars:
+    question: "In AgentScope, what are the external command-run logs versus the internal app-owned audit logs?"
+    ops_index: file://../memory-bank/ops/README.md
+    logging_guide: file://../memory-bank/ops/logging.md
+  assert:
+    - type: icontains
+      value: "memory-bank/ops/logging.md"
+    - type: icontains
+      value: "./tmp/logs"
+    - type: icontains
+      value: "appStateRoot"
+    - type: icontains
+      value: "audit/log.jsonl"
+    - type: icontains
+      value: "complementary"

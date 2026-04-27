@@ -1,0 +1,85 @@
+name: Promptfoo Evals
+
+on:
+  workflow_dispatch:
+    inputs:
+      filter_pattern:
+        description: Optional promptfoo test description regex.
+        required: false
+        type: string
+      max_concurrency:
+        description: Maximum concurrent model requests.
+        required: false
+        default: "1"
+        type: choice
+        options:
+          - "1"
+          - "2"
+          - "4"
+
+concurrency:
+  group: promptfoo-evals-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  nvidia:
+    name: NVIDIA DeepSeek V4 Flash
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+      PROMPTFOO_CONFIG_DIR: /tmp/promptfoo
+      PROMPTFOO_DISABLE_TELEMETRY: "true"
+      PROMPTFOO_DISABLE_WAL_MODE: "true"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 25.9.0
+
+      - name: Check NVIDIA API secret
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${NVIDIA_API_KEY}" ]]; then
+            echo "::error::Set the NVIDIA_API_KEY repository secret before running this workflow."
+            exit 1
+          fi
+
+      - name: Run promptfoo evals
+        env:
+          FILTER_PATTERN: ${{ inputs.filter_pattern }}
+          MAX_CONCURRENCY: ${{ inputs.max_concurrency }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p "${PROMPTFOO_CONFIG_DIR}"
+
+          args=(
+            eval
+            --config evals/promptfooconfig.yaml
+            --max-concurrency "${MAX_CONCURRENCY}"
+            --no-progress-bar
+            --output "${RUNNER_TEMP}/promptfoo-results.json"
+          )
+
+          if [[ -n "${FILTER_PATTERN}" ]]; then
+            args+=(--filter-pattern "${FILTER_PATTERN}")
+          fi
+
+          npx --yes promptfoo@0.121.8 "${args[@]}"
+
+      - name: Upload promptfoo results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: promptfoo-results
+          path: ${{ runner.temp }}/promptfoo-results.json
+          if-no-files-found: ignore

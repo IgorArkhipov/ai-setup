@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+
+description: "AgentScope documentation discovery regressions"
+
+prompts:
+  - file://prompts/log-discovery-chat.json
+
+providers:
+  - id: openai:chat:deepseek-ai/deepseek-v4-flash
+    config:
+      apiBaseUrl: https://integrate.api.nvidia.com/v1
+      apiKeyEnvar: NVIDIA_API_KEY
+      max_tokens: 1024
+      temperature: 0
+
+tests:
+  - file://cases/log-discovery.yaml
