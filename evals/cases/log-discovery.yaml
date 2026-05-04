@@ -1,25 +1,41 @@
 - description: "Discovers the governed logging guide from ops chat context"
+  metadata:
+    case_id: EC-001
+    tested: "The answer routes a logs question to the governed logging guide and explains the missing `./tmp/logs` state correctly."
+    expected: "The answer names `memory-bank/ops/logging.md`, mentions `./tmp/logs`, states that the directory may not exist yet, distinguishes repo-local logs from the audit log, and does not rely on `.env*` files."
+    reproduce: "Run `promptfoo eval -c evals/promptfooconfig.yaml --filter-pattern EC-001` with either the live NVIDIA provider or `--providers echo` for structural validation."
+    verification: "Pass when all five `icontains` assertions below succeed for the same answer."
   vars:
-    question: "Where should I look for AgentScope logs? I do not see a tmp/logs directory in this checkout."
+    question: "Where should I look for AgentScope logs if I do not see a tmp/logs directory in this checkout, and should I rely on any .env-based log config?"
     ops_index: file://../memory-bank/ops/README.md
-    logging_guide: file://../memory-bank/ops/logging.md
+    primary_doc_path: memory-bank/ops/logging.md
+    primary_doc_content: file://../memory-bank/ops/logging.md
+    supporting_context: file://../memory-bank/ops/config.md
   assert:
     - type: icontains
       value: "memory-bank/ops/logging.md"
     - type: icontains
       value: "./tmp/logs"
     - type: icontains
-      value: "may not exist"
+      value: "expected state"
     - type: icontains
       value: "~/.config/agentscope/audit/log.jsonl"
     - type: icontains
       value: ".env"
 
 - description: "Distinguishes repo-local runtime logs from AgentScope audit state"
+  metadata:
+    case_id: EC-002
+    tested: "The answer distinguishes external command-run logs from internal AgentScope-owned audit state."
+    expected: "The answer maps external logs to `./tmp/logs`, internal logs to `appStateRoot` audit state, and explains that the two evidence streams are complementary."
+    reproduce: "Run `promptfoo eval -c evals/promptfooconfig.yaml --filter-pattern EC-002`."
+    verification: "Pass when all five assertions below are present in one answer."
   vars:
     question: "In AgentScope, what are the external command-run logs versus the internal app-owned audit logs?"
     ops_index: file://../memory-bank/ops/README.md
-    logging_guide: file://../memory-bank/ops/logging.md
+    primary_doc_path: memory-bank/ops/logging.md
+    primary_doc_content: file://../memory-bank/ops/logging.md
+    supporting_context: file://../memory-bank/ops/config.md
   assert:
     - type: icontains
       value: "memory-bank/ops/logging.md"
@@ -31,3 +47,201 @@
       value: "audit/log.jsonl"
     - type: icontains
       value: "complementary"
+
+- description: "EC-003 configuration precedence remains explicit"
+  metadata:
+    case_id: EC-003
+    tested: "The answer reports the documented configuration precedence in the correct order."
+    expected: "The answer names `memory-bank/ops/config.md` and lists built-in defaults, global config, project config, and explicit CLI flags in the documented order."
+    reproduce: "Run `promptfoo eval -c evals/promptfooconfig.yaml --filter-pattern EC-003`."
+    verification: "Pass when the answer contains the path and the four precedence checkpoints below."
+  vars:
+    question: "What configuration source wins in AgentScope if defaults, ~/.config/agentscope/config.json, a project .agentscope.json, and CLI flags all disagree?"
+    ops_index: file://../memory-bank/ops/README.md
+    primary_doc_path: memory-bank/ops/config.md
+    primary_doc_content: file://../memory-bank/ops/config.md
+    supporting_context: "No additional supporting context."
+  assert:
+    - type: icontains
+      value: "memory-bank/ops/config.md"
+    - type: icontains
+      value: "built-in defaults"
+    - type: icontains
+      value: "~/.config/agentscope/config.json"
+    - type: icontains
+      value: ".agentscope.json"
+    - type: icontains
+      value: "explicit CLI flags"
+
+- description: "EC-004 CLI override flags and command coverage stay discoverable"
+  metadata:
+    case_id: EC-004
+    tested: "The answer reports the three root override flags and the command surface that supports them."
+    expected: "The answer names `memory-bank/ops/config.md`, includes `--project-root`, `--app-state-root`, and `--cursor-root`, and ties them to stateful commands."
+    reproduce: "Run `promptfoo eval -c evals/promptfooconfig.yaml --filter-pattern EC-004`."
+    verification: "Pass when the answer contains the path, all three flags, and at least two of the supported commands asserted below."
+  vars:
+    question: "Which CLI flags let me override AgentScope roots for a deterministic fixture-backed run, and what commands support them?"
+    ops_index: file://../memory-bank/ops/README.md
+    primary_doc_path: memory-bank/ops/config.md
+    primary_doc_content: file://../memory-bank/ops/config.md
+    supporting_context: file://../memory-bank/ops/development.md
+  assert:
+    - type: icontains
+      value: "memory-bank/ops/config.md"
+    - type: icontains
+      value: "--project-root"
+    - type: icontains
+      value: "--app-state-root"
+    - type: icontains
+      value: "--cursor-root"
+    - type: icontains
+      value: "doctor"
+    - type: icontains
+      value: "restore"
+
+- description: "EC-005 no-env configuration contract remains explicit"
+  metadata:
+    case_id: EC-005
+    tested: "The answer does not route AgentScope configuration through `.env*` files."
+    expected: "The answer names `memory-bank/ops/config.md`, says AgentScope is not `.env`-driven, points to JSON plus CLI overrides, and says `.env*` files are outside the supported contract."
+    reproduce: "Run `promptfoo eval -c evals/promptfooconfig.yaml --filter-pattern EC-005`."
+    verification: "Pass when all five assertions below appear in the same answer."
+  vars:
+    question: "Should I configure AgentScope through .env files, or through JSON and CLI flags?"
+    ops_index: file://../memory-bank/ops/README.md
+    primary_doc_path: memory-bank/ops/config.md
+    primary_doc_content: file://../memory-bank/ops/config.md
+    supporting_context: file://../memory-bank/ops/logging.md
+  assert:
+    - type: icontains
+      value: "memory-bank/ops/config.md"
+    - type: icontains
+      value: "not `.env`-driven"
+    - type: icontains
+      value: "file-based JSON"
+    - type: icontains
+      value: "CLI overrides"
+    - type: icontains
+      value: ".env*"
+
+- description: "EC-006 development verification baseline stays stable"
+  metadata:
+    case_id: EC-006
+    tested: "The answer reports the canonical local verification commands from the development guide."
+    expected: "The answer names `memory-bank/ops/development.md` and includes `npm run lint`, `npm test`, `npm run coverage`, and `npm run build`."
+    reproduce: "Run `promptfoo eval -c evals/promptfooconfig.yaml --filter-pattern EC-006`."
+    verification: "Pass when the answer contains the path and the four baseline commands below."
+  vars:
+    question: "What are the canonical local verification commands for tools/agentscope?"
+    ops_index: file://../memory-bank/ops/README.md
+    primary_doc_path: memory-bank/ops/development.md
+    primary_doc_content: file://../memory-bank/ops/development.md
+    supporting_context: file://../memory-bank/ops/release.md
+  assert:
+    - type: icontains
+      value: "memory-bank/ops/development.md"
+    - type: icontains
+      value: "npm run lint"
+    - type: icontains
+      value: "npm test"
+    - type: icontains
+      value: "npm run coverage"
+    - type: icontains
+      value: "npm run build"
+
+- description: "EC-007 development environment does not invent services"
+  metadata:
+    case_id: EC-007
+    tested: "The answer accurately describes the absence of a local web server, application database, and required supporting services."
+    expected: "The answer names `memory-bank/ops/development.md` and says there is no browser URL to discover, no application database to provision, and no required Docker/Redis/Postgres-style services."
+    reproduce: "Run `promptfoo eval -c evals/promptfooconfig.yaml --filter-pattern EC-007`."
+    verification: "Pass when the answer contains the path and the three no-service checkpoints below."
+  vars:
+    question: "Does AgentScope require a local web server, a database, or supporting services like Docker or Redis for development?"
+    ops_index: file://../memory-bank/ops/README.md
+    primary_doc_path: memory-bank/ops/development.md
+    primary_doc_content: file://../memory-bank/ops/development.md
+    supporting_context: "No additional supporting context."
+  assert:
+    - type: icontains
+      value: "memory-bank/ops/development.md"
+    - type: icontains
+      value: "no local web server"
+    - type: icontains
+      value: "no application database"
+    - type: icontains
+      value: "no required supporting services"
+
+- description: "EC-008 release flow stays build-and-verify"
+  metadata:
+    case_id: EC-008
+    tested: "The answer describes the current release flow without inventing a production deployment path."
+    expected: "The answer names `memory-bank/ops/release.md`, states the package is private, says the flow is build-and-verify, and mentions CI green plus merge to main."
+    reproduce: "Run `promptfoo eval -c evals/promptfooconfig.yaml --filter-pattern EC-008`."
+    verification: "Pass when the answer contains the path and the release-flow checkpoints below."
+  vars:
+    question: "Is AgentScope a private package, is the current release discipline build-and-verify, what is the current release flow, and what deployment steps do not exist yet?"
+    ops_index: file://../memory-bank/ops/README.md
+    primary_doc_path: memory-bank/ops/release.md
+    primary_doc_content: file://../memory-bank/ops/release.md
+    supporting_context: file://../tools/agentscope/package.json
+  assert:
+    - type: icontains
+      value: "memory-bank/ops/release.md"
+    - type: icontains
+      value: "private package"
+    - type: icontains
+      value: "build-and-verify"
+    - type: icontains
+      value: "GitHub Actions `CI`"
+    - type: icontains
+      value: "merge to `main`"
+
+- description: "EC-009 rollback distinguishes repo code from user state"
+  metadata:
+    case_id: EC-009
+    tested: "The answer distinguishes repository rollback from user-state rollback after a guarded mutation."
+    expected: "The answer names `memory-bank/ops/release.md`, mentions git commit or pull request rollback separately from backup-id restore, and points to `agentscope restore <backup-id>`."
+    reproduce: "Run `promptfoo eval -c evals/promptfooconfig.yaml --filter-pattern EC-009`."
+    verification: "Pass when the answer contains the path and the rollback checkpoints below."
+  vars:
+    question: "If a guarded mutation caused a problem, what are the rollback units for repository code versus user-owned local state?"
+    ops_index: file://../memory-bank/ops/README.md
+    primary_doc_path: memory-bank/ops/release.md
+    primary_doc_content: file://../memory-bank/ops/release.md
+    supporting_context: file://../memory-bank/ops/config.md
+  assert:
+    - type: icontains
+      value: "memory-bank/ops/release.md"
+    - type: icontains
+      value: "git commit or pull request"
+    - type: icontains
+      value: "backup id"
+    - type: icontains
+      value: "agentscope restore <backup-id>"
+
+- description: "EC-010 non-local environments stay CI-only"
+  metadata:
+    case_id: EC-010
+    tested: "The answer does not invent staging, preview, or production environments and names the remote logging surface correctly."
+    expected: "The answer names `memory-bank/ops/stages.md`, says GitHub Actions CI is the only authoritative non-local execution surface, and points to Actions step logs as the canonical remote logs."
+    reproduce: "Run `promptfoo eval -c evals/promptfooconfig.yaml --filter-pattern EC-010`."
+    verification: "Pass when the answer contains the path and the non-local environment checkpoints below."
+  vars:
+    question: "Does AgentScope have staging or production environments, and where should I look for canonical remote logs?"
+    ops_index: file://../memory-bank/ops/README.md
+    primary_doc_path: memory-bank/ops/stages.md
+    primary_doc_content: file://../memory-bank/ops/stages.md
+    supporting_context: file://../.github/workflows/ci.yml
+  assert:
+    - type: icontains
+      value: "memory-bank/ops/stages.md"
+    - type: icontains
+      value: "does not currently have staging, preview, or production deployments"
+    - type: icontains
+      value: "GitHub Actions CI"
+    - type: icontains
+      value: "step logs"
+    - type: icontains
+      value: "canonical remote logs"
