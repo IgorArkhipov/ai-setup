@@ -206,6 +206,7 @@ check_command required "gitleaks installed" gitleaks version
 check_command required "jq installed" jq --version
 check_command required "node installed" node --version
 check_command required "npx installed" npx --version
+check_command required "zellij installed" zellij --version
 check_port_selector
 check_direnv_port
 

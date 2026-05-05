@@ -4,6 +4,7 @@ BLUE := \033[0;34m
 NC := \033[0m
 PATH := $(HOME)/.local/bin:/usr/local/bin:/opt/homebrew/bin:$(PATH)
 VERSION ?= 0.2.0
+ROOT_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/..)
 
 NPM ?= mise exec -- npm
 CLAUDE ?= mise exec -- claude
@@ -22,7 +23,7 @@ GOOGLE_WORKSPACE_SKILLS := \
 	gws-drive \
 	gws-sheets
 
-.PHONY: ai bootstrap mise-package mise-install version check extra extra-check check-context codex-context register
+.PHONY: ai bootstrap mise-package mise-install version check check-task-session extra extra-check check-context codex-context register
 .PHONY: agents-install agents agents-cli agents-skills extra-skills
 .PHONY: agents-skills-install agents-skills-list agents-skills-check-npx
 
@@ -41,18 +42,21 @@ version:
 	fi
 
 check:
-	@VERSION=$(VERSION) ./.ai-setup/scripts/test-setup.sh
+	@VERSION=$(VERSION) "$(ROOT_DIR)"/.ai-setup/scripts/test-setup.sh
+
+check-task-session:
+	@"$(ROOT_DIR)"/.ai-setup/scripts/test-task-session.sh
 
 extra-check:
 	@CLAUDE_MARKETPLACE_NAMES="$(CLAUDE_MARKETPLACE_NAMES)" \
 	CLAUDE_EXPECTED_PLUGINS="$(CLAUDE_PLUGINS)" \
-	./.ai-setup/scripts/test-extras.sh
+	"$(ROOT_DIR)"/.ai-setup/scripts/test-extras.sh
 
 check-context:
-	@./.ai-setup/scripts/test-context.sh
+	@"$(ROOT_DIR)"/.ai-setup/scripts/test-context.sh
 
 codex-context:
-	@./.ai-setup/scripts/codex-context.sh
+	@"$(ROOT_DIR)"/.ai-setup/scripts/codex-context.sh
 
 mise-package:
 	@set -e; \

@@ -11,9 +11,9 @@ audience: humans_and_agents
 
 # Runbooks Index
 
-No project-specific runbooks are committed yet.
+- [Zellij Task Sessions](zellij-task-sessions.md) - canonical procedure for opening a neighboring `zellij` tab or session backed by an isolated git worktree and repo-owned task routing.
 
-That is acceptable today because `tools/agentscope` is a local CLI package with no deployed service, on-call rotation, or production incident surface. Add a runbook here once a task becomes both repeatable and operationally significant, for example:
+Add more runbooks here once a task becomes both repeatable and operationally significant, for example:
 
 - repeated mutation lock contention triage;
 - backup restore failure recovery;
@@ -28,15 +28,3 @@ A runbook should answer:
 - what result to expect;
 - how to roll back safely;
 - whom to escalate to and when.
-
-## Suggested Structure
-
-1. Summary
-2. Trigger / symptoms
-3. Safety notes
-4. Diagnosis
-5. Resolution
-6. Rollback
-7. Escalation
-
-When the first runbook is added, link it from this index and keep the trigger plus owning surface explicit.

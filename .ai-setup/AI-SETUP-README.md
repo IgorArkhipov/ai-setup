@@ -21,3 +21,5 @@
 
 - `make check-context` — проверка baseline-контекста для Claude Code и Codex.
 - `make codex-context` — сводка по текущей/последней Codex-сессии: окно контекста, live token usage, skills, subagents и грубая оценка baseline.
+- `make check-task-session` — статическая проверка repo-owned workflow для изолированных task-сессий в `zellij`.
+- `./.ai-setup/scripts/start-dev-task.sh --type impl --slug my-task --prompt "..."` — создать/переиспользовать `.worktrees/my-task`, выполнить `init.sh` и открыть routed task в `zellij`.

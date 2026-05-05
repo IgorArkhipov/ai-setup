@@ -1,0 +1,35 @@
+{
+  "defaultType": "impl",
+  "routes": {
+    "impl": {
+      "workflow": "small-feature",
+      "agent": "codex",
+      "model": "gpt-5.4",
+      "promptPrefix": "Implement the requested change directly in this isolated worktree. Follow AGENTS.md, PROJECT.md, and the active memory-bank documents. Update code, tests, and docs as needed, then verify before completion."
+    },
+    "debug": {
+      "workflow": "bug-fix",
+      "agent": "codex",
+      "model": "gpt-5.4",
+      "promptPrefix": "Treat this as a bug-fix workflow. Reproduce the failure first, isolate the cause, then implement the smallest safe fix with regression coverage and verification evidence."
+    },
+    "research": {
+      "workflow": "repo-research",
+      "agent": "codex",
+      "model": "gpt-5.5",
+      "promptPrefix": "Treat this as a research workflow. Explore the repository, gather evidence, and summarize findings before editing files unless the task itself explicitly asks for implementation."
+    },
+    "review": {
+      "workflow": "code-review",
+      "agent": "codex",
+      "model": "gpt-5.5",
+      "promptPrefix": "Treat this as a review workflow. Prioritize correctness, risks, regressions, and missing tests. Present findings first with concrete file references before any summary."
+    },
+    "spec": {
+      "workflow": "governed-doc",
+      "agent": "codex",
+      "model": "gpt-5.5",
+      "promptPrefix": "Treat this as governed-document work. Route to the smallest valid memory-bank workflow before drafting or editing, and avoid downstream execution artifacts until upstream intent is mature."
+    }
+  }
+}

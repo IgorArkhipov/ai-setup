@@ -59,6 +59,7 @@ make check
 ### Инструменты через `mise`
 
 Из `mise.toml` ставятся: `direnv`, `gh`, `gitleaks`, `jq`, `node`, `port-selector`, `ruby`
+а также `zellij` как базовый multiplexer для параллельных task-сессий.
 
 ### Кодинговые агенты
 
@@ -75,6 +76,41 @@ make check
 | [gh](https://github.com/cli/cli) | Работа с GitHub API за пределами `git`: просмотр и создание issue, pull request, projects | Попросить агента посмотреть или создать issue в репозитории |
 | [port-selector](https://github.com/dapi/port-selector) | Автоматический выбор свободного порта из диапазона для локальных dev-серверов и e2e при параллельной работе агентов | Выполнить `port-selector` и убедиться, что команда возвращает номер свободного порта |
 | [ccbox](https://github.com/diskd-ai/ccbox) | Инспекция и анализ кодовой базы для агентов | Выполнить `ccbox --version` |
+| [zellij](https://zellij.dev/) | Открытие соседних tab/session для изолированной работы в отдельных git worktree | Выполнить `zellij --version`, затем `make check` |
+
+## Изолированная task-сессия в соседнем tab/session
+
+Для параллельной работы используйте repo-owned launcher:
+
+```bash
+./.ai-setup/scripts/start-dev-task.sh \
+  --type impl \
+  --slug add-provider-toggle \
+  --prompt "Implement the requested change"
+```
+
+Что делает launcher:
+
+1. маршрутизирует задачу через `.ai-setup/task-router.json`;
+2. создает или переиспользует `.worktrees/<slug>`;
+3. запускает `./init.sh` в новом worktree;
+4. открывает routed task в `zellij`:
+   - если вы уже внутри `zellij`, создается соседний tab;
+   - если нет, создается отдельная `zellij` session.
+
+Поддерживаемые `--type` сейчас:
+
+- `impl` — реализация по workflow small feature на `codex` с `gpt-5.5`;
+- `debug` — bug-fix workflow на `codex` с `gpt-5.5`;
+- `research` — read-mostly исследование на `codex` с `gpt-5.4-mini`;
+- `review` — review workflow на `codex` с `gpt-5.5`;
+- `spec` — governed-doc workflow на `codex` с `gpt-5.5`.
+
+Проверка конфигурации task-session:
+
+```bash
+make check-task-session
+```
 
 ## Что сохранить в производном проекте
 

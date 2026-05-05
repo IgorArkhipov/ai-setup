@@ -1,4 +1,5 @@
 .obsidian/
+.worktrees/
 tools/*
 !tools/agentscope/
 !tools/agentscope/**

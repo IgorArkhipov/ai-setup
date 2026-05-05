@@ -46,10 +46,15 @@ PR expectations:
 
 ## Worktrees
 
-The repository does not currently define a specialized worktree workflow.
+This repository now defines a specialized local worktree workflow for parallel development tasks.
 
-If a worktree is used anyway:
+Rules:
 
-- bootstrap it the same way as a normal checkout;
-- run package commands from `tools/agentscope`;
+- the canonical worktree root is project-local [`.worktrees/`](../../.worktrees/), which must stay git-ignored;
+- create parallel task worktrees through [`.ai-setup/scripts/start-dev-task.sh`](../../.ai-setup/scripts/start-dev-task.sh) rather than ad hoc `git worktree add` commands when you want the full dev-session setup;
+- the launcher creates or reuses `.worktrees/<slug>`, runs `init.sh`, and opens the task in `zellij` using the route table in [`.ai-setup/task-router.json`](../../.ai-setup/task-router.json);
+- routing is by task type rather than branch name alone: `impl`, `debug`, `research`, `review`, and `spec` each map to a governed workflow and default model;
+- run package commands from `tools/agentscope` inside the selected worktree;
 - do not treat generated output such as `dist/` as a worktree-specific scratch area.
+
+Operational details live in [../ops/runbooks/zellij-task-sessions.md](../ops/runbooks/zellij-task-sessions.md).
