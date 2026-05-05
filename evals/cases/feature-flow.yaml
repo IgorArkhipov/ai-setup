@@ -1,0 +1,143 @@
+- description: "FF-001 drafts a canonical feature.md from a legacy brief-style input"
+  metadata:
+    case_id: FF-001
+    tested: "The answer converts a brief-style input into the current governed `feature.md` shape instead of reviving the legacy `spec.md` workflow."
+    expected: "The answer names the active workflow and template paths, then drafts a canonical `feature.md` with `What`, `How`, and `Verify` plus the minimum stable identifiers required by the governed flow."
+    reproduce: "Run `promptfoo eval -c evals/promptfooconfig.feature-flow.yaml --filter-pattern FF-001`."
+    verification: "Pass when the answer contains the governing paths and the required `feature.md` structure checkpoints below."
+  vars:
+    task_type: "draft"
+    memory_bank_index: file://../memory-bank/README.md
+    workflow_path: memory-bank/flows/workflows.md
+    workflow_content: file://../memory-bank/flows/workflows.md
+    feature_flow_path: memory-bank/flows/feature-flow.md
+    feature_flow_content: file://../memory-bank/flows/feature-flow.md
+    template_path: memory-bank/flows/templates/feature/large.md
+    template_content: file://../memory-bank/flows/templates/feature/large.md
+    supporting_context: file://../evals/fixtures/ft-007-brief.md
+    question: "Draft the canonical `memory-bank/features/FT-007/feature.md` from the attached legacy brief-style input. Start by naming the governing workflow/template paths you used, then produce the draft. Follow the current governed feature flow rather than the archived `brief.md -> spec.md -> plan.md` flow."
+  assert:
+    - type: icontains
+      value: "memory-bank/flows/workflows.md"
+    - type: icontains
+      value: "memory-bank/flows/feature-flow.md"
+    - type: icontains
+      value: "memory-bank/flows/templates/feature/large.md"
+    - type: icontains
+      value: "# FT-007: Audit History Export Command"
+    - type: icontains
+      value: "## What"
+    - type: icontains
+      value: "## How"
+    - type: icontains
+      value: "## Verify"
+    - type: icontains
+      value: "`REQ-01`"
+    - type: icontains
+      value: "`NS-01`"
+    - type: icontains
+      value: "`SC-01`"
+    - type: icontains
+      value: "`CHK-01`"
+    - type: icontains
+      value: "`EVID-01`"
+
+- description: "FF-002 reviews a flawed feature draft against the governed flow"
+  metadata:
+    case_id: FF-002
+    tested: "The answer reviews a flawed `feature.md` draft against the active workflow and template rules instead of treating it as acceptable because it looks spec-like."
+    expected: "The answer cites the active flow paths, flags that step-by-step execution belongs in `implementation-plan.md`, and calls out missing governed verification structure such as `SC-*`, `CHK-*`, and `EVID-*`."
+    reproduce: "Run `promptfoo eval -c evals/promptfooconfig.feature-flow.yaml --filter-pattern FF-002`."
+    verification: "Pass when the answer contains the governing paths and the key findings below."
+  vars:
+    task_type: "review"
+    memory_bank_index: file://../memory-bank/README.md
+    workflow_path: memory-bank/flows/workflows.md
+    workflow_content: file://../memory-bank/flows/workflows.md
+    feature_flow_path: memory-bank/flows/feature-flow.md
+    feature_flow_content: file://../memory-bank/flows/feature-flow.md
+    template_path: memory-bank/flows/templates/feature/large.md
+    template_content: file://../memory-bank/flows/templates/feature/large.md
+    supporting_context: file://../evals/fixtures/ft-007-feature-draft-bad.md
+    question: "Review the attached draft as if it were proposed for `memory-bank/features/FT-007/feature.md`. List concrete findings first, ordered by severity, and ground each finding in the active governed workflow/template rules."
+  assert:
+    - type: icontains
+      value: "memory-bank/flows/workflows.md"
+    - type: icontains
+      value: "memory-bank/flows/feature-flow.md"
+    - type: icontains
+      value: "implementation-plan.md"
+    - type: icontains
+      value: "`SC-*`"
+    - type: icontains
+      value: "`CHK-*`"
+    - type: icontains
+      value: "`EVID-*`"
+    - type: icontains
+      value: "step-by-step execution"
+
+- description: "FF-003 rewrites the flawed draft into the governed feature.md shape"
+  metadata:
+    case_id: FF-003
+    tested: "The answer rewrites a flawed draft into a canonical governed `feature.md` instead of patching it with more legacy-spec prose."
+    expected: "The answer returns a corrected `feature.md` draft with canonical frontmatter, explicit `must_not_define`, and governed verification sections including traceability and evidence."
+    reproduce: "Run `promptfoo eval -c evals/promptfooconfig.feature-flow.yaml --filter-pattern FF-003`."
+    verification: "Pass when the answer contains the required frontmatter and `Verify` structure checkpoints below."
+  vars:
+    task_type: "revise"
+    memory_bank_index: file://../memory-bank/README.md
+    workflow_path: memory-bank/flows/workflows.md
+    workflow_content: file://../memory-bank/flows/workflows.md
+    feature_flow_path: memory-bank/flows/feature-flow.md
+    feature_flow_content: file://../memory-bank/flows/feature-flow.md
+    template_path: memory-bank/flows/templates/feature/large.md
+    template_content: file://../memory-bank/flows/templates/feature/large.md
+    supporting_context: file://../evals/fixtures/ft-007-rewrite-context.md
+    question: "Rewrite the attached flawed draft into a canonical `memory-bank/features/FT-007/feature.md` that addresses the supplied review findings. Return the corrected draft only. Do not create `implementation-plan.md` yet."
+  assert:
+    - type: icontains
+      value: "delivery_status: planned"
+    - type: icontains
+      value: "must_not_define:"
+    - type: icontains
+      value: "implementation_sequence"
+    - type: icontains
+      value: "## Verify"
+    - type: icontains
+      value: "### Traceability matrix"
+    - type: icontains
+      value: "`SC-01`"
+    - type: icontains
+      value: "`CHK-01`"
+    - type: icontains
+      value: "`EVID-01`"
+
+- description: "FF-004 escalates to a second opinion before downstream planning"
+  metadata:
+    case_id: FF-004
+    tested: "The answer follows the governed review discipline when a first-pass review found significant issues and the user wants an independent second opinion."
+    expected: "The answer cites the workflow path, says a second-opinion review is appropriate before downstream planning, and honors the user's request to use Claude Code MCP for that independent pass."
+    reproduce: "Run `promptfoo eval -c evals/promptfooconfig.feature-flow.yaml --filter-pattern FF-004`."
+    verification: "Pass when the answer contains the workflow path, the second-opinion checkpoint, the Claude Code MCP request, and the rule that `implementation-plan.md` should wait for a mature `feature.md`."
+  vars:
+    task_type: "review-escalation"
+    memory_bank_index: file://../memory-bank/README.md
+    workflow_path: memory-bank/flows/workflows.md
+    workflow_content: file://../memory-bank/flows/workflows.md
+    feature_flow_path: memory-bank/flows/feature-flow.md
+    feature_flow_content: file://../memory-bank/flows/feature-flow.md
+    template_path: memory-bank/flows/templates/feature/large.md
+    template_content: file://../memory-bank/flows/templates/feature/large.md
+    supporting_context: file://../evals/fixtures/ft-007-review-findings.md
+    question: "The first review of `memory-bank/features/FT-007/feature.md` found significant issues and the document boundary is still debatable. The user asks whether to get a Claude Code MCP second opinion before moving on to `implementation-plan.md`. Answer according to the current governed flow."
+  assert:
+    - type: icontains
+      value: "memory-bank/flows/workflows.md"
+    - type: icontains
+      value: "second-opinion review"
+    - type: icontains
+      value: "Claude Code MCP"
+    - type: icontains
+      value: "implementation-plan.md"
+    - type: icontains
+      value: "feature.md"

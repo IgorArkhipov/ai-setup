@@ -234,3 +234,84 @@ Several isolated live retries were attempted and many were blocked by intermitte
 
 What improved:
 The full live suite completed at `2026-05-04T21:02:49` with `10 passed, 0 failed, 0 errors`. This confirmed that the widened `EC-008` question restored the missing release-flow checkpoints while keeping the `private package` and `build-and-verify` assertions satisfied.
+
+### D-012 split governed feature-flow evals into a separate config
+
+Initial result:
+The repository gained a second eval family for governed feature-document drafting and review, but the existing config was specialized for ops-document Q and A.
+
+Symptom:
+Reusing `evals/promptfooconfig.yaml` would have forced one prompt to serve unrelated task shapes or created prompt cross-products between ops-discovery cases and feature-flow cases.
+
+Suspected cause:
+The ops suite and the governed feature-flow suite have different prompt contracts, different supporting context, and different assertions even though both are memory-bank based.
+
+One change:
+Add `evals/promptfooconfig.feature-flow.yaml` with its own prompt and case file instead of overloading the existing ops config.
+
+Repeat run:
+Re-run the new feature-flow suite structurally with `--providers echo` after patching the config.
+
+What improved:
+The governed feature-flow suite can evolve independently without destabilizing the older ops regressions or introducing prompt cross-product noise.
+
+### D-013 feature-flow prompt anchored to current `feature.md` governance
+
+Initial result:
+The new real-world scenario started from the user's old `brief -> spec review -> revise` workflow shape.
+
+Symptom:
+That workflow no longer matches the active repository rules, where `feature.md` is the canonical owner and legacy `brief.md`, `spec.md`, and `plan.md` survive only as migration history.
+
+Suspected cause:
+The initial scenario idea was rooted in pre-migration habits rather than the active `memory-bank/flows/` contract.
+
+One change:
+Rewrite the new scenario family so it drafts `feature.md`, reviews against `workflows.md`, `feature-flow.md`, and `templates/feature/large.md`, and rewrites the draft without creating `implementation-plan.md` too early.
+
+Repeat run:
+Re-run the new feature-flow suite structurally with `--providers echo` after patching the prompt, fixtures, and assertions.
+
+What improved:
+The new evals now test the current governed flow directly rather than rewarding legacy `spec.md` behavior.
+
+### D-014 second-opinion escalation encoded as an explicit eval case
+
+Initial result:
+The governed flow requires review before downstream work and explicitly recommends a second-opinion review when the first pass finds significant issues, but the eval suite did not cover that escalation path.
+
+Symptom:
+A model could draft and review a feature document reasonably well while still skipping the independent-review checkpoint that should happen before downstream planning in contentious cases.
+
+Suspected cause:
+The earlier eval suite focused on direct answers and first-pass document quality, not on escalation discipline between stages.
+
+One change:
+Add `FF-004`, which asks whether to get a Claude Code MCP second opinion before moving on to `implementation-plan.md` after a significant first-pass review.
+
+Repeat run:
+Re-run the new feature-flow suite structurally with `--providers echo` after adding the escalation case.
+
+What improved:
+The eval family now covers the independent-review checkpoint and the rule that downstream planning should wait until the feature document is mature enough.
+
+### D-015 FF-001 heading made explicit for structural echo validation
+
+Initial result:
+The first structural run of the new feature-flow suite finished with `3 passed, 1 failed`.
+
+Symptom:
+`FF-001` failed while the other three feature-flow cases passed.
+
+Suspected cause:
+The drafting case asserted the exact heading `# FT-007: Audit History Export Command`, but that exact heading did not appear anywhere in the prompt context returned by the `echo` provider even though a live model would be expected to generate it.
+
+One change:
+Add `Target canonical heading: # FT-007: Audit History Export Command` to the legacy brief fixture used by `FF-001`.
+
+Repeat run:
+Re-ran `FF-001` alone and then the full governed feature-flow suite structurally with:
+`PROMPTFOO_CONFIG_DIR=/tmp/promptfoo PROMPTFOO_DISABLE_WAL_MODE=true promptfoo eval -c evals/promptfooconfig.feature-flow.yaml --providers echo --no-write --no-progress-bar --no-table`
+
+What improved:
+`FF-001` started passing and the full governed feature-flow suite completed at `4 passed, 0 failed, 0 errors`.

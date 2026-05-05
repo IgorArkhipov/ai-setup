@@ -1,10 +1,13 @@
 # Eval Suite
 
-This directory contains baseline promptfoo regressions for AgentScope documentation discovery. The current suite tests whether a chat answer can recover the correct operational source of truth from the active `memory-bank/ops/` documents without inventing unsupported behavior.
+This directory contains promptfoo regressions for two current AgentScope documentation workflows:
+
+1. ops-document discovery from the active `memory-bank/ops/` guides;
+2. governed feature-flow drafting and review from the active `memory-bank/flows/` and feature-template docs.
 
 ## Scope
 
-Current coverage is intentionally basic and document-centric. The 10 baseline cases cover:
+Current coverage is intentionally document-centric. The baseline ops suite covers:
 
 1. log discovery and missing `./tmp/logs` behavior;
 2. external versus internal log terminology;
@@ -19,9 +22,16 @@ Current coverage is intentionally basic and document-centric. The 10 baseline ca
 
 These are regression checks for answer quality against governed docs, not end-to-end CLI behavior tests.
 
+The governed feature-flow suite covers a realistic repeated documentation loop in the current memory-bank model:
+
+1. draft canonical `feature.md` from a legacy brief-style input;
+2. review the draft against `workflows.md`, `feature-flow.md`, and the selected feature template;
+3. rewrite the draft to address findings;
+4. escalate to a second-opinion review before downstream planning when the first pass finds significant issues.
+
 ## Run
 
-Structural validation without a live model:
+Structural validation without a live model, ops suite:
 
 ```bash
 PROMPTFOO_CONFIG_DIR=/tmp/promptfoo \
@@ -42,6 +52,27 @@ PROMPTFOO_DISABLE_WAL_MODE=true \
 promptfoo eval -c evals/promptfooconfig.yaml --no-progress-bar
 ```
 
+Structural validation without a live model, governed feature-flow suite:
+
+```bash
+PROMPTFOO_CONFIG_DIR=/tmp/promptfoo \
+PROMPTFOO_DISABLE_WAL_MODE=true \
+promptfoo eval -c evals/promptfooconfig.feature-flow.yaml \
+  --providers echo \
+  --no-write \
+  --no-progress-bar \
+  --no-table
+```
+
+Live NVIDIA run, governed feature-flow suite:
+
+```bash
+export NVIDIA_API_KEY=...
+PROMPTFOO_CONFIG_DIR=/tmp/promptfoo \
+PROMPTFOO_DISABLE_WAL_MODE=true \
+promptfoo eval -c evals/promptfooconfig.feature-flow.yaml --no-progress-bar
+```
+
 Manual GitHub Actions run:
 
 1. Set repository secret `NVIDIA_API_KEY`.
@@ -49,7 +80,7 @@ Manual GitHub Actions run:
 3. Optionally set `filter_pattern` to a case id such as `EC-003`.
 4. Review the uploaded `promptfoo-results` artifact.
 
-## Cases
+## Ops Cases
 
 ### EC-001
 
@@ -190,3 +221,61 @@ Run `promptfoo eval -c evals/promptfooconfig.yaml --filter-pattern EC-010`.
 
 How verification works:
 The case asserts the path plus the non-local environment and log ownership phrases.
+
+## Feature-Flow Cases
+
+### FF-001
+
+What is being tested:
+The answer drafts the current governed `feature.md` artifact from a legacy brief-style input instead of reviving the archived `spec.md` workflow.
+
+Expected result:
+The answer names `memory-bank/flows/workflows.md`, `memory-bank/flows/feature-flow.md`, and `memory-bank/flows/templates/feature/large.md`, then returns a draft with `What`, `How`, and `Verify` plus the minimum stable identifiers.
+
+How to reproduce:
+Run `promptfoo eval -c evals/promptfooconfig.feature-flow.yaml --filter-pattern FF-001`.
+
+How verification works:
+The case asserts the governing paths and the required `feature.md` structure checkpoints.
+
+### FF-002
+
+What is being tested:
+The answer reviews a flawed `feature.md` draft against the active governed flow and flags boundary violations instead of accepting legacy-spec structure.
+
+Expected result:
+The answer cites the active flow paths, says step-by-step execution belongs in `implementation-plan.md`, and calls out missing `SC-*`, `CHK-*`, and `EVID-*` style verification structure.
+
+How to reproduce:
+Run `promptfoo eval -c evals/promptfooconfig.feature-flow.yaml --filter-pattern FF-002`.
+
+How verification works:
+The case asserts the governing paths plus the key review findings.
+
+### FF-003
+
+What is being tested:
+The answer rewrites a flawed draft into a canonical governed `feature.md`.
+
+Expected result:
+The answer returns a corrected draft with canonical frontmatter, `must_not_define: implementation_sequence`, and governed `Verify` structure including traceability and evidence.
+
+How to reproduce:
+Run `promptfoo eval -c evals/promptfooconfig.feature-flow.yaml --filter-pattern FF-003`.
+
+How verification works:
+The case asserts the canonical frontmatter and `Verify` section checkpoints.
+
+### FF-004
+
+What is being tested:
+The answer escalates to an independent second-opinion review before downstream planning when the first pass found significant issues.
+
+Expected result:
+The answer cites `memory-bank/flows/workflows.md`, recommends a second-opinion review, honors the user's request to use Claude Code MCP for that pass, and keeps `implementation-plan.md` gated behind a mature `feature.md`.
+
+How to reproduce:
+Run `promptfoo eval -c evals/promptfooconfig.feature-flow.yaml --filter-pattern FF-004`.
+
+How verification works:
+The case asserts the workflow path, second-opinion checkpoint, Claude Code MCP mention, and plan-gating rule.

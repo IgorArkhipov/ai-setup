@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=https://promptfoo.dev/config-schema.json
+
+description: "AgentScope governed feature-flow drafting and review regressions"
+
+prompts:
+  - file://prompts/feature-flow-chat.json
+
+providers:
+  - id: openai:chat:deepseek-ai/deepseek-v4-flash
+    config:
+      apiBaseUrl: https://integrate.api.nvidia.com/v1
+      apiKeyEnvar: NVIDIA_API_KEY
+      max_tokens: 2048
+      temperature: 0
+
+tests:
+  - file://cases/feature-flow.yaml
