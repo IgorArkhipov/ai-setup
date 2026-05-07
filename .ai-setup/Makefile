@@ -16,6 +16,8 @@ CLAUDE_MARKETPLACE_NAMES ?= dapi
 CLAUDE_PLUGIN_NAMESPACE ?= dapi
 
 REGISTRY_REPO ?= thinknetica/ai_swe_group_1
+# Pin ccbox so CI does not depend on GitHub's anonymous latest-release API.
+CCBOX_VERSION ?= v0.1.21
 
 GOOGLE_WORKSPACE_SKILLS := \
 	gws-docs \
@@ -113,8 +115,8 @@ agents-cli:
 		installer="$$(mktemp)"; \
 		trap 'rm -f "$$installer"' EXIT; \
 		curl -fsSL -H 'Cache-Control: no-cache' -o "$$installer" https://raw.githubusercontent.com/diskd-ai/ccbox/main/scripts/install.sh; \
-		/bin/bash "$$installer"; \
-		echo "Install ccbox - installed via script"; \
+		CCBOX_TAG="$(CCBOX_VERSION)" /bin/bash "$$installer"; \
+		echo "Install ccbox - installed via script ($(CCBOX_VERSION))"; \
 	else \
 		echo "❌ ccbox: need either brew or curl to install"; \
 		exit 1; \
