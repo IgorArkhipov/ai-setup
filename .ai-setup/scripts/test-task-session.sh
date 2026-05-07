@@ -10,7 +10,9 @@ jq -e '
   (.routes | type == "object") and
   (.routes.impl.workflow == "small-feature") and
   (.routes.debug.workflow == "bug-fix") and
-  (.routes.research.model == "gpt-5.4-mini") and
+  (.routes.impl.model == "gpt-5.4") and
+  (.routes.debug.model == "gpt-5.4") and
+  (.routes.research.model == "gpt-5.5") and
   (.routes.review.agent == "codex") and
   (.routes.spec.workflow == "governed-doc")
 ' .ai-setup/task-router.json >/dev/null
@@ -21,7 +23,7 @@ output="$("./.ai-setup/scripts/start-dev-task.sh" --type research --slug smoke-r
 printf '%s' "$output" | jq -e '
   .type == "research" and
   .workflow == "repo-research" and
-  .model == "gpt-5.4-mini" and
+  .model == "gpt-5.5" and
   .branch == "task/smoke-route" and
   (.worktree | endswith("/.worktrees/smoke-route"))
 ' >/dev/null

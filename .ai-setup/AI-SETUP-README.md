@@ -1,25 +1,25 @@
-# Setup/bootstrap-репозиторий для курса AI driven development
+# Setup/bootstrap repository for the AI Driven Development course
 
 ![AI setup meme](https://i.programmerhumor.io/2025/07/9d40116f39da7b5d83f41899584b86c9c21d5c750c6330ff88d46532ecfb8d59.png)
 
-Этот репозиторий создан для [курса Данила Письменного по ai-driven-development на Thinknetica](https://thinknetica.com/ai/ai_swe_course?utm_source=telegram&utm_medium=post&utm_campaign=ai_swe_course&utm_content=dpismenny).
+This repository was created for [Danil Pismenny's AI-driven development course on Thinknetica](https://thinknetica.com/ai/ai_swe_course?utm_source=telegram&utm_medium=post&utm_campaign=ai_swe_course&utm_content=dpismenny).
 
-В первую очередь это базовый setup/bootstrap-репозиторий для окружения и агентских инструментов. Во вторую очередь это шаблон, из которого можно стартовать учебный проект.
+First, it is a base setup/bootstrap repository for the environment and agent tooling. Second, it is a template you can use to start a course project.
 
-## Цели этого репозитория
+## Goals Of This Repository
 
-1. Дать всем участникам общий базовый ai-setup по инструментам.
-2. Дать стартовую заготовку для учебного проекта, в котором происходит тренировка заданий.
+1. Give all participants a shared baseline `ai-setup` for tools.
+2. Provide a starter template for a course project used to practice tasks.
 
-## Как пользоваться этим репозиторием
+## How To Use This Repository
 
-1. Выполните инструкции в [SETUP.md](SETUP.md).
-2. После установки проверьте окружение командой `make check`.
-3. Если вы создаете на основе этого репозитория свой учебный проект, замените этот `README.md` описанием проекта и закоммитьте изменения.
+1. Follow the instructions in [SETUP.md](SETUP.md).
+2. After installation, verify the environment with `make check`.
+3. If you create your own course project from this repository, replace this `README.md` with your project description and commit the change.
 
-## Полезные команды
+## Useful Commands
 
-- `make check-context` — проверка baseline-контекста для Claude Code и Codex.
-- `make codex-context` — сводка по текущей/последней Codex-сессии: окно контекста, live token usage, skills, subagents и грубая оценка baseline.
-- `make check-task-session` — статическая проверка repo-owned workflow для изолированных task-сессий в `zellij`.
-- `./.ai-setup/scripts/start-dev-task.sh --type impl --slug my-task --prompt "..."` — создать/переиспользовать `.worktrees/my-task`, выполнить `init.sh` и открыть routed task в `zellij`.
+- `make check-context` - verify the baseline context for Claude Code and Codex.
+- `make codex-context` - summary of the current/latest Codex session: context window, live token usage, skills, subagents, and a rough baseline estimate.
+- `make check-task-session` - static validation of the repo-owned workflow for isolated task sessions in `zellij`.
+- `./.ai-setup/scripts/start-dev-task.sh --type impl --slug my-task --prompt "..."` - create or reuse `.worktrees/my-task`, run `init.sh`, and open the routed task in `zellij`.

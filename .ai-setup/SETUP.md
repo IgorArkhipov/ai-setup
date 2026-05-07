@@ -1,28 +1,28 @@
-# Базовый сетап для курса AI driven development
+# Base Setup For The AI Driven Development Course
 
-Основное взаимодействие с окружающей системой происходит через CLI-утилиты. Поэтому важно иметь рабочий базовый набор инструментов и agent skills, а после установки проверить, что они не только поставились, но и реально настроены под ваши аккаунты.
+Most interaction with the surrounding system happens through CLI tools. Because of that, it is important to have a working baseline toolset and agent skills, and after installation verify that they are not only installed but actually configured for your accounts.
 
-Этот файл — каноническая bootstrap-инструкция для самого `ai-setup` и для учебных проектов, созданных как fork на его основе. В downstream-документах ссылайтесь на этот файл, а не копируйте команды `make`, login-шаги, `direnv allow` и `make check`.
+This file is the canonical bootstrap guide for `ai-setup` itself and for course projects created as forks from it. In downstream documents, link to this file instead of copying the `make` commands, login steps, `direnv allow`, and `make check`.
 
-## Автоматическая установка
+## Automatic Installation
 
-Подходит для базовых Linux-дистрибутивов (Ubuntu-tested) и macOS.
+Works for mainstream Linux distributions (tested on Ubuntu) and macOS.
 
 ```bash
 make
 ```
 
-По умолчанию `make` запускает target `ai`, который последовательно:
+By default, `make` runs the `ai` target, which does the following in order:
 
-1. ставит `mise`, если его еще нет;
-2. устанавливает инструменты из `mise.toml`;
-3. ставит CLI-агенты;
-4. ставит CLI-утилиты для агентов;
-5. ставит curated skills для `codex` и `claude-code`.
+1. installs `mise` if it is not already available;
+2. installs the tools from `mise.toml`;
+3. installs the agent CLIs;
+4. installs supporting CLIs for agents;
+5. installs curated skills for `codex` and `claude-code`.
 
-## Авторизация
+## Authentication
 
-После `make` нужно пройти авторизацию в обязательных сервисах — без этого `make check` упадёт на проверке авторизации:
+After `make`, you must authenticate with the required services. Without that, `make check` will fail during the auth checks:
 
 ```bash
 claude auth login
@@ -30,57 +30,57 @@ codex login
 gh auth login
 ```
 
-Затем настройте интеграцию `direnv` с вашей shell (см. [раздел direnv](#direnv) ниже) и разрешите `.envrc`:
+Then configure `direnv` integration for your shell (see the [direnv section](#direnv) below) and allow `.envrc`:
 
 ```bash
 direnv allow
 ```
 
-## Проверка установки
+## Installation Verification
 
-После авторизации прогоните базовую проверку окружения:
+After authentication, run the baseline environment check:
 
 ```bash
 make check
 ```
 
-`make check` проверяет:
+`make check` validates:
 
-- обязательный toolchain из локального setup;
-- установку agent CLI;
-- обязательные проверки авторизации для `claude`, `codex` и `gh`;
-- установку вспомогательных CLI для агентов: `playwright-cli`, `ccbox`;
-- базовый shell/env setup, включая `direnv` и числовой `PORT`.
+- the required toolchain from the local setup;
+- installed agent CLIs;
+- required authentication for `claude`, `codex`, and `gh`;
+- installed supporting CLIs for agents: `playwright-cli`, `ccbox`;
+- the baseline shell/environment setup, including `direnv` and a numeric `PORT`.
 
-Команда завершается с ошибкой только на проблемах базовой установки.
+The command exits with an error only for baseline installation problems.
 
-## Что устанавливается автоматически
+## What Gets Installed Automatically
 
-### Инструменты через `mise`
+### Tools Installed Through `mise`
 
-Из `mise.toml` ставятся: `direnv`, `gh`, `gitleaks`, `jq`, `node`, `port-selector`, `ruby`
-а также `zellij` как базовый multiplexer для параллельных task-сессий.
+The following are installed from `mise.toml`: `direnv`, `gh`, `gitleaks`, `jq`, `node`, `port-selector`, and `ruby`,
+plus `zellij` as the baseline multiplexer for parallel task sessions.
 
-### Кодинговые агенты
+### Coding Agents
 
 - `@anthropic-ai/claude-code`
 - `@openai/codex`
 
-### CLI-утилиты для агентов
+### CLI Tools For Agents
 
-Обязательные:
+Required:
 
-| Утилита | Для чего | Как проверить |
+| Tool | Purpose | How To Verify |
 | --- | --- | --- |
-| [@playwright/cli](https://github.com/microsoft/playwright-cli) | Автоматизация работы с сайтами и тестирование веба | Попросить агента зайти на сайт и сделать скриншот |
-| [gh](https://github.com/cli/cli) | Работа с GitHub API за пределами `git`: просмотр и создание issue, pull request, projects | Попросить агента посмотреть или создать issue в репозитории |
-| [port-selector](https://github.com/dapi/port-selector) | Автоматический выбор свободного порта из диапазона для локальных dev-серверов и e2e при параллельной работе агентов | Выполнить `port-selector` и убедиться, что команда возвращает номер свободного порта |
-| [ccbox](https://github.com/diskd-ai/ccbox) | Инспекция и анализ кодовой базы для агентов | Выполнить `ccbox --version` |
-| [zellij](https://zellij.dev/) | Открытие соседних tab/session для изолированной работы в отдельных git worktree | Выполнить `zellij --version`, затем `make check` |
+| [@playwright/cli](https://github.com/microsoft/playwright-cli) | Website automation and web testing | Ask an agent to open a site and take a screenshot |
+| [gh](https://github.com/cli/cli) | Work with the GitHub API outside `git`: view and create issues, pull requests, and projects | Ask an agent to inspect or create an issue in the repository |
+| [port-selector](https://github.com/dapi/port-selector) | Automatically choose a free port from a range for local dev servers and e2e while agents work in parallel | Run `port-selector` and confirm that it returns a free port number |
+| [ccbox](https://github.com/diskd-ai/ccbox) | Codebase inspection and analysis for agents | Run `ccbox --version` |
+| [zellij](https://zellij.dev/) | Open adjacent tabs/sessions for isolated work in separate git worktrees | Run `zellij --version`, then `make check` |
 
-## Изолированная task-сессия в соседнем tab/session
+## Isolated Task Session In A Neighboring Tab/Session
 
-Для параллельной работы используйте repo-owned launcher:
+For parallel work, use the repo-owned launcher:
 
 ```bash
 ./.ai-setup/scripts/start-dev-task.sh \
@@ -89,54 +89,65 @@ make check
   --prompt "Implement the requested change"
 ```
 
-Что делает launcher:
+For script-driven or CI-like scenarios, you can run a detached session:
 
-1. маршрутизирует задачу через `.ai-setup/task-router.json`;
-2. создает или переиспользует `.worktrees/<slug>`;
-3. запускает `./init.sh` в новом worktree;
-4. открывает routed task в `zellij`:
-   - если вы уже внутри `zellij`, создается соседний tab;
-   - если нет, создается отдельная `zellij` session.
+```bash
+./.ai-setup/scripts/start-dev-task.sh \
+  --type spec \
+  --slug task-session-demo \
+  --prompt "Document the workflow" \
+  --detached
+```
 
-Поддерживаемые `--type` сейчас:
+What the launcher does:
 
-- `impl` — реализация по workflow small feature на `codex` с `gpt-5.5`;
-- `debug` — bug-fix workflow на `codex` с `gpt-5.5`;
-- `research` — read-mostly исследование на `codex` с `gpt-5.4-mini`;
-- `review` — review workflow на `codex` с `gpt-5.5`;
-- `spec` — governed-doc workflow на `codex` с `gpt-5.5`.
+1. routes the task through `.ai-setup/task-router.json`;
+2. creates or reuses `.worktrees/<slug>`;
+3. runs `./init.sh` in the new worktree;
+4. opens the routed task in `zellij`:
+   - if you are already inside `zellij`, it creates a neighboring tab;
+   - otherwise, it creates a separate `zellij` session;
+   - when needed, it uses `zellij` from `mise` and sets a short `ZELLIJ_SOCKET_DIR` to work around the macOS `TMPDIR` socket-path issue.
 
-Проверка конфигурации task-session:
+Currently supported `--type` values:
+
+- `impl` - implementation using the small-feature workflow in `codex` with `gpt-5.4`;
+- `debug` - bug-fix workflow in `codex` with `gpt-5.4`;
+- `research` - read-mostly research in `codex` with `gpt-5.5`;
+- `review` - review workflow in `codex` with `gpt-5.5`;
+- `spec` - governed-document workflow in `codex` with `gpt-5.5`.
+
+Validate the task-session configuration:
 
 ```bash
 make check-task-session
 ```
 
-## Что сохранить в производном проекте
+## What To Preserve In A Derived Project
 
-Если вы создаете учебный проект на основе этого репозитория, исходный `README.md` предполагается заменить README вашего проекта.
+If you create a course project from this repository, the original `README.md` is expected to be replaced with your project's README.
 
-Чтобы вместе с этим не потерять onboarding по окружению, сохраните требования к локальному setup в отдельном постоянном документе производного репозитория:
+To avoid losing the environment onboarding along with that change, keep the local setup requirements in a separate permanent document in the derived repository:
 
-- `SETUP.md`, если хотите держать setup отдельно от README;
-- `CONTRIBUTING.md`, если это часть developer onboarding;
-- `docs/onboarding.md`, если нужна более подробная внутренняя документация.
+- `SETUP.md` if you want to keep setup separate from the README;
+- `CONTRIBUTING.md` if it is part of developer onboarding;
+- `docs/onboarding.md` if you need more detailed internal documentation.
 
-Минимум, который стоит сохранить в таком документе:
+At minimum, that document should preserve:
 
-- как поднять локальное окружение;
-- как пройти обязательную авторизацию для CLI;
-- как проверить результат через `make check`.
+- how to bring up the local environment;
+- how to complete the required CLI authentication;
+- how to verify the result with `make check`.
 
 ## direnv
 
-В проекте используется `direnv`:
+This project uses `direnv`:
 
-1. настройте интеграцию с вашей shell: [direnv hooks documentation](https://direnv.net/docs/hook.html)
-2. разрешите локальный `.envrc` в корне проекта:
+1. configure integration with your shell: [direnv hooks documentation](https://direnv.net/docs/hook.html)
+2. allow the local `.envrc` in the project root:
 
 ```bash
 direnv allow
 ```
 
-`.envrc` подхватывает `.env` и `.env.local`, а если `PORT` не задан явно, выставляет его автоматически через `port-selector`. `make check` проверяет, что `direnv` действительно экспортирует числовой `PORT`.
+`.envrc` loads `.env` and `.env.local`, and if `PORT` is not set explicitly, it assigns one automatically through `port-selector`. `make check` validates that `direnv` really exports a numeric `PORT`.

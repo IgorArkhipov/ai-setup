@@ -19,6 +19,7 @@ Options:
   --prompt TEXT        Inline task prompt
   --prompt-file PATH   Read the task prompt from a file
   --base-ref REF       Base ref for new worktree creation (default: HEAD)
+  --detached           Start a new Zellij session without attaching to it
   --dry-run            Print the resolved plan without creating anything
   -h, --help           Show this help
 EOF
@@ -31,6 +32,25 @@ die() {
 
 need_cmd() {
 	command -v "$1" >/dev/null 2>&1 || die "required command not found: $1"
+}
+
+resolve_tool() {
+	local tool="$1"
+	local path_value=""
+
+	if path_value="$(command -v "$tool" 2>/dev/null)"; then
+		printf '%s\n' "$path_value"
+		return 0
+	fi
+
+	if command -v mise >/dev/null 2>&1; then
+		if path_value="$(mise which "$tool" 2>/dev/null)"; then
+			printf '%s\n' "$path_value"
+			return 0
+		fi
+	fi
+
+	die "required command not found: $tool"
 }
 
 slugify() {
@@ -47,6 +67,7 @@ read_prompt_file() {
 
 ensure_worktree_dir_is_ignored() {
 	local repo_root="$1"
+	mkdir -p "$repo_root/.worktrees"
 	if (cd "$repo_root" && git check-ignore -q .worktrees); then
 		return 0
 	fi
@@ -60,7 +81,7 @@ ensure_worktree() {
 	local base_ref="$4"
 
 	if [ -d "$worktree_path" ]; then
-		(cd "$worktree_path" && git rev-parse --show-toplevel >/dev/null 2>&1) || \
+		(cd "$worktree_path" && git rev-parse --show-toplevel >/dev/null 2>&1) ||
 			die "existing path is not a git worktree: $worktree_path"
 		return 0
 	fi
@@ -94,50 +115,54 @@ branch=""
 prompt=""
 prompt_file=""
 base_ref="HEAD"
+detached=0
 dry_run=0
 
 while [ $# -gt 0 ]; do
 	case "$1" in
-		--type)
-			shift
-			[ $# -gt 0 ] || die "--type requires a value"
-			type="$1"
-			;;
-		--slug)
-			shift
-			[ $# -gt 0 ] || die "--slug requires a value"
-			slug="$1"
-			;;
-		--branch)
-			shift
-			[ $# -gt 0 ] || die "--branch requires a value"
-			branch="$1"
-			;;
-		--prompt)
-			shift
-			[ $# -gt 0 ] || die "--prompt requires a value"
-			prompt="$1"
-			;;
-		--prompt-file)
-			shift
-			[ $# -gt 0 ] || die "--prompt-file requires a value"
-			prompt_file="$1"
-			;;
-		--base-ref)
-			shift
-			[ $# -gt 0 ] || die "--base-ref requires a value"
-			base_ref="$1"
-			;;
-		--dry-run)
-			dry_run=1
-			;;
-		-h|--help)
-			usage
-			exit 0
-			;;
-		*)
-			die "unknown argument: $1"
-			;;
+	--type)
+		shift
+		[ $# -gt 0 ] || die "--type requires a value"
+		type="$1"
+		;;
+	--slug)
+		shift
+		[ $# -gt 0 ] || die "--slug requires a value"
+		slug="$1"
+		;;
+	--branch)
+		shift
+		[ $# -gt 0 ] || die "--branch requires a value"
+		branch="$1"
+		;;
+	--prompt)
+		shift
+		[ $# -gt 0 ] || die "--prompt requires a value"
+		prompt="$1"
+		;;
+	--prompt-file)
+		shift
+		[ $# -gt 0 ] || die "--prompt-file requires a value"
+		prompt_file="$1"
+		;;
+	--base-ref)
+		shift
+		[ $# -gt 0 ] || die "--base-ref requires a value"
+		base_ref="$1"
+		;;
+	--detached)
+		detached=1
+		;;
+	--dry-run)
+		dry_run=1
+		;;
+	-h | --help)
+		usage
+		exit 0
+		;;
+	*)
+		die "unknown argument: $1"
+		;;
 	esac
 	shift
 done
@@ -146,6 +171,7 @@ done
 
 need_cmd git
 need_cmd jq
+need_cmd mise
 
 repo_root="$(git rev-parse --show-toplevel)"
 routes_file="$repo_root/.ai-setup/task-router.json"
@@ -214,6 +240,7 @@ if [ "$dry_run" -eq 1 ]; then
 		--arg session "$session_name" \
 		--arg tab "$tab_name" \
 		--arg baseRef "$base_ref" \
+		--argjson detached "$detached" \
 		'{
 			type: $type,
 			workflow: $workflow,
@@ -224,22 +251,26 @@ if [ "$dry_run" -eq 1 ]; then
 			worktree: $worktree,
 			session: $session,
 			tab: $tab,
-			baseRef: $baseRef
+			baseRef: $baseRef,
+			detached: $detached
 		}'
 	exit 0
 fi
 
-need_cmd codex
-need_cmd zellij
-need_cmd mise
-need_cmd direnv
+codex_bin="$(resolve_tool codex)"
+zellij_bin="$(resolve_tool zellij)"
+direnv_bin="$(resolve_tool direnv)"
+PATH="$(dirname "$codex_bin"):$(dirname "$zellij_bin"):$(dirname "$direnv_bin"):${PATH}"
+export PATH
+export ZELLIJ_SOCKET_DIR="${ZELLIJ_SOCKET_DIR:-/tmp/zellij-${UID:-$(id -u)}}"
+mkdir -p "$ZELLIJ_SOCKET_DIR"
 
 ensure_worktree_dir_is_ignored "$repo_root"
 mkdir -p "$worktree_root" "$launcher_dir"
 ensure_worktree "$repo_root" "$worktree_path" "$branch" "$base_ref"
 run_init_step "$worktree_path"
 
-printf '%s\n' "$full_prompt" > "$prompt_path"
+printf '%s\n' "$full_prompt" >"$prompt_path"
 
 jq -n \
 	--arg type "$type" \
@@ -262,17 +293,18 @@ jq -n \
 		branch: $branch,
 		worktree: $worktree,
 		session: $session,
-		tab: $tab,
-		promptFile: $promptFile,
-		launcher: $launcher
-	}' > "$manifest_path"
+	tab: $tab,
+	promptFile: $promptFile,
+	launcher: $launcher
+	}' >"$manifest_path"
 
-cat > "$launcher_path" <<EOF
+cat >"$launcher_path" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
 
 PATH="\${HOME}/.local/bin:/usr/local/bin:/opt/homebrew/bin:\${PATH}"
 export PATH
+export ZELLIJ_SOCKET_DIR=$(printf '%q' "$ZELLIJ_SOCKET_DIR")
 
 cd $(printf '%q' "$worktree_path")
 
@@ -286,7 +318,7 @@ printf '  model:    %s\n' $(printf '%q' "$model")
 printf '  prompt:   %s\n\n' $(printf '%q' "$prompt_path")
 
 prompt="\$(cat $(printf '%q' "$prompt_path"))"
-if codex --cd $(printf '%q' "$worktree_path") --model $(printf '%q' "$model") --no-alt-screen "\$prompt"; then
+if $(printf '%q' "$codex_bin") --cd $(printf '%q' "$worktree_path") --model $(printf '%q' "$model") --no-alt-screen "\$prompt"; then
 	:
 else
 	status=\$?
@@ -302,10 +334,19 @@ printf 'Prepared task worktree %s on branch %s\n' "$worktree_path" "$branch"
 printf 'Route: %s -> %s (%s)\n' "$type" "$workflow" "$model"
 
 if [ -n "${ZELLIJ:-}" ]; then
-	zellij action new-tab --name "$tab_name" --cwd "$worktree_path" -- "$launcher_path"
+	"$zellij_bin" action new-tab --name "$tab_name" --cwd "$worktree_path" -- "$launcher_path"
 	printf 'Opened Zellij tab %s in the current session\n' "$tab_name"
 else
-	printf 'Starting Zellij session %s\n' "$session_name"
-	cd "$worktree_path"
-	SHELL="$launcher_path" exec zellij --session "$session_name"
+	if [ "$detached" -eq 1 ]; then
+		"$zellij_bin" options \
+			--session-name "$session_name" \
+			--attach-to-session false \
+			--default-cwd "$worktree_path" \
+			--default-shell "$launcher_path"
+		printf 'Started detached Zellij session %s\n' "$session_name"
+	else
+		printf 'Starting Zellij session %s\n' "$session_name"
+		cd "$worktree_path"
+		SHELL="$launcher_path" exec "$zellij_bin" --session "$session_name"
+	fi
 fi

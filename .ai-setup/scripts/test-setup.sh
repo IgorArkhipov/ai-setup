@@ -83,6 +83,34 @@ check_command() {
 	return 1
 }
 
+check_tool_with_mise_fallback() {
+	local severity="$1"
+	local label="$2"
+	local tool="$3"
+	shift 3
+
+	if command_exists "$tool"; then
+		check_command "$severity" "$label" "$tool" "$@"
+		return $?
+	fi
+
+	if command_exists mise; then
+		local resolved
+		if resolved="$(mise which "$tool" 2>/dev/null)"; then
+			check_command "$severity" "$label" "$resolved" "$@"
+			return $?
+		fi
+	fi
+
+	if [ "$severity" = "required" ]; then
+		fail "$label"
+	else
+		warn "$label"
+	fi
+	note "$tool is not available in PATH or via mise"
+	return 1
+}
+
 check_json_command() {
 	local severity="$1"
 	local label="$2"
@@ -206,7 +234,7 @@ check_command required "gitleaks installed" gitleaks version
 check_command required "jq installed" jq --version
 check_command required "node installed" node --version
 check_command required "npx installed" npx --version
-check_command required "zellij installed" zellij --version
+check_tool_with_mise_fallback required "zellij installed" zellij --version
 check_port_selector
 check_direnv_port
 
