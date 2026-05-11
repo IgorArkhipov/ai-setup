@@ -6,8 +6,6 @@
     ".prompts/memory-bank-prime-documentation-context.md",
     ".prompts/memory-bank-create-prd.md"
   ],
-  "outputs": [
-    "memory-bank/prd/PRD-XXX.md"
-  ],
+  "outputs": ["memory-bank/prd/PRD-XXX.md"],
   "reviewPolicy": "required"
 }

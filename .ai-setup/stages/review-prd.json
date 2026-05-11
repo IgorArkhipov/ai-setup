@@ -6,8 +6,6 @@
     ".prompts/memory-bank-prime-documentation-context.md",
     ".prompts/memory-bank-review-prd.md"
   ],
-  "outputs": [
-    "stage-results/review-prd.md"
-  ],
+  "outputs": ["stage-results/review-prd.md"],
   "reviewPolicy": "none"
 }

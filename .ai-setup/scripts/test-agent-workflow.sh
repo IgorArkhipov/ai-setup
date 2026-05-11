@@ -62,7 +62,7 @@ while IFS= read -r stage_id; do
 	jq -e --arg id "$stage_id" '.id == $id and (.promptChain | type == "array")' "$stage_path" >/dev/null
 	while IFS= read -r prompt_path; do
 		case "$prompt_path" in
-		.env* | */.env* | ./.env* | */.env/*)
+		.env* | */.env*)
 			fail "stage $stage_id references forbidden .env* path: $prompt_path"
 			;;
 		esac

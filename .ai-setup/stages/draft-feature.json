@@ -7,8 +7,6 @@
     ".prompts/memory-bank-prime-documentation-context.md",
     ".prompts/memory-bank-create-feature.md"
   ],
-  "outputs": [
-    "memory-bank/features/FT-XXX/feature.md"
-  ],
+  "outputs": ["memory-bank/features/FT-XXX/feature.md"],
   "reviewPolicy": "required"
 }

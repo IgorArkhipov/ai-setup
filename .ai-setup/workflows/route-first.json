@@ -2,9 +2,7 @@
   "id": "route-first",
   "description": "Route an incoming AgentScope development prompt to the smallest governed document owner, then run draft/review/polish loops for that artifact family.",
   "initialStage": "route-document",
-  "hardGates": [
-    "selected-artifact-accepted"
-  ],
+  "hardGates": ["selected-artifact-accepted"],
   "stages": [
     "route-document",
     "draft-prd",

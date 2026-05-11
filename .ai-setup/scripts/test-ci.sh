@@ -45,6 +45,26 @@ check_mise() {
 	fail "$label" "$output"
 }
 
+check_direct_or_mise() {
+	local label="$1"
+	shift
+
+	local direct_output
+	if direct_output="$("$@" 2>&1)"; then
+		ok "$label"
+		return 0
+	fi
+
+	local mise_output
+	if mise_output="$(mise exec -- "$@" 2>&1)"; then
+		ok "$label"
+		return 0
+	fi
+
+	fail "$label" "direct: $direct_output
+mise: $mise_output"
+}
+
 check_port_selector() {
 	local output
 	local port
@@ -81,9 +101,9 @@ check_port_selector
 # check_mise "zellij installed" zellij --version
 
 section "Agent CLIs"
-check_direct "claude installed" claude --version
-check_direct "codex installed" codex --version
-check_direct "playwright-cli installed" playwright-cli --version
+check_direct_or_mise "claude installed" claude --version
+check_direct_or_mise "codex installed" codex --version
+check_direct_or_mise "playwright-cli installed" playwright-cli --version
 check_direct "ccbox installed" ccbox --version
 
 section "Repo workflow assets"

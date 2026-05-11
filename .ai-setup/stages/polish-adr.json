@@ -6,8 +6,6 @@
     ".prompts/memory-bank-prime-documentation-context.md",
     ".prompts/memory-bank-create-adr.md"
   ],
-  "outputs": [
-    "memory-bank/adr/ADR-XXX.md"
-  ],
+  "outputs": ["memory-bank/adr/ADR-XXX.md"],
   "reviewPolicy": "required"
 }

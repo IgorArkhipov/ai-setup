@@ -7,8 +7,6 @@
     ".prompts/memory-bank-prime-documentation-context.md",
     ".prompts/memory-bank-create-use-case.md"
   ],
-  "outputs": [
-    "memory-bank/use-cases/UC-XXX.md"
-  ],
+  "outputs": ["memory-bank/use-cases/UC-XXX.md"],
   "reviewPolicy": "required"
 }

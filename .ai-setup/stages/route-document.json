@@ -7,8 +7,6 @@
     ".prompts/memory-bank-prime-documentation-context.md",
     ".prompts/memory-bank-route-document.md"
   ],
-  "outputs": [
-    "stage-results/route-document.md"
-  ],
+  "outputs": ["stage-results/route-document.md"],
   "reviewPolicy": "none"
 }

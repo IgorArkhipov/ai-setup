@@ -203,7 +203,7 @@ ensure_worktree_root_safe() {
 
 	case "$root" in
 	"$repo_root"/*)
-		rel_path="${root#$repo_root/}"
+		rel_path="${root#"$repo_root"/}"
 		if git -C "$repo_root" check-ignore -q "$rel_path"; then
 			mkdir -p "$root"
 			return 0
@@ -343,8 +343,7 @@ resolve_transition_target() {
 				return 0
 			fi
 			case "$requested_next_stage" in
-			draft-prd | draft-use-case | draft-adr | draft-feature)
-				;;
+			draft-prd | draft-use-case | draft-adr | draft-feature) ;;
 			*)
 				die "invalid route next stage: $requested_next_stage"
 				;;
@@ -508,10 +507,10 @@ write_claude_review_prompt() {
 		printf '# Claude Code Second-Opinion Review\n\n'
 		printf 'You are performing an independent second-opinion review for an agentic workflow stage.\n\n'
 		printf 'Constraints:\n'
-		printf -- '- This is a review pass for repository work in `%s`.\n' "$manifest_worktree"
-		printf -- '- Do not read or use `.env*` files.\n'
-		printf -- '- Write your final parseable result to `%s`.\n' "$review_result_path"
-		printf -- '- If review cannot run, use `Status: needs_human` or `Status: blocked`; do not silently accept.\n\n'
+		printf -- '- This is a review pass for repository work in %s.\n' "$manifest_worktree"
+		printf -- '- Do not read or use .env* files.\n'
+		printf -- '- Write your final parseable result to %s.\n' "$review_result_path"
+		printf -- '- If review cannot run, use Status: needs_human or Status: blocked; do not silently accept.\n\n'
 		printf 'Run metadata:\n'
 		jq -r '
 			"- run_id: \(.run_id)",
@@ -531,7 +530,7 @@ write_claude_review_prompt() {
 		printf 'Status: accepted | needs_polish | needs_upstream | blocked | needs_human | failed\n'
 		printf 'Target artifact: %s\n' "${target_artifact_value:-none}"
 		printf 'Open findings: <non-negative integer>\n\n'
-		printf 'Use `accepted` only when the artifact is ready. Use `needs_polish` for current-artifact fixes, `needs_upstream` when the plan/design/input must change first, and `needs_human` when a human decision is required.\n'
+		printf 'Use accepted only when the artifact is ready. Use needs_polish for current-artifact fixes, needs_upstream when the plan/design/input must change first, and needs_human when a human decision is required.\n'
 	} >"$review_prompt_path"
 }
 
@@ -770,8 +769,7 @@ run_stage_agent() {
 should_run_claude_review() {
 	[ "$claude_review" -eq 1 ] || return 1
 	case "$stage_id" in
-	review-*)
-		;;
+	review-*) ;;
 	*)
 		return 1
 		;;

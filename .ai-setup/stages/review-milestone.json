@@ -7,9 +7,7 @@
     ".prompts/memory-bank-prime-documentation-context.md",
     ".prompts/skills/code-review.md"
   ],
-  "outputs": [
-    "stage-results/review-milestone.md"
-  ],
+  "outputs": ["stage-results/review-milestone.md"],
   "reviewPolicy": "none",
   "targetArtifactRequired": false
 }
