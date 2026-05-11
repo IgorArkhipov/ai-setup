@@ -158,6 +158,20 @@ jq -e '
 	(.stage_history | length == 1)
 ' "$manifest" >/dev/null
 
+resume_stage_json="$("$runner" resume \
+	--run-id "$run_id" \
+	--state-root "$sandbox/agent-workflows" \
+	--apply \
+	--json)"
+assert_json_eq "$resume_stage_json" '.status' 'stage_ready'
+assert_json_eq "$resume_stage_json" '.stage' 'draft-feature'
+resume_stage_prompt="$sandbox/agent-workflows/$run_id/stage-prompts/draft-feature.prompt.md"
+assert_json_eq "$resume_stage_json" '.prompt_file' "$resume_stage_prompt"
+assert_file "$resume_stage_prompt"
+resume_stage_prompt_text="$(cat "$resume_stage_prompt")"
+assert_contains "$resume_stage_prompt_text" "# Agent Workflow Stage: draft-feature"
+assert_contains "$resume_stage_prompt_text" "Expected outputs:"
+
 draft_transition_json="$("$runner" transition \
 	--run-id "$run_id" \
 	--stage draft-feature \

@@ -296,6 +296,51 @@ write_stage_prompt() {
 	} >"$prompt_path"
 }
 
+render_stage_json() {
+	prompt_chain_json="$(jq -c '.promptChain' "$stage_path")"
+	jq -n \
+		--arg status "stage_ready" \
+		--arg stage "$stage_id" \
+		--arg agent "$agent" \
+		--arg model "$model" \
+		--arg prompt_file "$prompt_path" \
+		--arg result_file "$result_path" \
+		--arg command "$command_text" \
+		--argjson prompt_chain "$prompt_chain_json" \
+		'{
+			status: $status,
+			stage: $stage,
+			agent: $agent,
+			model: $model,
+			prompt_file: $prompt_file,
+			result_file: $result_file,
+			command: $command,
+			prompt_chain: $prompt_chain
+		}'
+}
+
+prepare_stage() {
+	stage_path="$(stage_file "$stage_id")"
+	[ -f "$stage_path" ] || die "stage config not found: $stage_path"
+	agent="$(jq -r '.agent' "$stage_path")"
+	model="$(jq -r '.model' "$stage_path")"
+	first_output="$(jq -r '.outputs[0]' "$stage_path")"
+	state_dir="$state_root_abs/$run_id"
+	prompt_path="$state_dir/stage-prompts/$stage_id.prompt.md"
+	case "$first_output" in
+	stage-results/*)
+		result_path="$state_dir/$first_output"
+		;;
+	*)
+		result_path="$repo_root/$first_output"
+		;;
+	esac
+	command_text="codex --cd $(jq -r '.worktree' "$manifest") --model $model --no-alt-screen \"$prompt_path\""
+	if [ "$apply" -eq 1 ]; then
+		write_stage_prompt "$stage_id" "$stage_path" "$manifest" "$prompt_path" "$result_path"
+	fi
+}
+
 render_start_json() {
 	jq -n \
 		--arg run_id "$run_id" \
@@ -479,6 +524,22 @@ status | resume)
 	manifest="$state_root_abs/$run_id/run.json"
 	read_manifest "$manifest"
 	if [ "$command" = "resume" ]; then
+		if [ "$apply" -eq 1 ] && [ "$(jq -r '.next_action' "$manifest")" = "run_stage" ]; then
+			stage_id="$(jq -r '.current_stage' "$manifest")"
+			prepare_stage
+			if [ "$json" -eq 1 ]; then
+				render_stage_json
+			else
+				printf 'status: stage_ready\n'
+				printf 'stage: %s\n' "$stage_id"
+				printf 'agent: %s\n' "$agent"
+				printf 'model: %s\n' "$model"
+				printf 'prompt_file: %s\n' "$prompt_path"
+				printf 'result_file: %s\n' "$result_path"
+				printf 'command: %s\n' "$command_text"
+			fi
+			exit 0
+		fi
 		output="$(jq '. + {status: "resume_ready"}' "$manifest")"
 	else
 		output="$(cat "$manifest")"
@@ -499,46 +560,9 @@ stage)
 	state_root_abs="$(abs_path "$state_root")"
 	manifest="$state_root_abs/$run_id/run.json"
 	read_manifest "$manifest"
-	stage_path="$(stage_file "$stage_id")"
-	[ -f "$stage_path" ] || die "stage config not found: $stage_path"
-	agent="$(jq -r '.agent' "$stage_path")"
-	model="$(jq -r '.model' "$stage_path")"
-	first_output="$(jq -r '.outputs[0]' "$stage_path")"
-	state_dir="$state_root_abs/$run_id"
-	prompt_path="$state_dir/stage-prompts/$stage_id.prompt.md"
-	case "$first_output" in
-	stage-results/*)
-		result_path="$state_dir/$first_output"
-		;;
-	*)
-		result_path="$repo_root/$first_output"
-		;;
-	esac
-	command_text="codex --cd $(jq -r '.worktree' "$manifest") --model $model --no-alt-screen \"$prompt_path\""
-	if [ "$apply" -eq 1 ]; then
-		write_stage_prompt "$stage_id" "$stage_path" "$manifest" "$prompt_path" "$result_path"
-	fi
+	prepare_stage
 	if [ "$json" -eq 1 ]; then
-		prompt_chain_json="$(jq -c '.promptChain' "$stage_path")"
-		jq -n \
-			--arg status "stage_ready" \
-			--arg stage "$stage_id" \
-			--arg agent "$agent" \
-			--arg model "$model" \
-			--arg prompt_file "$prompt_path" \
-			--arg result_file "$result_path" \
-			--arg command "$command_text" \
-			--argjson prompt_chain "$prompt_chain_json" \
-			'{
-				status: $status,
-				stage: $stage,
-				agent: $agent,
-				model: $model,
-				prompt_file: $prompt_file,
-				result_file: $result_file,
-				command: $command,
-				prompt_chain: $prompt_chain
-			}'
+		render_stage_json
 	else
 		printf 'status: stage_ready\n'
 		printf 'stage: %s\n' "$stage_id"

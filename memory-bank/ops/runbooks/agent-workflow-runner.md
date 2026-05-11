@@ -115,6 +115,16 @@ Expected output includes:
 
 The current slice validates the manifest and reports the resumable stage. Later slices will execute the recorded next action.
 
+Use `--apply` when `next_action` is `run_stage` to materialize the prompt for the recorded `current_stage`:
+
+```bash
+./.ai-setup/scripts/run-agent-workflow.sh resume \
+  --run-id <run-id> \
+  --apply
+```
+
+This writes `tmp/agent-workflows/<run-id>/stage-prompts/<current-stage>.prompt.md` and returns the same stage-ready fields as the explicit `stage` command.
+
 ### 5. Prepare A Stage Prompt
 
 Compose a dry-run stage command without executing live Codex:
