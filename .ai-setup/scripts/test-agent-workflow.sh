@@ -640,6 +640,8 @@ cat >"$implementation_plan_fixture" <<'EOF'
 | --- | --- | --- | --- |
 | `STEP-01` | agent | Add the first fixture milestone | `echo step 1` |
 | `STEP-02` | agent | Add the second fixture milestone | `echo step 2` |
+- [ ] `STEP-03` Add the third fixture milestone from a task list
+### MS-04 - Add the fourth fixture milestone from a heading
 EOF
 
 implementation_json="$("$runner" run \
@@ -657,22 +659,26 @@ implementation_json="$("$runner" run \
 	--json)"
 assert_json_eq "$implementation_json" '.run_id' "$implementation_run_id"
 assert_json_eq "$implementation_json" '.status' 'stopped'
-assert_json_eq "$implementation_json" '.steps' '4'
+assert_json_eq "$implementation_json" '.steps' '8'
 assert_json_eq "$implementation_json" '.next_action' 'stop_gate'
 assert_json_eq "$implementation_json" '.stop_reason' 'all_milestones_accepted'
 implementation_manifest="$sandbox/agent-workflows/$implementation_run_id/run.json"
 jq -e '
 	.workflow == "implementation-plan" and
 	.implementation_plan == "'"$implementation_plan_fixture"'" and
-	(.milestones | length == 2) and
-	.current_milestone_index == 1 and
-	.current_milestone.id == "STEP-02" and
-	(.stage_history | length == 4) and
+	(.milestones | length == 4) and
+	.current_milestone_index == 3 and
+	.current_milestone.id == "MS-04" and
+	.milestones[2].id == "STEP-03" and
+	.milestones[3].goal == "Add the fourth fixture milestone from a heading" and
+	(.stage_history | length == 8) and
 	.stage_history[0].stage == "implement-milestone" and
 	.stage_history[1].stage == "review-milestone" and
 	.stage_history[1].result_file == "'"$sandbox"'/agent-workflows/'"$implementation_run_id"'/stage-results/review-milestone.claude.md" and
 	.stage_history[2].stage == "implement-milestone" and
-	.stage_history[3].stage == "review-milestone"
+	.stage_history[3].stage == "review-milestone" and
+	.stage_history[6].stage == "implement-milestone" and
+	.stage_history[7].stage == "review-milestone"
 ' "$implementation_manifest" >/dev/null
 assert_file "$sandbox/agent-workflows/$implementation_run_id/stage-prompts/implement-milestone.prompt.md"
 assert_file "$sandbox/agent-workflows/$implementation_run_id/stage-results/review-milestone.claude.md"

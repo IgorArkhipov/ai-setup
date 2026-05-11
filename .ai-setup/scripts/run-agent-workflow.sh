@@ -127,21 +127,22 @@ read_manifest() {
 extract_milestones_json() {
 	local plan_path="$1"
 	awk '
-		BEGIN { first = 1; print "[" }
-		/^\|[[:space:]]*`?(STEP|MS|TASK)-[A-Za-z0-9._-]+`?[[:space:]]*\|/ {
-			line = $0
-			gsub(/^\|/, "", line)
-			gsub(/\|$/, "", line)
-			n = split(line, raw, "|")
-			for (i = 1; i <= n; i++) {
-				gsub(/^[[:space:]]+|[[:space:]]+$/, "", raw[i])
-				gsub(/^`|`$/, "", raw[i])
+		function trim(value) {
+			gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+			return value
+		}
+		function clean(value) {
+			value = trim(value)
+			gsub(/^`|`$/, "", value)
+			return value
+		}
+		function emit(id, goal) {
+			id = clean(id)
+			goal = trim(goal)
+			if (seen[id] || id == "") {
+				return
 			}
-			id = raw[1]
-			goal = raw[3]
-			if (goal == "") {
-				goal = raw[2]
-			}
+			seen[id] = 1
 			gsub(/\\/,"\\\\", id)
 			gsub(/"/,"\\\"", id)
 			gsub(/\\/,"\\\\", goal)
@@ -151,6 +152,46 @@ extract_milestones_json() {
 			}
 			printf "  {\"id\":\"%s\",\"goal\":\"%s\"}", id, goal
 			first = 0
+		}
+		BEGIN { first = 1; print "[" }
+		/^\|[[:space:]]*`?(STEP|MS|TASK)-[A-Za-z0-9._-]+`?[[:space:]]*\|/ {
+			line = $0
+			gsub(/^\|/, "", line)
+			gsub(/\|$/, "", line)
+			n = split(line, raw, "|")
+			for (i = 1; i <= n; i++) {
+				raw[i] = clean(raw[i])
+			}
+			id = raw[1]
+			goal = raw[3]
+			if (goal == "") {
+				goal = raw[2]
+			}
+			emit(id, goal)
+			next
+		}
+		match($0, /^[[:space:]]*[-*][[:space:]]+\[[ xX]\][[:space:]]+`?(STEP|MS|TASK)-[A-Za-z0-9._-]+`?[: -]+/) {
+			prefix = substr($0, RSTART, RLENGTH)
+			line = $0
+			sub(/^[[:space:]]*[-*][[:space:]]+\[[ xX]\][[:space:]]+`?/, "", line)
+			match(line, /^(STEP|MS|TASK)-[A-Za-z0-9._-]+`?/)
+			id = substr(line, RSTART, RLENGTH)
+			gsub(/`$/, "", id)
+			goal = substr(line, RSTART + RLENGTH)
+			sub(/^[: -]+/, "", goal)
+			emit(id, goal)
+			next
+		}
+		match($0, /^#{1,6}[[:space:]]+`?(STEP|MS|TASK)-[A-Za-z0-9._-]+`?[[:space:]:-]+/) {
+			line = $0
+			sub(/^#{1,6}[[:space:]]+`?/, "", line)
+			match(line, /^(STEP|MS|TASK)-[A-Za-z0-9._-]+`?/)
+			id = substr(line, RSTART, RLENGTH)
+			gsub(/`$/, "", id)
+			goal = substr(line, RSTART + RLENGTH)
+			sub(/^[[:space:]:-]+/, "", goal)
+			emit(id, goal)
+			next
 		}
 		END { print "\n]" }
 	' "$plan_path"
