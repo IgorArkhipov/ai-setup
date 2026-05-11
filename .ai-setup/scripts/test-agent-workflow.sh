@@ -77,10 +77,15 @@ sandbox="$(mktemp -d)"
 apply_run_id="2026-05-11-1433-provider-auth-apply"
 apply_worktree="$sandbox/worktrees/$apply_run_id"
 apply_branch="task/$apply_run_id"
+none_run_id="2026-05-11-1434-no-doc-needed"
+none_worktree="$sandbox/worktrees/$none_run_id"
+none_branch="task/$none_run_id"
 
 cleanup() {
 	git -C "$repo_root" worktree remove --force "$apply_worktree" >/dev/null 2>&1 || true
+	git -C "$repo_root" worktree remove --force "$none_worktree" >/dev/null 2>&1 || true
 	git -C "$repo_root" branch -D "$apply_branch" >/dev/null 2>&1 || true
+	git -C "$repo_root" branch -D "$none_branch" >/dev/null 2>&1 || true
 	rm -rf "$sandbox"
 }
 trap cleanup EXIT
@@ -138,6 +143,35 @@ assert_contains "$stage_prompt_text" "original_prompt:"
 assert_contains "$stage_prompt_text" "Add provider auth detection"
 assert_contains "$stage_prompt_text" "Expected outputs:"
 assert_contains "$stage_prompt_text" "Next stage:"
+assert_contains "$stage_prompt_text" "none"
+
+none_json="$("$runner" start \
+	--workflow route-first \
+	--slug "No Doc Needed" \
+	--prompt "No governed document is needed" \
+	--now "2026-05-11 14:34" \
+	--state-root "$sandbox/agent-workflows" \
+	--worktree-root "$sandbox/worktrees" \
+	--apply \
+	--json)"
+none_manifest="$sandbox/agent-workflows/$(printf '%s' "$none_json" | jq -r '.run_id')/run.json"
+none_route_json="$("$runner" transition \
+	--run-id "$none_run_id" \
+	--stage route-document \
+	--state-root "$sandbox/agent-workflows" \
+	--result-file "$fixtures_dir/route-none.md" \
+	--apply \
+	--json)"
+assert_json_eq "$none_route_json" '.next_action' 'stop_gate'
+assert_json_eq "$none_route_json" '.stop_reason' 'no_governed_document'
+jq -e '
+	.current_stage == "route-document" and
+	.next_action == "stop_gate" and
+	.stop_reason == "no_governed_document" and
+	.last_result.requested_next_stage == "none" and
+	.last_result.stop_reason == "no_governed_document" and
+	(.stage_history | length == 1)
+' "$none_manifest" >/dev/null
 
 route_transition_json="$("$runner" transition \
 	--run-id "$run_id" \

@@ -170,6 +170,7 @@ Applied transitions are ordered. The `--stage` value must match the manifest's c
 For document-stage families, applied transitions also update `current_stage` when the decision points to a next runnable stage:
 
 - `route-document` with `accepted` and `Next stage: draft-<kind>` moves to that draft stage;
+- `route-document` with `accepted` and `Next stage: none` stops at `stop_gate` with `stop_reason: no_governed_document`;
 - `draft-<kind>` with `accepted` moves to `review-<kind>`;
 - `review-<kind>` with `needs_polish` moves to `polish-<kind>`;
 - `polish-<kind>` with `accepted` moves back to `review-<kind>`;
@@ -181,6 +182,7 @@ The route-stage result must include `Next stage:` when accepted. Valid first dra
 - `draft-use-case`
 - `draft-adr`
 - `draft-feature`
+- `none`
 
 Recognized statuses:
 

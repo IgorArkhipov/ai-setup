@@ -218,6 +218,11 @@ resolve_transition_target() {
 		case "$stage" in
 		route-document)
 			[ -n "$requested_next_stage" ] || die "route-document accepted result requires Next stage"
+			if [ "$requested_next_stage" = "none" ]; then
+				resolved_next_action="stop_gate"
+				resolved_stop_reason="no_governed_document"
+				return 0
+			fi
 			[ -f "$(stage_file "$requested_next_stage")" ] || die "route next stage not found: $requested_next_stage"
 			resolved_next_stage="$requested_next_stage"
 			resolved_next_action="run_stage"
@@ -242,7 +247,7 @@ resolve_transition_target() {
 		;;
 	esac
 
-	if [ "$resolved_next_action" != "run_stage" ]; then
+	if [ "$resolved_next_action" != "run_stage" ] && [ -z "$resolved_stop_reason" ]; then
 		resolved_stop_reason="$resolved_next_action"
 	fi
 }
@@ -296,7 +301,7 @@ write_stage_prompt() {
 		printf -- '- Status: accepted | needs_polish | needs_upstream | blocked | needs_human | failed\n'
 		printf -- '- Open findings: <non-negative integer>\n'
 		if [ "$stage" = "route-document" ]; then
-			printf -- '- Next stage: draft-prd | draft-use-case | draft-adr | draft-feature\n'
+			printf -- '- Next stage: draft-prd | draft-use-case | draft-adr | draft-feature | none\n'
 		fi
 	} >"$prompt_path"
 }
