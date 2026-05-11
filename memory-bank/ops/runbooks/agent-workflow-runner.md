@@ -36,7 +36,7 @@ Use [Zellij Task Sessions](zellij-task-sessions.md) instead when you need an int
 - The runner rejects `.env*` prompt paths before reading.
 - Run state is non-governed operational state under `tmp/agent-workflows/<run-id>/`.
 - `run` and `step` execute stages non-interactively. The default executor is `codex exec`; use `--stage-command` or `AGENT_WORKFLOW_STAGE_COMMAND` when a test harness or alternate agent command should produce the stage result file.
-- Direct Claude Code MCP second-opinion calls are not enforced by the shell runner. Stages must record unavailable second opinion as `needs_human` or `blocked` instead of treating it as passed.
+- `--claude-review` runs a Claude second-opinion review after accepted review stages. If Claude is unavailable or cannot complete the review, the stage result must stop as `needs_human`, `blocked`, or `failed`; do not treat missing review as accepted.
 - `.worktrees/` remains the intended worktree root for live pipeline runs, but workflow checks use disposable test roots.
 
 ## Diagnosis
@@ -132,7 +132,49 @@ The command runs with these environment variables:
 - `AGENT_WORKFLOW_AGENT`
 - `AGENT_WORKFLOW_MODEL`
 
-### 4. Inspect Run State
+Add `--claude-review` when accepted review stages should receive an independent Claude second-opinion pass before the runner advances:
+
+```bash
+./.ai-setup/scripts/run-agent-workflow.sh run \
+  --workflow route-first \
+  --slug provider-auth \
+  --prompt "Add provider auth detection" \
+  --claude-review \
+  --apply
+```
+
+For test harnesses or alternate Claude wrappers, set `--review-command` or `AGENT_WORKFLOW_REVIEW_COMMAND`. Review commands receive the stage environment plus:
+
+- `AGENT_WORKFLOW_REVIEW_PROMPT_FILE`
+- `AGENT_WORKFLOW_REVIEW_RESULT_FILE`
+- `AGENT_WORKFLOW_IMPLEMENTATION_PLAN`
+- `AGENT_WORKFLOW_CURRENT_MILESTONE_ID`
+- `AGENT_WORKFLOW_CURRENT_MILESTONE_GOAL`
+
+The review command must write the normal parseable stage-result contract to `AGENT_WORKFLOW_REVIEW_RESULT_FILE`. If that result is `needs_polish`, the runner moves into the matching polish stage and then re-runs review.
+
+### 4. Run An Implementation Plan By Milestone
+
+Use the `implementation-plan` workflow when a governed `implementation-plan.md` has been accepted and should be executed milestone by milestone:
+
+```bash
+./.ai-setup/scripts/run-agent-workflow.sh run \
+  --workflow implementation-plan \
+  --slug provider-auth-implementation \
+  --implementation-plan memory-bank/features/FT-007/implementation-plan.md \
+  --claude-review \
+  --apply
+```
+
+The runner extracts milestone rows whose first table cell is shaped like `STEP-*`, `MS-*`, or `TASK-*`, stores them in `run.json`, and runs:
+
+- `implement-milestone`
+- `review-milestone`
+- `polish-milestone`, when review finds current-milestone issues
+
+After `review-milestone` accepts the current milestone, the runner advances to the next queued milestone. When all milestones are accepted, it stops with `stop_reason: all_milestones_accepted`.
+
+### 5. Inspect Run State
 
 ```bash
 ./.ai-setup/scripts/run-agent-workflow.sh status \
@@ -146,7 +188,7 @@ Expected output includes:
 - `stop_reason`, when present
 - `last_result_stage`, `last_result_status`, and `last_result_next_action`, when present
 
-### 5. Resume A Run
+### 6. Resume A Run
 
 ```bash
 ./.ai-setup/scripts/run-agent-workflow.sh resume \
@@ -168,7 +210,7 @@ This writes `tmp/agent-workflows/<run-id>/stage-prompts/<current-stage>.prompt.m
 
 When the manifest has a stop action such as `stop_gate`, `resume --dry-run --json` and `resume --apply --json` return `status: stopped` with the persisted `stop_reason` instead of preparing another stage.
 
-### 6. Prepare A Stage Prompt
+### 7. Prepare A Stage Prompt
 
 Compose a dry-run stage command without executing live Codex:
 
@@ -185,7 +227,7 @@ Use `--apply` with `stage` to write the composed stage prompt file under `tmp/ag
 
 Applied stage prompt preparation is ordered. The manifest must have `next_action: run_stage`, and the requested `--stage` must match the manifest's current `current_stage`; otherwise the runner stops before writing a prompt. Use `stage --dry-run` when you only want to inspect a stage config or command shape without enforcing the runnable manifest position.
 
-### 7. Execute One Current Stage
+### 8. Execute One Current Stage
 
 Use `step --apply` when a run already exists and only the current stage should execute before returning control:
 
@@ -197,7 +239,7 @@ Use `step --apply` when a run already exists and only the current stage should e
 
 `step` uses the same executor contract as `run`, writes one stage prompt, requires the stage command to create the declared result file, persists one transition, and stops. This is the non-interactive equivalent of advancing one item in an otherwise interactive workflow.
 
-### 8. Check Or Persist A Stage Result Transition
+### 9. Check Or Persist A Stage Result Transition
 
 ```bash
 ./.ai-setup/scripts/run-agent-workflow.sh transition \

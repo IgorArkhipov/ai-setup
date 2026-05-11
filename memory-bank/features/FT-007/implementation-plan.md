@@ -18,7 +18,7 @@ must_not_define:
 
 ## Goal Of This Plan
 
-Build the non-interactive `.ai-setup` workflow-runner for FT-007: a route-first governed-document pipeline with timestamped run state, reusable stage definitions, mandatory review-loop transitions, dry-run/status/resume support, full pipeline execution, single-stage execution, and verification that it does not modify `tools/agentscope`.
+Build the non-interactive `.ai-setup` workflow-runner for FT-007: a route-first governed-document pipeline with timestamped run state, reusable stage definitions, mandatory review-loop transitions, Claude second-opinion review hooks, implementation-plan milestone execution, dry-run/status/resume support, full pipeline execution, single-stage execution, and verification that it does not modify `tools/agentscope`.
 
 ## Current State / Reference Points
 
@@ -60,7 +60,7 @@ Build the non-interactive `.ai-setup` workflow-runner for FT-007: a route-first 
 | --- | --- | --- | --- |
 | setup | Work from repository root; use `bash`, `jq`, `git`, `date`, `sed`, `mkdir`, and existing `.ai-setup` scripts; do not require Node dependencies for runner checks | `STEP-01` through `STEP-08` | Workflow validation fails on a fresh bootstrap even when `make check-task-session` passes |
 | test | `make check-agent-workflow` is the canonical new check; `make check-task-session` must remain green | `CHK-01`, `CHK-02`, `CHK-03`, `CHK-04` | Runner behavior changes without a shell-level regression catching it |
-| access / network / secrets | No secrets are needed; `.env*` paths are rejected before reading; default live execution may call local `codex exec`; Claude MCP execution is not directly automated by the shell runner | all steps | A test or runner path reads `.env*`, requires hidden auth, or treats missing Claude as passed |
+| access / network / secrets | No secrets are needed; `.env*` paths are rejected before reading; default live execution may call local `codex exec`; Claude second-opinion review may call local `claude -p` or a configured review command | all steps | A test or runner path reads `.env*`, requires hidden auth, or treats missing Claude as passed |
 | filesystem | Real run state belongs under ignored `tmp/agent-workflows/<run-id>/`; worktrees belong under ignored `.worktrees/<run-id>`; tests use disposable temp roots | `STEP-03` through `STEP-07` | Tests dirty governed docs or create tracked runtime artifacts |
 | agent execution | Codex stage execution is configured but must be dry-runable; stage completion depends on declared outputs and result status, not exit code alone | `STEP-06`, `STEP-07` | A stage advances after exit 0 with missing artifact or missing status |
 
@@ -147,12 +147,14 @@ Build the non-interactive `.ai-setup` workflow-runner for FT-007: a route-first 
 FT-007 slice 1 is ready for acceptance when:
 
 - `run-agent-workflow.sh` supports `run`, `step`, `start`, `status`, `resume`, `stage`, and `transition` in testable mode.
+- `run-agent-workflow.sh run --claude-review` can run a second-opinion review after accepted review stages and route findings back through polish/re-review.
+- `run-agent-workflow.sh run --workflow implementation-plan --implementation-plan <path>` can execute parsed plan milestones one by one and review every milestone before advancing.
 - `route-first` workflow and document-stage configs validate against existing `.prompts` files.
 - Run ids, worktree paths, branch names, and run-state paths use `YYYY-MM-DD-HHMM-<slug>` consistently.
 - Stage-result parsing supports `accepted`, `needs_polish`, `needs_upstream`, `blocked`, `needs_human`, and `failed`.
 - Review-loop fixtures prove the runner loops, backtracks, or stops without advancing on unresolved findings.
 - `.env*` prompt/source paths are rejected before reading in both the new runner and any touched launcher path.
-- Operator runbook and setup docs describe the tested non-interactive pipeline and single-stage execution paths while deferring direct Claude MCP automation and interactive Zellij stages to later work.
+- Operator runbook and setup docs describe the tested non-interactive pipeline, Claude review, implementation-plan milestone, and single-stage execution paths while deferring interactive Zellij stages to later work.
 - `make check-agent-workflow`, `.ai-setup/scripts/test-ci.sh`, and `make check-task-session` pass locally.
 
 ## Execution Summary
@@ -170,6 +172,8 @@ Status: implemented locally and ready for acceptance review, with local ShellChe
 | `run-agent-workflow.sh stage ... --apply --json` | passed | Writes a composed stage prompt file with run metadata, original prompt, previous-stage result context, prompt-chain contents, and expected output contract |
 | `run-agent-workflow.sh step ... --stage-command <fixture> --apply --json` | passed | Executes one current stage, writes one stage result, persists one transition, and returns control with `status: step_complete` |
 | `run-agent-workflow.sh run ... --stage-command <fixture> --apply --json` | passed | Starts from a prompt and executes route, draft, review, polish, and re-review stages until `stop_gate` |
+| `run-agent-workflow.sh run ... --claude-review --review-command <fixture> --apply --json` | passed | Runs Claude second-opinion review after accepted review stages; review findings trigger polish and re-review |
+| `run-agent-workflow.sh run --workflow implementation-plan --implementation-plan <path> ... --apply --json` | passed | Extracts implementation-plan milestone rows, executes implementation/review for each milestone, and stops at `all_milestones_accepted` |
 | `run-agent-workflow.sh stage ... --apply` output contract | passed | Generated prompts require parseable `Status`, `Target artifact`, and `Open findings` fields, plus `Next stage` for route decisions |
 | `run-agent-workflow.sh stage ... --apply` manifest-order guard | passed | Refuses to prepare a stage prompt when `--stage` does not match `current_stage` or `next_action` is no longer `run_stage` |
 | `run-agent-workflow.sh resume ... --apply --json` | passed | When `next_action` is `run_stage`, materializes the manifest's `current_stage` prompt and returns a stage-ready payload |
@@ -189,4 +193,4 @@ Status: implemented locally and ready for acceptance review, with local ShellChe
 | `shellcheck init.sh .ai-setup/scripts/*.sh` | not run | `shellcheck` is not installed on the local PATH or through `mise exec` in this environment |
 | `.ai-setup/scripts/test-ci.sh` | passed | Runs bootstrap checks plus `task-session` and `agent workflow` asset checks; agent CLI detection now mirrors PATH-based setup behavior |
 
-Deferred by FT-007 scope: direct Claude Code MCP second-opinion automation, interactive Zellij stage mode, and implementation-plan milestone expansion.
+Deferred by FT-007 scope: interactive Zellij stage mode and richer implementation-plan parsing beyond the governed milestone table shape.

@@ -149,6 +149,28 @@ Create the timestamped run state and worktree when you are ready to materialize 
   --apply
 ```
 
+Run the same pipeline with Claude second-opinion review after accepted review stages:
+
+```bash
+./.ai-setup/scripts/run-agent-workflow.sh run \
+  --workflow route-first \
+  --slug provider-auth \
+  --prompt "Add provider auth detection" \
+  --claude-review \
+  --apply
+```
+
+Execute an accepted governed implementation plan milestone by milestone:
+
+```bash
+./.ai-setup/scripts/run-agent-workflow.sh run \
+  --workflow implementation-plan \
+  --slug provider-auth-implementation \
+  --implementation-plan memory-bank/features/FT-007/implementation-plan.md \
+  --claude-review \
+  --apply
+```
+
 ## What To Preserve In A Derived Project
 
 If you create a course project from this repository, the original `README.md` is expected to be replaced with your project's README.
