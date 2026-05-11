@@ -10,6 +10,8 @@ workflow=".ai-setup/workflows/route-first.json"
 stages_dir=".ai-setup/stages"
 fixtures_dir=".ai-setup/test/fixtures/stage-results"
 fake_agent="$repo_root/.ai-setup/test/fixtures/fake-stage-agent.sh"
+fake_accepting_agent="$repo_root/.ai-setup/test/fixtures/fake-stage-agent-accepting-review.sh"
+fake_claude_reviewer="$repo_root/.ai-setup/test/fixtures/fake-claude-reviewer.sh"
 
 fail() {
 	printf 'agent-workflow check failed: %s\n' "$1" >&2
@@ -42,8 +44,12 @@ assert_json_eq() {
 assert_file "$workflow"
 assert_executable "$runner"
 assert_executable "$fake_agent"
+assert_executable "$fake_accepting_agent"
+assert_executable "$fake_claude_reviewer"
 bash -n "$runner"
 bash -n "$fake_agent"
+bash -n "$fake_accepting_agent"
+bash -n "$fake_claude_reviewer"
 
 jq -e '.id == "route-first" and (.stages | type == "array") and (.stages | length > 0)' "$workflow" >/dev/null
 
@@ -97,6 +103,10 @@ step_branch="task/$step_run_id"
 pipeline_run_id="2026-05-11-1436-$pipeline_slug"
 pipeline_worktree="$sandbox/worktrees/$pipeline_run_id"
 pipeline_branch="task/$pipeline_run_id"
+claude_review_slug="claude-review-demo-$sandbox_tag"
+claude_review_run_id="2026-05-11-1438-$claude_review_slug"
+claude_review_worktree="$sandbox/worktrees/$claude_review_run_id"
+claude_review_branch="task/$claude_review_run_id"
 mismatch_slug="branch-mismatch-$sandbox_tag"
 mismatch_run_id="2026-05-11-1437-$mismatch_slug"
 mismatch_worktree="$sandbox/worktrees/$mismatch_run_id"
@@ -108,11 +118,13 @@ cleanup() {
 	git -C "$repo_root" worktree remove --force "$none_worktree" >/dev/null 2>&1 || true
 	git -C "$repo_root" worktree remove --force "$step_worktree" >/dev/null 2>&1 || true
 	git -C "$repo_root" worktree remove --force "$pipeline_worktree" >/dev/null 2>&1 || true
+	git -C "$repo_root" worktree remove --force "$claude_review_worktree" >/dev/null 2>&1 || true
 	git -C "$repo_root" worktree remove --force "$mismatch_worktree" >/dev/null 2>&1 || true
 	git -C "$repo_root" branch -D "$apply_branch" >/dev/null 2>&1 || true
 	git -C "$repo_root" branch -D "$none_branch" >/dev/null 2>&1 || true
 	git -C "$repo_root" branch -D "$step_branch" >/dev/null 2>&1 || true
 	git -C "$repo_root" branch -D "$pipeline_branch" >/dev/null 2>&1 || true
+	git -C "$repo_root" branch -D "$claude_review_branch" >/dev/null 2>&1 || true
 	git -C "$repo_root" branch -D "$mismatch_branch" >/dev/null 2>&1 || true
 	git -C "$repo_root" branch -D "$mismatch_existing_branch" >/dev/null 2>&1 || true
 	rm -rf "$sandbox"
@@ -559,6 +571,42 @@ assert_file "$sandbox/agent-workflows/$pipeline_run_id/stage-results/draft-featu
 assert_file "$sandbox/agent-workflows/$pipeline_run_id/stage-results/review-feature.md"
 assert_file "$sandbox/agent-workflows/$pipeline_run_id/stage-results/polish-feature.md"
 assert_file "$pipeline_worktree/memory-bank/features/FT-007/feature.md"
+
+claude_review_json="$("$runner" run \
+	--workflow route-first \
+	--slug "$claude_review_slug" \
+	--prompt "Run the routed feature workflow with Claude second-opinion review" \
+	--now "2026-05-11 14:38" \
+	--state-root "$sandbox/agent-workflows" \
+	--worktree-root "$sandbox/worktrees" \
+	--stage-command "$fake_accepting_agent" \
+	--claude-review \
+	--review-command "$fake_claude_reviewer" \
+	--max-steps 10 \
+	--apply \
+	--json)"
+assert_json_eq "$claude_review_json" '.run_id' "$claude_review_run_id"
+assert_json_eq "$claude_review_json" '.status' 'stopped'
+assert_json_eq "$claude_review_json" '.steps' '5'
+assert_json_eq "$claude_review_json" '.current_stage' 'review-feature'
+assert_json_eq "$claude_review_json" '.next_action' 'stop_gate'
+claude_review_manifest="$sandbox/agent-workflows/$claude_review_run_id/run.json"
+jq -e '
+	.current_stage == "review-feature" and
+	.next_action == "stop_gate" and
+	(.stage_history | length == 5) and
+	.stage_history[0].stage == "route-document" and
+	.stage_history[1].stage == "draft-feature" and
+	.stage_history[2].stage == "review-feature" and
+	.stage_history[2].status == "needs_polish" and
+	.stage_history[2].result_file == "'"$sandbox"'/agent-workflows/'"$claude_review_run_id"'/stage-results/review-feature.claude.md" and
+	.stage_history[3].stage == "polish-feature" and
+	.stage_history[4].stage == "review-feature" and
+	.stage_history[4].status == "accepted"
+' "$claude_review_manifest" >/dev/null
+assert_file "$sandbox/agent-workflows/$claude_review_run_id/stage-results/review-feature.md"
+assert_file "$sandbox/agent-workflows/$claude_review_run_id/stage-results/review-feature.claude.md"
+assert_file "$sandbox/agent-workflows/$claude_review_run_id/stage-review-prompts/review-feature.claude.prompt.md"
 
 bad_id="2026-05-11-1500-bad"
 mkdir -p "$sandbox/agent-workflows/$bad_id"

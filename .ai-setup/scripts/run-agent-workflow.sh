@@ -31,6 +31,8 @@ Common options:
   --now "YYYY-MM-DD HH:MM"
   --result-file PATH    Stage result file for transition checks
   --stage-command CMD   Shell command used by run/step; receives AGENT_WORKFLOW_* env vars
+  --claude-review       Run Claude second-opinion review after accepted review stages
+  --review-command CMD  Shell command for Claude review; receives AGENT_WORKFLOW_* env vars
   --max-steps N         Maximum stages executed by run, default: 20
   --apply               Write run state for start
   --dry-run             Validate without live agent execution
@@ -388,6 +390,55 @@ write_stage_prompt() {
 	} >"$prompt_path"
 }
 
+write_claude_review_prompt() {
+	local review_prompt_path="$1"
+	local review_result_path="$2"
+	local primary_result_path="$3"
+	local target_artifact_value
+	local target_artifact_abs
+	local manifest_worktree
+	local prompt_dir
+
+	prompt_dir="${review_prompt_path%/*}"
+	mkdir -p "$prompt_dir"
+	target_artifact_value="$(extract_result_field "Target artifact" "$primary_result_path")"
+	manifest_worktree="$(jq -r '.worktree' "$manifest")"
+	target_artifact_abs=""
+	if [ -n "$target_artifact_value" ] && [ "$target_artifact_value" != "none" ]; then
+		target_artifact_abs="$(target_artifact_path "$target_artifact_value" "$manifest_worktree")"
+	fi
+
+	{
+		printf '# Claude Code Second-Opinion Review\n\n'
+		printf 'You are performing an independent second-opinion review for an agentic workflow stage.\n\n'
+		printf 'Constraints:\n'
+		printf -- '- This is a review pass for repository work in `%s`.\n' "$manifest_worktree"
+		printf -- '- Do not read or use `.env*` files.\n'
+		printf -- '- Write your final parseable result to `%s`.\n' "$review_result_path"
+		printf -- '- If review cannot run, use `Status: needs_human` or `Status: blocked`; do not silently accept.\n\n'
+		printf 'Run metadata:\n'
+		jq -r '
+			"- run_id: \(.run_id)",
+			"- workflow: \(.workflow)",
+			"- current_stage: \(.current_stage)",
+			"- worktree: \(.worktree)"
+		' "$manifest"
+		printf -- '- primary_result_file: %s\n' "$primary_result_path"
+		printf -- '- target_artifact: %s\n' "${target_artifact_value:-none}"
+		if [ -n "$target_artifact_abs" ]; then
+			printf -- '- target_artifact_absolute: %s\n' "$target_artifact_abs"
+		fi
+
+		printf '\nPrimary review result:\n\n'
+		cat "$primary_result_path"
+		printf '\n\nReview the target artifact and produce this exact stage-result contract:\n\n'
+		printf 'Status: accepted | needs_polish | needs_upstream | blocked | needs_human | failed\n'
+		printf 'Target artifact: %s\n' "${target_artifact_value:-none}"
+		printf 'Open findings: <non-negative integer>\n\n'
+		printf 'Use `accepted` only when the artifact is ready. Use `needs_polish` for current-artifact fixes, `needs_upstream` when the plan/design/input must change first, and `needs_human` when a human decision is required.\n'
+	} >"$review_prompt_path"
+}
+
 render_stage_json() {
 	prompt_chain_json="$(jq -c '.promptChain' "$stage_path")"
 	jq -n \
@@ -514,6 +565,50 @@ run_stage_agent() {
 	[ -f "$result_path" ] || die "stage command did not write result file: $result_path"
 }
 
+should_run_claude_review() {
+	[ "$claude_review" -eq 1 ] || return 1
+	case "$stage_id" in
+	review-*)
+		;;
+	*)
+		return 1
+		;;
+	esac
+	[ "$(extract_result_field "Status" "$result_path")" = "accepted" ] || return 1
+	return 0
+}
+
+run_claude_review_agent() {
+	local manifest_worktree
+	local command_body
+
+	manifest_worktree="$(jq -r '.worktree' "$manifest")"
+	review_prompt_path="$state_dir/stage-review-prompts/$stage_id.claude.prompt.md"
+	review_result_path="$state_dir/stage-results/$stage_id.claude.md"
+	write_claude_review_prompt "$review_prompt_path" "$review_result_path" "$result_path"
+
+	command_body="${review_command:-}"
+	if [ -n "$command_body" ]; then
+		AGENT_WORKFLOW_RUN_ID="$run_id" \
+			AGENT_WORKFLOW_STAGE_ID="$stage_id" \
+			AGENT_WORKFLOW_PROMPT_FILE="$prompt_path" \
+			AGENT_WORKFLOW_RESULT_FILE="$result_path" \
+			AGENT_WORKFLOW_REVIEW_PROMPT_FILE="$review_prompt_path" \
+			AGENT_WORKFLOW_REVIEW_RESULT_FILE="$review_result_path" \
+			AGENT_WORKFLOW_WORKTREE="$manifest_worktree" \
+			AGENT_WORKFLOW_STATE_DIR="$state_dir" \
+			AGENT_WORKFLOW_AGENT="claude" \
+			AGENT_WORKFLOW_MODEL="$model" \
+			sh -c "$command_body"
+	else
+		need_cmd claude
+		claude -p "$(cat "$review_prompt_path")" >"$review_result_path"
+	fi
+
+	[ -f "$review_result_path" ] || die "Claude review did not write result file: $review_result_path"
+	result_path="$review_result_path"
+}
+
 execute_current_stage() {
 	local manifest_next_action
 
@@ -525,6 +620,9 @@ execute_current_stage() {
 	stage_id="$(jq -r '.current_stage' "$manifest")"
 	prepare_stage
 	run_stage_agent
+	if should_run_claude_review; then
+		run_claude_review_agent
+	fi
 	"$0" transition \
 		--run-id "$run_id" \
 		--stage "$stage_id" \
@@ -565,6 +663,8 @@ now=""
 result_file=""
 stage_id=""
 stage_command="${AGENT_WORKFLOW_STAGE_COMMAND:-}"
+review_command="${AGENT_WORKFLOW_REVIEW_COMMAND:-}"
+claude_review=0
 max_steps=20
 apply=0
 dry_run=0
@@ -631,6 +731,14 @@ while [ $# -gt 0 ]; do
 		shift
 		[ $# -gt 0 ] || die "--stage-command requires a value"
 		stage_command="$1"
+		;;
+	--review-command)
+		shift
+		[ $# -gt 0 ] || die "--review-command requires a value"
+		review_command="$1"
+		;;
+	--claude-review)
+		claude_review=1
 		;;
 	--max-steps)
 		shift
