@@ -74,13 +74,22 @@ assert_json_eq "$start_json" '.current_stage' 'route-document'
 assert_json_eq "$start_json" '.next_action' 'run_stage'
 
 sandbox="$(mktemp -d)"
-trap 'rm -rf "$sandbox"' EXIT
+apply_run_id="2026-05-11-1433-provider-auth-apply"
+apply_worktree="$sandbox/worktrees/$apply_run_id"
+apply_branch="task/$apply_run_id"
+
+cleanup() {
+	git -C "$repo_root" worktree remove --force "$apply_worktree" >/dev/null 2>&1 || true
+	git -C "$repo_root" branch -D "$apply_branch" >/dev/null 2>&1 || true
+	rm -rf "$sandbox"
+}
+trap cleanup EXIT
 
 apply_json="$("$runner" start \
 	--workflow route-first \
-	--slug "Provider Auth" \
+	--slug "Provider Auth Apply" \
 	--prompt "Add provider auth detection" \
-	--now "2026-05-11 14:32" \
+	--now "2026-05-11 14:33" \
 	--state-root "$sandbox/agent-workflows" \
 	--worktree-root "$sandbox/worktrees" \
 	--apply \
@@ -88,7 +97,10 @@ apply_json="$("$runner" start \
 run_id="$(printf '%s' "$apply_json" | jq -r '.run_id')"
 manifest="$sandbox/agent-workflows/$run_id/run.json"
 assert_file "$manifest"
-jq -e '.run_id == "2026-05-11-1432-provider-auth" and .current_stage == "route-document" and .next_action == "run_stage"' "$manifest" >/dev/null
+jq -e '.run_id == "2026-05-11-1433-provider-auth-apply" and .current_stage == "route-document" and .next_action == "run_stage"' "$manifest" >/dev/null
+assert_file "$sandbox/agent-workflows/$run_id/prompt.md"
+[ -d "$apply_worktree" ] || fail "apply did not create worktree: $apply_worktree"
+git -C "$apply_worktree" rev-parse --show-toplevel >/dev/null 2>&1 || fail "apply worktree is not a git worktree"
 
 status_output="$("$runner" status --run-id "$run_id" --state-root "$sandbox/agent-workflows")"
 assert_contains "$status_output" "current_stage: route-document"
@@ -109,6 +121,22 @@ assert_json_eq "$stage_json" '.stage' 'route-document'
 assert_json_eq "$stage_json" '.agent' 'codex'
 assert_json_eq "$stage_json" '.model' 'gpt-5.5'
 assert_json_eq "$stage_json" '.result_file' "$sandbox/agent-workflows/$run_id/stage-results/route-document.md"
+
+stage_apply_json="$("$runner" stage \
+	--run-id "$run_id" \
+	--stage route-document \
+	--state-root "$sandbox/agent-workflows" \
+	--apply \
+	--json)"
+stage_prompt="$sandbox/agent-workflows/$run_id/stage-prompts/route-document.prompt.md"
+assert_json_eq "$stage_apply_json" '.prompt_file' "$stage_prompt"
+assert_file "$stage_prompt"
+stage_prompt_text="$(cat "$stage_prompt")"
+assert_contains "$stage_prompt_text" "# Agent Workflow Stage: route-document"
+assert_contains "$stage_prompt_text" "run_id: $run_id"
+assert_contains "$stage_prompt_text" "original_prompt:"
+assert_contains "$stage_prompt_text" "Add provider auth detection"
+assert_contains "$stage_prompt_text" "Expected outputs:"
 
 bad_id="2026-05-11-1500-bad"
 mkdir -p "$sandbox/agent-workflows/$bad_id"

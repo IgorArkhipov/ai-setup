@@ -21,6 +21,7 @@ Common options:
   --slug SLUG           Human-readable run label
   --prompt TEXT         Inline source prompt
   --prompt-file PATH    Source prompt file; .env* paths are rejected
+  --base-ref REF        Base ref for new worktree creation, default: HEAD
   --run-id RUN_ID       Existing workflow run id
   --stage STAGE_ID      Stage id for stage command
   --state-root PATH     Run-state root, default: tmp/agent-workflows
@@ -106,6 +107,41 @@ read_manifest() {
 		die "run manifest is missing current_stage, next_action, workflow, or run_id: $path"
 }
 
+ensure_worktree_root_safe() {
+	local root="$1"
+	local rel_path
+
+	case "$root" in
+	"$repo_root"/*)
+		rel_path="${root#$repo_root/}"
+		if git -C "$repo_root" check-ignore -q "$rel_path"; then
+			mkdir -p "$root"
+			return 0
+		fi
+		die "$rel_path is not ignored by git; add it to .gitignore before using this workflow"
+		;;
+	esac
+	mkdir -p "$root"
+}
+
+ensure_worktree() {
+	local worktree="$1"
+	local branch_name="$2"
+	local base_ref_value="$3"
+
+	if [ -d "$worktree" ]; then
+		(cd "$worktree" && git rev-parse --show-toplevel >/dev/null 2>&1) ||
+			die "existing path is not a git worktree: $worktree"
+		return 0
+	fi
+
+	if git -C "$repo_root" rev-parse --verify "$branch_name" >/dev/null 2>&1; then
+		git -C "$repo_root" worktree add --quiet "$worktree" "$branch_name"
+	else
+		git -C "$repo_root" worktree add --quiet -b "$branch_name" "$worktree" "$base_ref_value"
+	fi
+}
+
 extract_result_field() {
 	local field="$1"
 	local path="$2"
@@ -146,6 +182,57 @@ transition_next_action() {
 	esac
 }
 
+write_stage_prompt() {
+	local stage="$1"
+	local stage_path="$2"
+	local manifest_path="$3"
+	local prompt_path="$4"
+	local result_path="$5"
+	local prompt_dir
+	local source_prompt
+
+	prompt_dir="${prompt_path%/*}"
+	source_prompt="$state_dir/prompt.md"
+	[ -f "$source_prompt" ] || die "source prompt not found: $source_prompt"
+	mkdir -p "$prompt_dir"
+
+	{
+		printf '# Agent Workflow Stage: %s\n\n' "$stage"
+		printf '## Run metadata\n\n'
+		jq -r '
+			"- run_id: \(.run_id)",
+			"- workflow: \(.workflow)",
+			"- slug: \(.slug)",
+			"- branch: \(.branch)",
+			"- worktree: \(.worktree)",
+			"- current_stage: \(.current_stage)",
+			"- next_action: \(.next_action)"
+		' "$manifest_path"
+
+		printf '\n## Original prompt\n\n'
+		printf 'original_prompt:\n'
+		sed 's/^/  /' "$source_prompt"
+
+		printf '\n\n## Prompt chain\n'
+		while IFS= read -r chain_path; do
+			reject_env_path "$chain_path"
+			[ -f "$repo_root/$chain_path" ] || die "prompt-chain file not found: $chain_path"
+			printf '\n### %s\n\n' "$chain_path"
+			cat "$repo_root/$chain_path"
+			printf '\n'
+		done < <(jq -r '.promptChain[]' "$stage_path")
+
+		printf '\n## Output contract\n\n'
+		printf 'Expected outputs:\n'
+		jq -r '.outputs[] | "- " + .' "$stage_path"
+		printf '\nStage result file:\n'
+		printf -- '- %s\n\n' "$result_path"
+		printf 'The stage result must include these parseable fields:\n'
+		printf -- '- Status: accepted | needs_polish | needs_upstream | blocked | needs_human | failed\n'
+		printf -- '- Open findings: <non-negative integer>\n'
+	} >"$prompt_path"
+}
+
 render_start_json() {
 	jq -n \
 		--arg run_id "$run_id" \
@@ -170,8 +257,9 @@ render_start_json() {
 		}'
 }
 
-repo_root="$(git rev-parse --show-toplevel)"
+need_cmd git
 need_cmd jq
+repo_root="$(git rev-parse --show-toplevel)"
 
 command="${1:-}"
 if [ -z "$command" ]; then
@@ -187,6 +275,7 @@ prompt_file=""
 run_id=""
 state_root="tmp/agent-workflows"
 worktree_root=".worktrees"
+base_ref="HEAD"
 now=""
 result_file=""
 stage_id=""
@@ -230,6 +319,11 @@ while [ $# -gt 0 ]; do
 		shift
 		[ $# -gt 0 ] || die "--worktree-root requires a value"
 		worktree_root="$1"
+		;;
+	--base-ref)
+		shift
+		[ $# -gt 0 ] || die "--base-ref requires a value"
+		base_ref="$1"
 		;;
 	--now)
 		shift
@@ -292,6 +386,8 @@ start)
 	run_status="$([ "$apply" -eq 1 ] && printf 'created' || printf 'dry-run')"
 
 	if [ "$apply" -eq 1 ]; then
+		ensure_worktree_root_safe "$worktree_root_abs"
+		ensure_worktree "$worktree_path" "$branch" "$base_ref"
 		mkdir -p "$state_dir/stage-results"
 		if [ -n "$prompt_file" ]; then
 			cp "$prompt_file" "$state_dir/prompt.md"
@@ -355,6 +451,9 @@ stage)
 		;;
 	esac
 	command_text="codex --cd $(jq -r '.worktree' "$manifest") --model $model --no-alt-screen \"$prompt_path\""
+	if [ "$apply" -eq 1 ]; then
+		write_stage_prompt "$stage_id" "$stage_path" "$manifest" "$prompt_path" "$result_path"
+	fi
 	if [ "$json" -eq 1 ]; then
 		prompt_chain_json="$(jq -c '.promptChain' "$stage_path")"
 		jq -n \

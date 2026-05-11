@@ -35,7 +35,7 @@ Use [Zellij Task Sessions](zellij-task-sessions.md) instead when you need an int
 
 - The runner rejects `.env*` prompt paths before reading.
 - Run state is non-governed operational state under `tmp/agent-workflows/<run-id>/`.
-- The first slice is dry-run and manifest oriented. It validates routing, state, stage config, and transition behavior without executing live Claude MCP review automation.
+- The current slice materializes run state, a timestamped worktree, and stage prompt files. It still does not execute live Claude MCP review automation.
 - `.worktrees/` remains the intended worktree root for live pipeline runs, but workflow checks use disposable test roots.
 
 ## Diagnosis
@@ -74,9 +74,9 @@ The runner prints:
 - branch and worktree paths;
 - run-state path.
 
-### 2. Create Run State
+### 2. Create Run State And Worktree
 
-Use `--apply` when you want the initial run manifest and prompt file written:
+Use `--apply` when you want the initial run manifest, prompt file, branch, and worktree created:
 
 ```bash
 ./.ai-setup/scripts/run-agent-workflow.sh start \
@@ -91,6 +91,7 @@ This creates:
 - `tmp/agent-workflows/<run-id>/prompt.md`
 - `tmp/agent-workflows/<run-id>/run.json`
 - `tmp/agent-workflows/<run-id>/stage-results/`
+- `.worktrees/<run-id>/` on branch `task/<run-id>`
 
 ### 3. Inspect Run State
 
@@ -126,6 +127,8 @@ Compose a dry-run stage command without executing live Codex:
 ```
 
 The output includes the configured agent, model, prompt file path, result file path, and command text.
+
+Use `--apply` with `stage` to write the composed stage prompt file under `tmp/agent-workflows/<run-id>/stage-prompts/`. The prompt includes run metadata, the original user prompt, configured prompt-chain contents, and the expected output contract.
 
 ```bash
 ./.ai-setup/scripts/run-agent-workflow.sh transition \

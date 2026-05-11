@@ -139,6 +139,16 @@ Start a dry-run route-first workflow for AgentScope development:
   --dry-run
 ```
 
+Create the timestamped run state and worktree when you are ready to materialize the pipeline:
+
+```bash
+./.ai-setup/scripts/run-agent-workflow.sh start \
+  --workflow route-first \
+  --slug provider-auth \
+  --prompt "Add provider auth detection" \
+  --apply
+```
+
 ## What To Preserve In A Derived Project
 
 If you create a course project from this repository, the original `README.md` is expected to be replaced with your project's README.

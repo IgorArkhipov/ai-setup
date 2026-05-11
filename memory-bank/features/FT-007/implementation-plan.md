@@ -166,6 +166,8 @@ Status: implemented locally and ready for acceptance review, with local ShellChe
 | `shfmt -d init.sh .ai-setup/scripts/*.sh` | passed | No shell formatting diff reported |
 | `git diff --check` | passed | No whitespace errors reported |
 | `run-agent-workflow.sh start ... --dry-run --json` | passed | Produced `2026-05-11-1432-provider-auth`, branch `task/2026-05-11-1432-provider-auth`, worktree `.worktrees/2026-05-11-1432-provider-auth`, and `next_action: run_stage` |
+| `run-agent-workflow.sh start ... --apply --json` | passed | Creates timestamped run state and a git worktree on `task/<run-id>` using a disposable test worktree root |
+| `run-agent-workflow.sh stage ... --apply --json` | passed | Writes a composed stage prompt file with run metadata, original prompt, prompt-chain contents, and expected output contract |
 | `run-agent-workflow.sh transition --result-file needs_upstream.md --dry-run --json` | passed | Produced `next_action: backtrack_upstream` |
 | `shellcheck init.sh .ai-setup/scripts/*.sh` | not run | `shellcheck` is not installed on the local PATH or through `mise exec` in this environment |
 | `.ai-setup/scripts/test-ci.sh` | passed | Runs bootstrap checks plus `task-session` and `agent workflow` asset checks; agent CLI detection now mirrors PATH-based setup behavior |
