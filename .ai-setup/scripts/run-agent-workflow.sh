@@ -204,6 +204,7 @@ stage_family() {
 resolve_transition_target() {
 	local stage="$1"
 	local decision_action="$2"
+	local requested_next_stage="$3"
 	local family
 	local candidate
 
@@ -214,6 +215,12 @@ resolve_transition_target() {
 	case "$decision_action" in
 	advance_or_gate)
 		case "$stage" in
+		route-document)
+			[ -n "$requested_next_stage" ] || die "route-document accepted result requires Next stage"
+			[ -f "$(stage_file "$requested_next_stage")" ] || die "route next stage not found: $requested_next_stage"
+			resolved_next_stage="$requested_next_stage"
+			resolved_next_action="run_stage"
+			;;
 		draft-* | polish-*)
 			candidate="review-$family"
 			[ -f "$(stage_file "$candidate")" ] || die "next review stage not found: $candidate"
@@ -283,6 +290,9 @@ write_stage_prompt() {
 		printf 'The stage result must include these parseable fields:\n'
 		printf -- '- Status: accepted | needs_polish | needs_upstream | blocked | needs_human | failed\n'
 		printf -- '- Open findings: <non-negative integer>\n'
+		if [ "$stage" = "route-document" ]; then
+			printf -- '- Next stage: draft-prd | draft-use-case | draft-adr | draft-feature\n'
+		fi
 	} >"$prompt_path"
 }
 
@@ -548,6 +558,7 @@ transition)
 	open_findings="$(extract_result_field "Open findings" "$result_file")"
 	open_findings="${open_findings:-0}"
 	target_artifact="$(extract_result_field "Target artifact" "$result_file")"
+	requested_next_stage="$(extract_result_field "Next stage" "$result_file")"
 	case "$open_findings" in
 	'' | *[!0-9]*)
 		die "Open findings must be a non-negative integer: $open_findings"
@@ -562,7 +573,7 @@ transition)
 		state_root_abs="$(abs_path "$state_root")"
 		manifest="$state_root_abs/$run_id/run.json"
 		read_manifest "$manifest"
-		resolve_transition_target "$stage_id" "$decision_action"
+		resolve_transition_target "$stage_id" "$decision_action" "$requested_next_stage"
 		tmp_manifest="$(mktemp)"
 		jq \
 			--arg stage "$stage_id" \
@@ -570,6 +581,7 @@ transition)
 			--arg decision_action "$decision_action" \
 			--arg next_action "$resolved_next_action" \
 			--arg next_stage "$resolved_next_stage" \
+			--arg requested_next_stage "$requested_next_stage" \
 			--arg result_file "$result_file" \
 			--arg target_artifact "$target_artifact" \
 			--argjson open_findings "$open_findings" \
@@ -582,6 +594,7 @@ transition)
 					decision_action: $decision_action,
 					next_action: $next_action,
 					next_stage: $next_stage,
+					requested_next_stage: $requested_next_stage,
 					open_findings: $open_findings,
 					result_file: $result_file,
 					target_artifact: $target_artifact
@@ -596,8 +609,9 @@ transition)
 			--arg next_action "$resolved_next_action" \
 			--arg decision_action "$decision_action" \
 			--arg next_stage "$resolved_next_stage" \
+			--arg requested_next_stage "$requested_next_stage" \
 			--argjson open_findings "$open_findings" \
-			'{status: $status, decision_action: $decision_action, next_action: $next_action, next_stage: $next_stage, open_findings: $open_findings}'
+			'{status: $status, decision_action: $decision_action, next_action: $next_action, next_stage: $next_stage, requested_next_stage: $requested_next_stage, open_findings: $open_findings}'
 	else
 		printf 'status: %s\n' "$status"
 		printf 'decision_action: %s\n' "$decision_action"

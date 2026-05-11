@@ -137,6 +137,26 @@ assert_contains "$stage_prompt_text" "run_id: $run_id"
 assert_contains "$stage_prompt_text" "original_prompt:"
 assert_contains "$stage_prompt_text" "Add provider auth detection"
 assert_contains "$stage_prompt_text" "Expected outputs:"
+assert_contains "$stage_prompt_text" "Next stage:"
+
+route_transition_json="$("$runner" transition \
+	--run-id "$run_id" \
+	--stage route-document \
+	--state-root "$sandbox/agent-workflows" \
+	--result-file "$fixtures_dir/route-feature.md" \
+	--apply \
+	--json)"
+assert_json_eq "$route_transition_json" '.status' 'accepted'
+assert_json_eq "$route_transition_json" '.next_action' 'run_stage'
+assert_json_eq "$route_transition_json" '.next_stage' 'draft-feature'
+jq -e '
+	.current_stage == "draft-feature" and
+	.next_action == "run_stage" and
+	.last_result.stage == "route-document" and
+	.last_result.decision_action == "advance_or_gate" and
+	.last_result.next_stage == "draft-feature" and
+	(.stage_history | length == 1)
+' "$manifest" >/dev/null
 
 draft_transition_json="$("$runner" transition \
 	--run-id "$run_id" \
@@ -153,7 +173,7 @@ jq -e '
 	.last_result.status == "accepted" and
 	.last_result.decision_action == "advance_or_gate" and
 	.last_result.next_stage == "review-feature" and
-	(.stage_history | length == 1)
+	(.stage_history | length == 2)
 ' "$manifest" >/dev/null
 
 review_transition_json="$("$runner" transition \
@@ -174,9 +194,9 @@ jq -e '
 	.last_result.decision_action == "polish_current" and
 	.last_result.next_stage == "polish-feature" and
 	.last_result.result_file == "'"$fixtures_dir"'/needs_polish.md" and
-	(.stage_history | length == 2) and
-	.stage_history[0].status == "accepted" and
-	.stage_history[1].next_action == "run_stage"
+	(.stage_history | length == 3) and
+	.stage_history[0].stage == "route-document" and
+	.stage_history[2].next_action == "run_stage"
 ' "$manifest" >/dev/null
 
 polish_transition_json="$("$runner" transition \
@@ -192,7 +212,7 @@ jq -e '
 	.next_action == "run_stage" and
 	.last_result.decision_action == "advance_or_gate" and
 	.last_result.next_stage == "review-feature" and
-	(.stage_history | length == 3)
+	(.stage_history | length == 4)
 ' "$manifest" >/dev/null
 
 review_accept_json="$("$runner" transition \
@@ -208,7 +228,7 @@ jq -e '
 	.next_action == "stop_gate" and
 	.last_result.decision_action == "advance_or_gate" and
 	.last_result.next_stage == "" and
-	(.stage_history | length == 4)
+	(.stage_history | length == 5)
 ' "$manifest" >/dev/null
 
 bad_id="2026-05-11-1500-bad"

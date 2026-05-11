@@ -156,10 +156,18 @@ This updates:
 
 For document-stage families, applied transitions also update `current_stage` when the decision points to a next runnable stage:
 
+- `route-document` with `accepted` and `Next stage: draft-<kind>` moves to that draft stage;
 - `draft-<kind>` with `accepted` moves to `review-<kind>`;
 - `review-<kind>` with `needs_polish` moves to `polish-<kind>`;
 - `polish-<kind>` with `accepted` moves back to `review-<kind>`;
 - `review-<kind>` with `accepted` stops at `stop_gate`.
+
+The route-stage result must include `Next stage:` when accepted. Valid first draft stages in the current route-first workflow are:
+
+- `draft-prd`
+- `draft-use-case`
+- `draft-adr`
+- `draft-feature`
 
 Recognized statuses:
 
