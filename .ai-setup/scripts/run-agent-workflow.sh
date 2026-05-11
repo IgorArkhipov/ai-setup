@@ -10,10 +10,12 @@ usage() {
 Usage: ./.ai-setup/scripts/run-agent-workflow.sh <command> [options]
 
 Commands:
+  run         Execute a full workflow pipeline until it stops
   start       Plan or create a timestamped workflow run
   status      Show current run state
   resume      Validate and report the next resumable action
   stage       Compose one stage command without executing live agents
+  step        Execute exactly one current stage and transition it
   transition  Parse a stage result and report the next action
 
 Common options:
@@ -28,6 +30,8 @@ Common options:
   --worktree-root PATH  Worktree root, default: .worktrees
   --now "YYYY-MM-DD HH:MM"
   --result-file PATH    Stage result file for transition checks
+  --stage-command CMD   Shell command used by run/step; receives AGENT_WORKFLOW_* env vars
+  --max-steps N         Maximum stages executed by run, default: 20
   --apply               Write run state for start
   --dry-run             Validate without live agent execution
   --json                Render JSON output
@@ -387,7 +391,7 @@ prepare_stage() {
 	state_dir="$state_root_abs/$run_id"
 	prompt_path="$state_dir/stage-prompts/$stage_id.prompt.md"
 	result_path="$state_dir/stage-results/$stage_id.md"
-	command_text="codex --cd $(jq -r '.worktree' "$manifest") --model $model --no-alt-screen \"$prompt_path\""
+	command_text="codex exec --cd $(jq -r '.worktree' "$manifest") --model $model \"\$(cat $prompt_path)\""
 	if [ "$apply" -eq 1 ]; then
 		write_stage_prompt "$stage_id" "$stage_path" "$manifest" "$prompt_path" "$result_path"
 	fi
@@ -418,6 +422,95 @@ render_start_json() {
 		}'
 }
 
+initialize_run_state() {
+	[ -n "$slug" ] || die "$command requires --slug"
+	[ -z "$prompt" ] || [ -z "$prompt_file" ] || die "use either --prompt or --prompt-file, not both"
+	[ -n "$prompt" ] || [ -n "$prompt_file" ] || die "$command requires --prompt or --prompt-file"
+	if [ -n "$prompt_file" ]; then
+		reject_env_path "$prompt_file"
+	fi
+
+	wf_file="$(workflow_file "$workflow")"
+	[ -f "$wf_file" ] || die "workflow not found: $wf_file"
+	current_stage="$(jq -r '.initialStage' "$wf_file")"
+	[ -f "$(stage_file "$current_stage")" ] || die "initial stage not found: $current_stage"
+
+	slug="$(slugify "$slug")"
+	[ -n "$slug" ] || die "slug resolved to empty value"
+	run_id="$(timestamp_prefix "$now")-$slug"
+	branch="task/$run_id"
+	state_root_abs="$(abs_path "$state_root")"
+	worktree_root_abs="$(abs_path "$worktree_root")"
+	state_dir="$state_root_abs/$run_id"
+	worktree_path="$worktree_root_abs/$run_id"
+	next_action="run_stage"
+	run_status="$([ "$apply" -eq 1 ] && printf 'created' || printf 'dry-run')"
+
+	if [ "$apply" -eq 1 ]; then
+		ensure_worktree_root_safe "$worktree_root_abs"
+		ensure_worktree "$worktree_path" "$branch" "$base_ref"
+		mkdir -p "$state_dir/stage-results"
+		if [ -n "$prompt_file" ]; then
+			cp "$prompt_file" "$state_dir/prompt.md"
+		else
+			printf '%s\n' "$prompt" >"$state_dir/prompt.md"
+		fi
+		render_start_json >"$state_dir/run.json"
+	fi
+}
+
+run_stage_agent() {
+	local manifest_worktree
+	local command_body
+
+	manifest_worktree="$(jq -r '.worktree' "$manifest")"
+	command_body="${stage_command:-}"
+	if [ -n "$command_body" ]; then
+		AGENT_WORKFLOW_RUN_ID="$run_id" \
+			AGENT_WORKFLOW_STAGE_ID="$stage_id" \
+			AGENT_WORKFLOW_PROMPT_FILE="$prompt_path" \
+			AGENT_WORKFLOW_RESULT_FILE="$result_path" \
+			AGENT_WORKFLOW_WORKTREE="$manifest_worktree" \
+			AGENT_WORKFLOW_STATE_DIR="$state_dir" \
+			AGENT_WORKFLOW_AGENT="$agent" \
+			AGENT_WORKFLOW_MODEL="$model" \
+			sh -c "$command_body"
+	else
+		need_cmd codex
+		codex exec --cd "$manifest_worktree" --model "$model" "$(cat "$prompt_path")"
+	fi
+
+	[ -f "$result_path" ] || die "stage command did not write result file: $result_path"
+}
+
+execute_current_stage() {
+	local manifest_next_action
+
+	read_manifest "$manifest"
+	manifest_next_action="$(jq -r '.next_action' "$manifest")"
+	[ "$manifest_next_action" = "run_stage" ] ||
+		die "cannot execute stage; next_action is $manifest_next_action"
+
+	stage_id="$(jq -r '.current_stage' "$manifest")"
+	prepare_stage
+	run_stage_agent
+	"$0" transition \
+		--run-id "$run_id" \
+		--stage "$stage_id" \
+		--state-root "$state_root_abs" \
+		--result-file "$result_path" \
+		--apply \
+		--json >/dev/null
+}
+
+render_execution_json() {
+	jq \
+		--arg status "$pipeline_status" \
+		--argjson steps "$pipeline_steps" \
+		'. + {status: $status, steps: $steps}' \
+		"$manifest"
+}
+
 need_cmd git
 need_cmd jq
 repo_root="$(git rev-parse --show-toplevel)"
@@ -440,6 +533,8 @@ base_ref="HEAD"
 now=""
 result_file=""
 stage_id=""
+stage_command="${AGENT_WORKFLOW_STAGE_COMMAND:-}"
+max_steps=20
 apply=0
 dry_run=0
 json=0
@@ -501,6 +596,16 @@ while [ $# -gt 0 ]; do
 		[ $# -gt 0 ] || die "--stage requires a value"
 		stage_id="$1"
 		;;
+	--stage-command)
+		shift
+		[ $# -gt 0 ] || die "--stage-command requires a value"
+		stage_command="$1"
+		;;
+	--max-steps)
+		shift
+		[ $# -gt 0 ] || die "--max-steps requires a value"
+		max_steps="$1"
+		;;
 	--apply)
 		apply=1
 		;;
@@ -521,42 +626,48 @@ while [ $# -gt 0 ]; do
 	shift
 done
 
+case "$max_steps" in
+'' | *[!0-9]*)
+	die "--max-steps must be a non-negative integer: $max_steps"
+	;;
+esac
+
 case "$command" in
-start)
-	[ -n "$slug" ] || die "start requires --slug"
-	[ -z "$prompt" ] || [ -z "$prompt_file" ] || die "use either --prompt or --prompt-file, not both"
-	[ -n "$prompt" ] || [ -n "$prompt_file" ] || die "start requires --prompt or --prompt-file"
-	if [ -n "$prompt_file" ]; then
-		reject_env_path "$prompt_file"
+run)
+	[ "$apply" -eq 1 ] || die "run requires --apply"
+	[ "$dry_run" -eq 0 ] || die "run does not support --dry-run; use start/resume/stage/transition"
+	if [ -z "$run_id" ]; then
+		initialize_run_state
+	else
+		state_root_abs="$(abs_path "$state_root")"
 	fi
 
-	wf_file="$(workflow_file "$workflow")"
-	[ -f "$wf_file" ] || die "workflow not found: $wf_file"
-	current_stage="$(jq -r '.initialStage' "$wf_file")"
-	[ -f "$(stage_file "$current_stage")" ] || die "initial stage not found: $current_stage"
-
-	slug="$(slugify "$slug")"
-	[ -n "$slug" ] || die "slug resolved to empty value"
-	run_id="$(timestamp_prefix "$now")-$slug"
-	branch="task/$run_id"
-	state_root_abs="$(abs_path "$state_root")"
-	worktree_root_abs="$(abs_path "$worktree_root")"
-	state_dir="$state_root_abs/$run_id"
-	worktree_path="$worktree_root_abs/$run_id"
-	next_action="run_stage"
-	run_status="$([ "$apply" -eq 1 ] && printf 'created' || printf 'dry-run')"
-
-	if [ "$apply" -eq 1 ]; then
-		ensure_worktree_root_safe "$worktree_root_abs"
-		ensure_worktree "$worktree_path" "$branch" "$base_ref"
-		mkdir -p "$state_dir/stage-results"
-		if [ -n "$prompt_file" ]; then
-			cp "$prompt_file" "$state_dir/prompt.md"
-		else
-			printf '%s\n' "$prompt" >"$state_dir/prompt.md"
+	manifest="$state_root_abs/$run_id/run.json"
+	read_manifest "$manifest"
+	pipeline_steps=0
+	while [ "$(jq -r '.next_action' "$manifest")" = "run_stage" ]; do
+		[ "$pipeline_steps" -lt "$max_steps" ] ||
+			die "max steps reached before workflow stopped: $max_steps"
+		execute_current_stage
+		pipeline_steps=$((pipeline_steps + 1))
+		read_manifest "$manifest"
+	done
+	pipeline_status="stopped"
+	if [ "$json" -eq 1 ]; then
+		render_execution_json
+	else
+		printf 'status: %s\n' "$pipeline_status"
+		printf 'run_id: %s\n' "$run_id"
+		printf 'steps: %s\n' "$pipeline_steps"
+		printf 'current_stage: %s\n' "$(jq -r '.current_stage' "$manifest")"
+		printf 'next_action: %s\n' "$(jq -r '.next_action' "$manifest")"
+		if [ "$(jq -r '.stop_reason // ""' "$manifest")" != "" ]; then
+			printf 'stop_reason: %s\n' "$(jq -r '.stop_reason' "$manifest")"
 		fi
-		render_start_json >"$state_dir/run.json"
 	fi
+	;;
+start)
+	initialize_run_state
 
 	if [ "$json" -eq 1 ]; then
 		render_start_json
@@ -568,6 +679,27 @@ start)
 		printf 'branch: %s\n' "$branch"
 		printf 'worktree: %s\n' "$worktree_path"
 		printf 'state_dir: %s\n' "$state_dir"
+	fi
+	;;
+step)
+	[ "$apply" -eq 1 ] || die "step requires --apply"
+	[ "$dry_run" -eq 0 ] || die "step does not support --dry-run; use stage/transition"
+	[ -n "$run_id" ] || die "step requires --run-id"
+	state_root_abs="$(abs_path "$state_root")"
+	manifest="$state_root_abs/$run_id/run.json"
+	read_manifest "$manifest"
+	pipeline_steps=1
+	execute_current_stage
+	read_manifest "$manifest"
+	pipeline_status="step_complete"
+	if [ "$json" -eq 1 ]; then
+		render_execution_json
+	else
+		printf 'status: %s\n' "$pipeline_status"
+		printf 'run_id: %s\n' "$run_id"
+		printf 'steps: %s\n' "$pipeline_steps"
+		printf 'current_stage: %s\n' "$(jq -r '.current_stage' "$manifest")"
+		printf 'next_action: %s\n' "$(jq -r '.next_action' "$manifest")"
 	fi
 	;;
 status | resume)

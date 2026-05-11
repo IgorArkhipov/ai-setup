@@ -9,6 +9,7 @@ runner=".ai-setup/scripts/run-agent-workflow.sh"
 workflow=".ai-setup/workflows/route-first.json"
 stages_dir=".ai-setup/stages"
 fixtures_dir=".ai-setup/test/fixtures/stage-results"
+fake_agent="$repo_root/.ai-setup/test/fixtures/fake-stage-agent.sh"
 
 fail() {
 	printf 'agent-workflow check failed: %s\n' "$1" >&2
@@ -40,7 +41,9 @@ assert_json_eq() {
 
 assert_file "$workflow"
 assert_executable "$runner"
+assert_executable "$fake_agent"
 bash -n "$runner"
+bash -n "$fake_agent"
 
 jq -e '.id == "route-first" and (.stages | type == "array") and (.stages | length > 0)' "$workflow" >/dev/null
 
@@ -80,12 +83,22 @@ apply_branch="task/$apply_run_id"
 none_run_id="2026-05-11-1434-no-doc-needed"
 none_worktree="$sandbox/worktrees/$none_run_id"
 none_branch="task/$none_run_id"
+step_run_id="2026-05-11-1435-step-demo"
+step_worktree="$sandbox/worktrees/$step_run_id"
+step_branch="task/$step_run_id"
+pipeline_run_id="2026-05-11-1436-pipeline-demo"
+pipeline_worktree="$sandbox/worktrees/$pipeline_run_id"
+pipeline_branch="task/$pipeline_run_id"
 
 cleanup() {
 	git -C "$repo_root" worktree remove --force "$apply_worktree" >/dev/null 2>&1 || true
 	git -C "$repo_root" worktree remove --force "$none_worktree" >/dev/null 2>&1 || true
+	git -C "$repo_root" worktree remove --force "$step_worktree" >/dev/null 2>&1 || true
+	git -C "$repo_root" worktree remove --force "$pipeline_worktree" >/dev/null 2>&1 || true
 	git -C "$repo_root" branch -D "$apply_branch" >/dev/null 2>&1 || true
 	git -C "$repo_root" branch -D "$none_branch" >/dev/null 2>&1 || true
+	git -C "$repo_root" branch -D "$step_branch" >/dev/null 2>&1 || true
+	git -C "$repo_root" branch -D "$pipeline_branch" >/dev/null 2>&1 || true
 	rm -rf "$sandbox"
 }
 trap cleanup EXIT
@@ -401,6 +414,70 @@ stopped_stage_output="$("$runner" stage \
 	--apply \
 	2>&1 || true)"
 assert_contains "$stopped_stage_output" "next_action is stop_gate"
+
+step_start_json="$("$runner" start \
+	--workflow route-first \
+	--slug "Step Demo" \
+	--prompt "Run one routed feature workflow step" \
+	--now "2026-05-11 14:35" \
+	--state-root "$sandbox/agent-workflows" \
+	--worktree-root "$sandbox/worktrees" \
+	--apply \
+	--json)"
+assert_json_eq "$step_start_json" '.run_id' "$step_run_id"
+step_json="$("$runner" step \
+	--run-id "$step_run_id" \
+	--state-root "$sandbox/agent-workflows" \
+	--stage-command "$fake_agent" \
+	--apply \
+	--json)"
+assert_json_eq "$step_json" '.status' 'step_complete'
+assert_json_eq "$step_json" '.steps' '1'
+assert_json_eq "$step_json" '.current_stage' 'draft-feature'
+assert_json_eq "$step_json" '.next_action' 'run_stage'
+jq -e '
+	.current_stage == "draft-feature" and
+	.next_action == "run_stage" and
+	(.stage_history | length == 1) and
+	.stage_history[0].stage == "route-document"
+' "$sandbox/agent-workflows/$step_run_id/run.json" >/dev/null
+assert_file "$sandbox/agent-workflows/$step_run_id/stage-results/route-document.md"
+
+pipeline_json="$("$runner" run \
+	--workflow route-first \
+	--slug "Pipeline Demo" \
+	--prompt "Run the routed feature workflow to a review gate" \
+	--now "2026-05-11 14:36" \
+	--state-root "$sandbox/agent-workflows" \
+	--worktree-root "$sandbox/worktrees" \
+	--stage-command "$fake_agent" \
+	--max-steps 10 \
+	--apply \
+	--json)"
+assert_json_eq "$pipeline_json" '.run_id' "$pipeline_run_id"
+assert_json_eq "$pipeline_json" '.status' 'stopped'
+assert_json_eq "$pipeline_json" '.steps' '5'
+assert_json_eq "$pipeline_json" '.current_stage' 'review-feature'
+assert_json_eq "$pipeline_json" '.next_action' 'stop_gate'
+assert_json_eq "$pipeline_json" '.stop_reason' 'stop_gate'
+pipeline_manifest="$sandbox/agent-workflows/$pipeline_run_id/run.json"
+jq -e '
+	.current_stage == "review-feature" and
+	.next_action == "stop_gate" and
+	(.stage_history | length == 5) and
+	.stage_history[0].stage == "route-document" and
+	.stage_history[1].stage == "draft-feature" and
+	.stage_history[2].stage == "review-feature" and
+	.stage_history[2].status == "needs_polish" and
+	.stage_history[3].stage == "polish-feature" and
+	.stage_history[4].stage == "review-feature" and
+	.stage_history[4].status == "accepted"
+' "$pipeline_manifest" >/dev/null
+assert_file "$sandbox/agent-workflows/$pipeline_run_id/stage-results/route-document.md"
+assert_file "$sandbox/agent-workflows/$pipeline_run_id/stage-results/draft-feature.md"
+assert_file "$sandbox/agent-workflows/$pipeline_run_id/stage-results/review-feature.md"
+assert_file "$sandbox/agent-workflows/$pipeline_run_id/stage-results/polish-feature.md"
+assert_file "$pipeline_worktree/memory-bank/features/FT-007/feature.md"
 
 bad_id="2026-05-11-1500-bad"
 mkdir -p "$sandbox/agent-workflows/$bad_id"
