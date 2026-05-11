@@ -61,8 +61,11 @@ while IFS= read -r stage_id; do
 	done < <(jq -r '.promptChain[]' "$stage_path")
 done < <(jq -r '.stages[]' "$workflow")
 
-env_output="$("$runner" start --workflow route-first --slug env-guard --prompt-file .env.local --dry-run 2>&1 || true)"
+env_output="$("$runner" start --workflow route-first --slug env-guard --prompt-file .envrc --dry-run 2>&1 || true)"
 assert_contains "$env_output" ".env"
+
+bad_slug_output="$("$runner" start --workflow route-first --slug "bad..slug" --prompt "Bad slug" --dry-run 2>&1 || true)"
+assert_contains "$bad_slug_output" "invalid branch name"
 
 start_json="$("$runner" start \
 	--workflow route-first \
@@ -94,16 +97,24 @@ step_branch="task/$step_run_id"
 pipeline_run_id="2026-05-11-1436-$pipeline_slug"
 pipeline_worktree="$sandbox/worktrees/$pipeline_run_id"
 pipeline_branch="task/$pipeline_run_id"
+mismatch_slug="branch-mismatch-$sandbox_tag"
+mismatch_run_id="2026-05-11-1437-$mismatch_slug"
+mismatch_worktree="$sandbox/worktrees/$mismatch_run_id"
+mismatch_branch="task/$mismatch_run_id"
+mismatch_existing_branch="task/$mismatch_run_id-existing"
 
 cleanup() {
 	git -C "$repo_root" worktree remove --force "$apply_worktree" >/dev/null 2>&1 || true
 	git -C "$repo_root" worktree remove --force "$none_worktree" >/dev/null 2>&1 || true
 	git -C "$repo_root" worktree remove --force "$step_worktree" >/dev/null 2>&1 || true
 	git -C "$repo_root" worktree remove --force "$pipeline_worktree" >/dev/null 2>&1 || true
+	git -C "$repo_root" worktree remove --force "$mismatch_worktree" >/dev/null 2>&1 || true
 	git -C "$repo_root" branch -D "$apply_branch" >/dev/null 2>&1 || true
 	git -C "$repo_root" branch -D "$none_branch" >/dev/null 2>&1 || true
 	git -C "$repo_root" branch -D "$step_branch" >/dev/null 2>&1 || true
 	git -C "$repo_root" branch -D "$pipeline_branch" >/dev/null 2>&1 || true
+	git -C "$repo_root" branch -D "$mismatch_branch" >/dev/null 2>&1 || true
+	git -C "$repo_root" branch -D "$mismatch_existing_branch" >/dev/null 2>&1 || true
 	rm -rf "$sandbox"
 }
 trap cleanup EXIT
@@ -124,6 +135,41 @@ jq -e --arg run_id "$apply_run_id" '.run_id == $run_id and .current_stage == "ro
 assert_file "$sandbox/agent-workflows/$run_id/prompt.md"
 [ -d "$apply_worktree" ] || fail "apply did not create worktree: $apply_worktree"
 git -C "$apply_worktree" rev-parse --show-toplevel >/dev/null 2>&1 || fail "apply worktree is not a git worktree"
+
+duplicate_output="$("$runner" start \
+	--workflow route-first \
+	--slug "$apply_slug" \
+	--prompt "Replace existing run" \
+	--now "2026-05-11 14:33" \
+	--state-root "$sandbox/agent-workflows" \
+	--worktree-root "$sandbox/worktrees" \
+	--apply \
+	2>&1 || true)"
+assert_contains "$duplicate_output" "run already initialized"
+
+tracked_state_output="$("$runner" start \
+	--workflow route-first \
+	--slug "Tracked State $sandbox_tag" \
+	--prompt "Reject tracked state root" \
+	--now "2026-05-11 14:34" \
+	--state-root memory-bank/state \
+	--worktree-root "$sandbox/worktrees" \
+	--apply \
+	2>&1 || true)"
+assert_contains "$tracked_state_output" "not ignored by git"
+
+git -C "$repo_root" branch "$mismatch_existing_branch" HEAD
+git -C "$repo_root" worktree add --quiet "$mismatch_worktree" "$mismatch_existing_branch"
+mismatch_output="$("$runner" start \
+	--workflow route-first \
+	--slug "$mismatch_slug" \
+	--prompt "Reject mismatched worktree branch" \
+	--now "2026-05-11 14:37" \
+	--state-root "$sandbox/agent-workflows" \
+	--worktree-root "$sandbox/worktrees" \
+	--apply \
+	2>&1 || true)"
+assert_contains "$mismatch_output" "worktree branch mismatch"
 
 status_output="$("$runner" status --run-id "$run_id" --state-root "$sandbox/agent-workflows")"
 assert_contains "$status_output" "current_stage: route-document"
@@ -179,6 +225,28 @@ upstream_transition_dry_json="$("$runner" transition \
 	--json)"
 assert_json_eq "$upstream_transition_dry_json" '.next_action' 'run_stage'
 assert_json_eq "$upstream_transition_dry_json" '.next_stage' 'draft-feature'
+
+accepted_unresolved_json="$("$runner" transition \
+	--result-file "$fixtures_dir/accepted.md" \
+	--dry-run \
+	--json)"
+assert_json_eq "$accepted_unresolved_json" '.decision_action' 'advance_or_gate'
+assert_json_eq "$accepted_unresolved_json" '.next_action' 'unresolved'
+
+invalid_route_result="$sandbox/invalid-route.md"
+cat >"$invalid_route_result" <<'EOF'
+Status: accepted
+Target artifact: none
+Open findings: 0
+Next stage: review-feature
+EOF
+invalid_route_output="$("$runner" transition \
+	--stage route-document \
+	--result-file "$invalid_route_result" \
+	--dry-run \
+	--json \
+	2>&1 || true)"
+assert_contains "$invalid_route_output" "invalid route next stage"
 
 none_json="$("$runner" start \
 	--workflow route-first \
@@ -419,6 +487,14 @@ stopped_stage_output="$("$runner" stage \
 	--apply \
 	2>&1 || true)"
 assert_contains "$stopped_stage_output" "next_action is stop_gate"
+stopped_transition_output="$("$runner" transition \
+	--run-id "$run_id" \
+	--stage review-feature \
+	--state-root "$sandbox/agent-workflows" \
+	--result-file "$fixtures_dir/accepted.md" \
+	--apply \
+	2>&1 || true)"
+assert_contains "$stopped_transition_output" "next_action is stop_gate"
 
 step_start_json="$("$runner" start \
 	--workflow route-first \
@@ -489,6 +565,29 @@ mkdir -p "$sandbox/agent-workflows/$bad_id"
 printf '{"run_id":"%s"}\n' "$bad_id" >"$sandbox/agent-workflows/$bad_id/run.json"
 bad_output="$("$runner" resume --run-id "$bad_id" --state-root "$sandbox/agent-workflows" --dry-run 2>&1 || true)"
 assert_contains "$bad_output" "missing current_stage"
+
+bad_worktree_id="2026-05-11-1501-bad-worktree"
+mkdir -p "$sandbox/agent-workflows/$bad_worktree_id"
+cat >"$sandbox/agent-workflows/$bad_worktree_id/run.json" <<EOF
+{
+  "run_id": "$bad_worktree_id",
+  "workflow": "route-first",
+  "slug": "bad-worktree",
+  "branch": "task/$bad_worktree_id",
+  "state_dir": "$sandbox/agent-workflows/$bad_worktree_id",
+  "current_stage": "route-document",
+  "next_action": "run_stage",
+  "stage_history": []
+}
+EOF
+bad_worktree_output="$("$runner" resume --run-id "$bad_worktree_id" --state-root "$sandbox/agent-workflows" --dry-run 2>&1 || true)"
+assert_contains "$bad_worktree_output" "missing"
+
+crlf_result="$sandbox/crlf-result.md"
+printf 'Status: accepted\r\nTarget artifact: none\r\nOpen findings: 0\r\nNext stage: none\r\n' >"$crlf_result"
+crlf_json="$("$runner" transition --stage route-document --result-file "$crlf_result" --dry-run --json)"
+assert_json_eq "$crlf_json" '.status' 'accepted'
+assert_json_eq "$crlf_json" '.next_action' 'stop_gate'
 
 for status in accepted needs_polish needs_upstream blocked needs_human failed; do
 	result="$fixtures_dir/$status.md"

@@ -59,6 +59,12 @@ slugify() {
 		sed 's/[^a-z0-9._-]/-/g; s/--*/-/g; s/^-//; s/-$//'
 }
 
+validate_branch_name() {
+	local branch_name="$1"
+	git check-ref-format --branch "$branch_name" >/dev/null 2>&1 ||
+		die "invalid branch name: $branch_name"
+}
+
 read_prompt_file() {
 	local path="$1"
 	[ -f "$path" ] || die "prompt file not found: $path"
@@ -67,7 +73,7 @@ read_prompt_file() {
 
 is_env_path() {
 	case "$1" in
-	.env | .env.* | */.env | */.env.*)
+	.env* | */.env*)
 		return 0
 		;;
 	*)
@@ -97,10 +103,14 @@ ensure_worktree() {
 	local worktree_path="$2"
 	local branch="$3"
 	local base_ref="$4"
+	local existing_branch
 
 	if [ -d "$worktree_path" ]; then
 		(cd "$worktree_path" && git rev-parse --show-toplevel >/dev/null 2>&1) ||
 			die "existing path is not a git worktree: $worktree_path"
+		existing_branch="$(git -C "$worktree_path" rev-parse --abbrev-ref HEAD)"
+		[ "$existing_branch" = "$branch" ] ||
+			die "worktree branch mismatch: expected $branch, got $existing_branch"
 		return 0
 	fi
 
@@ -214,6 +224,7 @@ slug="$(slugify "${slug:-$type-$timestamp}")"
 [ -n "$slug" ] || die "slug resolved to empty value"
 
 branch="${branch:-task/$slug}"
+validate_branch_name "$branch"
 worktree_root="$repo_root/.worktrees"
 worktree_path="$worktree_root/$slug"
 repo_name="$(basename "$repo_root")"

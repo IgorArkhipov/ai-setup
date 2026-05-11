@@ -28,9 +28,15 @@ printf '%s' "$output" | jq -e '
   (.worktree | endswith("/.worktrees/smoke-route"))
 ' >/dev/null
 
-env_output="$("./.ai-setup/scripts/start-dev-task.sh" --type spec --slug env-guard --prompt-file .env.local --dry-run 2>&1 || true)"
+env_output="$("./.ai-setup/scripts/start-dev-task.sh" --type spec --slug env-guard --prompt-file .envrc --dry-run 2>&1 || true)"
 printf '%s' "$env_output" | grep -Fq "refusing to read .env" || {
 	printf 'expected .env* prompt-file rejection, got: %s\n' "$env_output" >&2
+	exit 1
+}
+
+bad_slug_output="$("./.ai-setup/scripts/start-dev-task.sh" --type research --slug "bad..slug" --dry-run 2>&1 || true)"
+printf '%s' "$bad_slug_output" | grep -Fq "invalid branch name" || {
+	printf 'expected invalid branch rejection, got: %s\n' "$bad_slug_output" >&2
 	exit 1
 }
 

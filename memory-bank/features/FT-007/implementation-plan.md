@@ -185,7 +185,7 @@ Status: implemented locally and ready for acceptance review, with local ShellChe
 | `run-agent-workflow.sh transition ... --stage review-feature --apply --json` upstream backtracking | passed | Converts `needs_upstream` review results into a runnable matching `draft-*` stage before re-review |
 | `run-agent-workflow.sh transition ... --stage route-document --apply --json` | passed | Parses accepted route results with `Next stage:` and moves the manifest to the selected draft stage |
 | `run-agent-workflow.sh transition ... --stage route-document --apply --json` no-document route | passed | Accepts `Next stage: none` and stops with `stop_reason: no_governed_document` |
-| `run-agent-workflow.sh transition --result-file needs_upstream.md --dry-run --json` | passed | Produced `next_action: backtrack_upstream` |
+| `run-agent-workflow.sh transition --result-file needs_upstream.md --dry-run --json` | passed | Produced `decision_action: backtrack_upstream` and unresolved workflow target until a stage is supplied |
 | `shellcheck init.sh .ai-setup/scripts/*.sh` | not run | `shellcheck` is not installed on the local PATH or through `mise exec` in this environment |
 | `.ai-setup/scripts/test-ci.sh` | passed | Runs bootstrap checks plus `task-session` and `agent workflow` asset checks; agent CLI detection now mirrors PATH-based setup behavior |
 

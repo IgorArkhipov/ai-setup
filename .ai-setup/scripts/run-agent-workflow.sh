@@ -54,9 +54,15 @@ slugify() {
 		sed 's/[^a-z0-9._-]/-/g; s/--*/-/g; s/^-//; s/-$//'
 }
 
+validate_branch_name() {
+	local branch_name="$1"
+	git check-ref-format --branch "$branch_name" >/dev/null 2>&1 ||
+		die "invalid branch name: $branch_name"
+}
+
 is_env_path() {
 	case "$1" in
-	.env | .env.* | */.env | */.env.*)
+	.env* | */.env*)
 		return 0
 		;;
 	*)
@@ -107,8 +113,8 @@ stage_file() {
 read_manifest() {
 	local path="$1"
 	[ -f "$path" ] || die "run manifest not found: $path"
-	jq -e '.run_id and .workflow and .current_stage and .next_action and (.stage_history | type == "array")' "$path" >/dev/null ||
-		die "run manifest is missing current_stage, next_action, workflow, run_id, or stage_history: $path"
+	jq -e '.run_id and .workflow and .worktree and .current_stage and .next_action and (.stage_history | type == "array")' "$path" >/dev/null ||
+		die "run manifest is missing current_stage, next_action, workflow, run_id, worktree, or stage_history: $path"
 }
 
 ensure_worktree_root_safe() {
@@ -132,10 +138,14 @@ ensure_worktree() {
 	local worktree="$1"
 	local branch_name="$2"
 	local base_ref_value="$3"
+	local existing_branch
 
 	if [ -d "$worktree" ]; then
 		(cd "$worktree" && git rev-parse --show-toplevel >/dev/null 2>&1) ||
 			die "existing path is not a git worktree: $worktree"
+		existing_branch="$(git -C "$worktree" rev-parse --abbrev-ref HEAD)"
+		[ "$existing_branch" = "$branch_name" ] ||
+			die "worktree branch mismatch: expected $branch_name, got $existing_branch"
 		return 0
 	fi
 
@@ -149,7 +159,18 @@ ensure_worktree() {
 extract_result_field() {
 	local field="$1"
 	local path="$2"
-	awk -F': *' -v field="$field" '$1 == field { print $2; exit }' "$path"
+	awk -v field="$field" '
+		{
+			sub(/\r$/, "", $0)
+			prefix = field ":"
+			if (index($0, prefix) == 1) {
+				value = substr($0, length(prefix) + 1)
+				sub(/^ */, "", value)
+				print value
+				exit
+			}
+		}
+	' "$path"
 }
 
 target_artifact_path() {
@@ -241,6 +262,13 @@ resolve_transition_target() {
 				resolved_stop_reason="no_governed_document"
 				return 0
 			fi
+			case "$requested_next_stage" in
+			draft-prd | draft-use-case | draft-adr | draft-feature)
+				;;
+			*)
+				die "invalid route next stage: $requested_next_stage"
+				;;
+			esac
 			[ -f "$(stage_file "$requested_next_stage")" ] || die "route next stage not found: $requested_next_stage"
 			resolved_next_stage="$requested_next_stage"
 			resolved_next_action="run_stage"
@@ -439,6 +467,7 @@ initialize_run_state() {
 	[ -n "$slug" ] || die "slug resolved to empty value"
 	run_id="$(timestamp_prefix "$now")-$slug"
 	branch="task/$run_id"
+	validate_branch_name "$branch"
 	state_root_abs="$(abs_path "$state_root")"
 	worktree_root_abs="$(abs_path "$worktree_root")"
 	state_dir="$state_root_abs/$run_id"
@@ -447,7 +476,9 @@ initialize_run_state() {
 	run_status="$([ "$apply" -eq 1 ] && printf 'created' || printf 'dry-run')"
 
 	if [ "$apply" -eq 1 ]; then
+		ensure_worktree_root_safe "$state_root_abs"
 		ensure_worktree_root_safe "$worktree_root_abs"
+		[ ! -f "$state_dir/run.json" ] || die "run already initialized: $state_dir/run.json"
 		ensure_worktree "$worktree_path" "$branch" "$base_ref"
 		mkdir -p "$state_dir/stage-results"
 		if [ -n "$prompt_file" ]; then
@@ -802,6 +833,9 @@ transition)
 		state_root_abs="$(abs_path "$state_root")"
 		manifest="$state_root_abs/$run_id/run.json"
 		read_manifest "$manifest"
+		manifest_next_action="$(jq -r '.next_action' "$manifest")"
+		[ "$manifest_next_action" = "run_stage" ] ||
+			die "cannot apply transition for $stage_id; next_action is $manifest_next_action"
 		manifest_stage="$(jq -r '.current_stage' "$manifest")"
 		[ "$stage_id" = "$manifest_stage" ] ||
 			die "cannot apply transition for $stage_id; current stage is $manifest_stage"
@@ -845,6 +879,16 @@ transition)
 		mv "$tmp_manifest" "$manifest"
 	elif [ -n "$stage_id" ]; then
 		resolve_transition_target "$stage_id" "$decision_action" "$requested_next_stage"
+	else
+		case "$decision_action" in
+		stop_*)
+			resolved_next_action="$decision_action"
+			resolved_stop_reason="$decision_action"
+			;;
+		*)
+			resolved_next_action="unresolved"
+			;;
+		esac
 	fi
 	if [ "$json" -eq 1 ]; then
 		jq -n \
