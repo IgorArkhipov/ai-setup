@@ -181,6 +181,7 @@ For document-stage families, applied transitions also update `current_stage` whe
 - `route-document` with `accepted` and `Next stage: none` stops at `stop_gate` with `stop_reason: no_governed_document`;
 - `draft-<kind>` with `accepted` moves to `review-<kind>`;
 - `review-<kind>` with `needs_polish` moves to `polish-<kind>`;
+- `review-<kind>` with `needs_upstream` moves back to `draft-<kind>`;
 - `polish-<kind>` with `accepted` moves back to `review-<kind>`;
 - `review-<kind>` with `accepted` stops at `stop_gate`.
 

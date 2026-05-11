@@ -259,6 +259,39 @@ jq -e '
 	(.stage_history | length == 2)
 ' "$manifest" >/dev/null
 
+upstream_transition_json="$("$runner" transition \
+	--run-id "$run_id" \
+	--stage review-feature \
+	--state-root "$sandbox/agent-workflows" \
+	--result-file "$fixtures_dir/needs_upstream.md" \
+	--apply \
+	--json)"
+assert_json_eq "$upstream_transition_json" '.status' 'needs_upstream'
+assert_json_eq "$upstream_transition_json" '.next_action' 'run_stage'
+assert_json_eq "$upstream_transition_json" '.next_stage' 'draft-feature'
+jq -e '
+	.current_stage == "draft-feature" and
+	.next_action == "run_stage" and
+	.last_result.status == "needs_upstream" and
+	.last_result.decision_action == "backtrack_upstream" and
+	.last_result.next_stage == "draft-feature" and
+	(.stage_history | length == 3)
+' "$manifest" >/dev/null
+
+redraft_transition_json="$("$runner" transition \
+	--run-id "$run_id" \
+	--stage draft-feature \
+	--state-root "$sandbox/agent-workflows" \
+	--result-file "$fixtures_dir/accepted.md" \
+	--apply \
+	--json)"
+assert_json_eq "$redraft_transition_json" '.next_action' 'run_stage'
+jq -e '
+	.current_stage == "review-feature" and
+	.next_action == "run_stage" and
+	(.stage_history | length == 4)
+' "$manifest" >/dev/null
+
 review_transition_json="$("$runner" transition \
 	--run-id "$run_id" \
 	--stage review-feature \
@@ -277,9 +310,9 @@ jq -e '
 	.last_result.decision_action == "polish_current" and
 	.last_result.next_stage == "polish-feature" and
 	.last_result.result_file == "'"$fixtures_dir"'/needs_polish.md" and
-	(.stage_history | length == 3) and
+	(.stage_history | length == 5) and
 	.stage_history[0].stage == "route-document" and
-	.stage_history[2].next_action == "run_stage"
+	.stage_history[4].next_action == "run_stage"
 ' "$manifest" >/dev/null
 
 polish_stage_json="$("$runner" stage \
@@ -310,7 +343,7 @@ jq -e '
 	.next_action == "run_stage" and
 	.last_result.decision_action == "advance_or_gate" and
 	.last_result.next_stage == "review-feature" and
-	(.stage_history | length == 4)
+	(.stage_history | length == 6)
 ' "$manifest" >/dev/null
 
 review_accept_json="$("$runner" transition \
@@ -328,7 +361,7 @@ jq -e '
 	.last_result.decision_action == "advance_or_gate" and
 	.last_result.next_stage == "" and
 	.last_result.stop_reason == "stop_gate" and
-	(.stage_history | length == 5)
+	(.stage_history | length == 7)
 ' "$manifest" >/dev/null
 resume_stop_json="$("$runner" resume --run-id "$run_id" --state-root "$sandbox/agent-workflows" --dry-run --json)"
 assert_json_eq "$resume_stop_json" '.next_action' 'stop_gate'

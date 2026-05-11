@@ -259,6 +259,17 @@ resolve_transition_target() {
 		resolved_next_stage="$candidate"
 		resolved_next_action="run_stage"
 		;;
+	backtrack_upstream)
+		case "$stage" in
+		review-* | polish-*)
+			[ -n "$family" ] || die "cannot backtrack stage without a stage family: $stage"
+			candidate="draft-$family"
+			[ -f "$(stage_file "$candidate")" ] || die "upstream draft stage not found: $candidate"
+			resolved_next_stage="$candidate"
+			resolved_next_action="run_stage"
+			;;
+		esac
+		;;
 	esac
 
 	if [ "$resolved_next_action" != "run_stage" ] && [ -z "$resolved_stop_reason" ]; then
