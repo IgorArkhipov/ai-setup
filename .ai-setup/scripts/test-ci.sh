@@ -13,6 +13,10 @@ ok() {
 	printf '[OK] %s\n' "$1"
 }
 
+skip() {
+	printf '[SKIP] %s (%s)\n' "$1" "$2"
+}
+
 fail() {
 	printf '[FAIL] %s\n' "$1"
 	printf '       %s\n' "$2"
@@ -65,6 +69,15 @@ check_direct_or_mise() {
 mise: $mise_output"
 }
 
+check_codex_cli() {
+	if [ "${CI:-}" = "true" ] || [ "${AI_SETUP_CHECK_CODEX:-}" = "1" ]; then
+		check_direct_or_mise "codex installed" codex --version
+		return 0
+	fi
+
+	skip "codex installed" "set AI_SETUP_CHECK_CODEX=1 outside nested Codex sessions"
+}
+
 check_port_selector() {
 	local output
 	local port
@@ -102,7 +115,7 @@ check_port_selector
 
 section "Agent CLIs"
 check_direct_or_mise "claude installed" claude --version
-check_direct_or_mise "codex installed" codex --version
+check_codex_cli
 check_direct_or_mise "playwright-cli installed" playwright-cli --version
 check_direct "ccbox installed" ccbox --version
 
