@@ -30,7 +30,7 @@ assert_executable() {
 assert_contains() {
 	local haystack="$1"
 	local needle="$2"
-	printf '%s' "$haystack" | grep -Fq "$needle" || fail "expected output to contain: $needle"
+	grep -Fq "$needle" <<<"$haystack" || fail "expected output to contain: $needle"
 }
 
 assert_json_eq() {
@@ -38,7 +38,7 @@ assert_json_eq() {
 	local query="$2"
 	local expected="$3"
 	local actual
-	actual="$(printf '%s' "$json" | jq -r "$query")"
+	actual="$(jq -r "$query" <<<"$json")"
 	[ "$actual" = "$expected" ] || fail "expected $query to be $expected, got $actual"
 }
 
