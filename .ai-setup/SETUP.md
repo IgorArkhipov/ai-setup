@@ -171,6 +171,16 @@ Execute an accepted governed implementation plan milestone by milestone:
   --apply
 ```
 
+Open the current stage in an interactive Zellij-ready launcher:
+
+```bash
+./.ai-setup/scripts/run-agent-workflow.sh stage \
+  --run-id <run-id> \
+  --stage <current-stage> \
+  --interactive \
+  --apply
+```
+
 ## What To Preserve In A Derived Project
 
 If you create a course project from this repository, the original `README.md` is expected to be replaced with your project's README.

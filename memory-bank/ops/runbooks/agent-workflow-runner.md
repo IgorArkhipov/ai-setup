@@ -166,7 +166,13 @@ Use the `implementation-plan` workflow when a governed `implementation-plan.md` 
   --apply
 ```
 
-The runner extracts milestone rows whose first table cell is shaped like `STEP-*`, `MS-*`, or `TASK-*`, stores them in `run.json`, and runs:
+The runner extracts milestone rows shaped as any of the following, stores them in `run.json`, and runs:
+
+- governed table rows whose first cell is `STEP-*`, `MS-*`, or `TASK-*`;
+- Markdown checklist rows such as `- [ ] STEP-01: ...`;
+- Markdown headings such as `### MS-01 - ...`.
+
+For each queued milestone it runs:
 
 - `implement-milestone`
 - `review-milestone`
@@ -239,7 +245,27 @@ Use `step --apply` when a run already exists and only the current stage should e
 
 `step` uses the same executor contract as `run`, writes one stage prompt, requires the stage command to create the declared result file, persists one transition, and stops. This is the non-interactive equivalent of advancing one item in an otherwise interactive workflow.
 
-### 9. Check Or Persist A Stage Result Transition
+### 9. Open One Stage Interactively
+
+Use `stage --interactive --apply` when a human wants to take over the current stage in a terminal:
+
+```bash
+./.ai-setup/scripts/run-agent-workflow.sh stage \
+  --run-id <run-id> \
+  --stage <current-stage> \
+  --interactive \
+  --apply
+```
+
+This writes:
+
+- `tmp/agent-workflows/<run-id>/stage-prompts/<stage>.prompt.md`
+- `tmp/agent-workflows/<run-id>/stage-launchers/<stage>.sh`
+- `tmp/agent-workflows/<run-id>/stage-launchers/<stage>.json`
+
+The launcher opens Codex in the run worktree with the prepared stage prompt. Add `--launch` to start a Zellij tab or session immediately. Add `--detached` with `--launch` when creating a detached Zellij session from outside an existing Zellij session.
+
+### 10. Check Or Persist A Stage Result Transition
 
 ```bash
 ./.ai-setup/scripts/run-agent-workflow.sh transition \

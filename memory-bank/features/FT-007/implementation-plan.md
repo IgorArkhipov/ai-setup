@@ -154,7 +154,7 @@ FT-007 slice 1 is ready for acceptance when:
 - Stage-result parsing supports `accepted`, `needs_polish`, `needs_upstream`, `blocked`, `needs_human`, and `failed`.
 - Review-loop fixtures prove the runner loops, backtracks, or stops without advancing on unresolved findings.
 - `.env*` prompt/source paths are rejected before reading in both the new runner and any touched launcher path.
-- Operator runbook and setup docs describe the tested non-interactive pipeline, Claude review, implementation-plan milestone, and single-stage execution paths while deferring interactive Zellij stages to later work.
+- Operator runbook and setup docs describe the tested non-interactive pipeline, Claude review, implementation-plan milestone, interactive Zellij launcher, and single-stage execution paths.
 - `make check-agent-workflow`, `.ai-setup/scripts/test-ci.sh`, and `make check-task-session` pass locally.
 
 ## Execution Summary
@@ -174,6 +174,7 @@ Status: implemented locally and ready for acceptance review, with local ShellChe
 | `run-agent-workflow.sh run ... --stage-command <fixture> --apply --json` | passed | Starts from a prompt and executes route, draft, review, polish, and re-review stages until `stop_gate` |
 | `run-agent-workflow.sh run ... --claude-review --review-command <fixture> --apply --json` | passed | Runs Claude second-opinion review after accepted review stages; review findings trigger polish and re-review |
 | `run-agent-workflow.sh run --workflow implementation-plan --implementation-plan <path> ... --apply --json` | passed | Extracts implementation-plan milestone rows, executes implementation/review for each milestone, and stops at `all_milestones_accepted` |
+| `run-agent-workflow.sh stage ... --interactive --apply --json` | passed | Writes a Zellij-ready stage launcher and reports `interactive_ready` without starting a live terminal unless `--launch` is supplied |
 | `run-agent-workflow.sh stage ... --apply` output contract | passed | Generated prompts require parseable `Status`, `Target artifact`, and `Open findings` fields, plus `Next stage` for route decisions |
 | `run-agent-workflow.sh stage ... --apply` manifest-order guard | passed | Refuses to prepare a stage prompt when `--stage` does not match `current_stage` or `next_action` is no longer `run_stage` |
 | `run-agent-workflow.sh resume ... --apply --json` | passed | When `next_action` is `run_stage`, materializes the manifest's `current_stage` prompt and returns a stage-ready payload |
@@ -193,4 +194,4 @@ Status: implemented locally and ready for acceptance review, with local ShellChe
 | `shellcheck init.sh .ai-setup/scripts/*.sh` | not run | `shellcheck` is not installed on the local PATH or through `mise exec` in this environment |
 | `.ai-setup/scripts/test-ci.sh` | passed | Runs bootstrap checks plus `task-session` and `agent workflow` asset checks; agent CLI detection now mirrors PATH-based setup behavior |
 
-Deferred by FT-007 scope: interactive Zellij stage mode and richer implementation-plan parsing beyond the governed milestone table shape.
+Deferred by FT-007 scope: no known FT-007 workflow-runner behavior remains deferred. Future improvements should be driven by real usage findings rather than this initial feature scope.

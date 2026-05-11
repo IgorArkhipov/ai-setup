@@ -43,7 +43,7 @@ This feature is specifically about the development process for `tools/agentscope
 - `REQ-04` Use one timestamped worktree per pipeline run, with the user slug preserved as a human label and a filesystem-safe run id such as `YYYY-MM-DD-HHMM-<slug>`.
 - `REQ-05` Store non-governed run state under `tmp/agent-workflows/<run-id>/`, including the original prompt, `run.json`, and parseable stage result files.
 - `REQ-06` Treat every artifact-producing stage as incomplete until required review loops pass. Review findings may trigger current-artifact polish, upstream backtracking, human feedback, or failure.
-- `REQ-07` Execute the pipeline non-interactively with Codex-compatible stage commands, direct Claude Code second-opinion review hooks, and implementation-plan milestone loops; interactive Zellij stage execution is a follow-up slice.
+- `REQ-07` Execute the pipeline with Codex-compatible stage commands, direct Claude Code second-opinion review hooks, implementation-plan milestone loops, and interactive Zellij stage launchers.
 - `REQ-08` Preserve the existing governed source-of-truth rules: `memory-bank` owns intent and lifecycle, `.prompts` supplies reusable prompt chains, `.ai-setup` owns orchestration, and `.env*` files must not be read or used.
 
 ### Non-Scope
