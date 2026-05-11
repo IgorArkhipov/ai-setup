@@ -597,6 +597,9 @@ transition)
 		state_root_abs="$(abs_path "$state_root")"
 		manifest="$state_root_abs/$run_id/run.json"
 		read_manifest "$manifest"
+		manifest_stage="$(jq -r '.current_stage' "$manifest")"
+		[ "$stage_id" = "$manifest_stage" ] ||
+			die "cannot apply transition for $stage_id; current stage is $manifest_stage"
 		resolve_transition_target "$stage_id" "$decision_action" "$requested_next_stage"
 		tmp_manifest="$(mktemp)"
 		jq \

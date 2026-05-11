@@ -158,6 +158,15 @@ jq -e '
 	(.stage_history | length == 1)
 ' "$manifest" >/dev/null
 
+wrong_stage_output="$("$runner" transition \
+	--run-id "$run_id" \
+	--stage review-feature \
+	--state-root "$sandbox/agent-workflows" \
+	--result-file "$fixtures_dir/accepted.md" \
+	--apply \
+	2>&1 || true)"
+assert_contains "$wrong_stage_output" "current stage is draft-feature"
+
 resume_stage_json="$("$runner" resume \
 	--run-id "$run_id" \
 	--state-root "$sandbox/agent-workflows" \
