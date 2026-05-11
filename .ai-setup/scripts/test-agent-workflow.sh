@@ -221,6 +221,10 @@ assert_json_eq "$resume_stage_json" '.prompt_file' "$resume_stage_prompt"
 assert_file "$resume_stage_prompt"
 resume_stage_prompt_text="$(cat "$resume_stage_prompt")"
 assert_contains "$resume_stage_prompt_text" "# Agent Workflow Stage: draft-feature"
+assert_contains "$resume_stage_prompt_text" "## Previous stage result"
+assert_contains "$resume_stage_prompt_text" "previous_result_stage: route-document"
+assert_contains "$resume_stage_prompt_text" "previous_result_status: accepted"
+assert_contains "$resume_stage_prompt_text" "Next stage: draft-feature"
 assert_contains "$resume_stage_prompt_text" "Expected outputs:"
 
 draft_transition_json="$("$runner" transition \
@@ -263,6 +267,21 @@ jq -e '
 	.stage_history[0].stage == "route-document" and
 	.stage_history[2].next_action == "run_stage"
 ' "$manifest" >/dev/null
+
+polish_stage_json="$("$runner" stage \
+	--run-id "$run_id" \
+	--stage polish-feature \
+	--state-root "$sandbox/agent-workflows" \
+	--apply \
+	--json)"
+polish_stage_prompt="$sandbox/agent-workflows/$run_id/stage-prompts/polish-feature.prompt.md"
+assert_json_eq "$polish_stage_json" '.prompt_file' "$polish_stage_prompt"
+assert_file "$polish_stage_prompt"
+polish_stage_prompt_text="$(cat "$polish_stage_prompt")"
+assert_contains "$polish_stage_prompt_text" "previous_result_stage: review-feature"
+assert_contains "$polish_stage_prompt_text" "previous_result_status: needs_polish"
+assert_contains "$polish_stage_prompt_text" "Open findings: 2"
+assert_contains "$polish_stage_prompt_text" "Clarify the stop condition."
 
 polish_transition_json="$("$runner" transition \
 	--run-id "$run_id" \

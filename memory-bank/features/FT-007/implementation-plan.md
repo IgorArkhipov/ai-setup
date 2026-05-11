@@ -167,7 +167,7 @@ Status: implemented locally and ready for acceptance review, with local ShellChe
 | `git diff --check` | passed | No whitespace errors reported |
 | `run-agent-workflow.sh start ... --dry-run --json` | passed | Produced `2026-05-11-1432-provider-auth`, branch `task/2026-05-11-1432-provider-auth`, worktree `.worktrees/2026-05-11-1432-provider-auth`, and `next_action: run_stage` |
 | `run-agent-workflow.sh start ... --apply --json` | passed | Creates timestamped run state and a git worktree on `task/<run-id>` using a disposable test worktree root |
-| `run-agent-workflow.sh stage ... --apply --json` | passed | Writes a composed stage prompt file with run metadata, original prompt, prompt-chain contents, and expected output contract |
+| `run-agent-workflow.sh stage ... --apply --json` | passed | Writes a composed stage prompt file with run metadata, original prompt, previous-stage result context, prompt-chain contents, and expected output contract |
 | `run-agent-workflow.sh stage ... --apply` manifest-order guard | passed | Refuses to prepare a stage prompt when `--stage` does not match `current_stage` or `next_action` is no longer `run_stage` |
 | `run-agent-workflow.sh resume ... --apply --json` | passed | When `next_action` is `run_stage`, materializes the manifest's `current_stage` prompt and returns a stage-ready payload |
 | `run-agent-workflow.sh resume ... --apply --json` stopped runs | passed | When `next_action` is a stop action, returns `status: stopped` with the persisted `stop_reason` |

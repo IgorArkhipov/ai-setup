@@ -259,6 +259,7 @@ write_stage_prompt() {
 	local prompt_path="$4"
 	local result_path="$5"
 	local prompt_dir
+	local previous_result_file
 	local source_prompt
 
 	prompt_dir="${prompt_path%/*}"
@@ -282,6 +283,29 @@ write_stage_prompt() {
 		printf '\n## Original prompt\n\n'
 		printf 'original_prompt:\n'
 		sed 's/^/  /' "$source_prompt"
+
+		if jq -e '.last_result?' "$manifest_path" >/dev/null; then
+			printf '\n\n## Previous stage result\n\n'
+			jq -r '
+				"- previous_result_stage: \(.last_result.stage)",
+				"- previous_result_status: \(.last_result.status)",
+				"- previous_result_next_action: \(.last_result.next_action)",
+				"- previous_result_next_stage: \(.last_result.next_stage)",
+				"- previous_result_open_findings: \(.last_result.open_findings)",
+				"- previous_result_file: \(.last_result.result_file)"
+			' "$manifest_path"
+			previous_result_file="$(jq -r '.last_result.result_file // ""' "$manifest_path")"
+			if [ -n "$previous_result_file" ]; then
+				reject_env_path "$previous_result_file"
+				printf '\nPrevious result content:\n\n'
+				if [ -f "$previous_result_file" ]; then
+					cat "$previous_result_file"
+					printf '\n'
+				else
+					printf 'Previous result file is not available at prompt-preparation time.\n'
+				fi
+			fi
+		fi
 
 		printf '\n\n## Prompt chain\n'
 		while IFS= read -r chain_path; do
