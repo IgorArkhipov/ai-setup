@@ -1,0 +1,14 @@
+{
+  "id": "route-document",
+  "agent": "codex",
+  "model": "gpt-5.5",
+  "promptChain": [
+    ".prompts/memory-bank-prime-project-context.md",
+    ".prompts/memory-bank-prime-documentation-context.md",
+    ".prompts/memory-bank-route-document.md"
+  ],
+  "outputs": [
+    "stage-results/route-document.md"
+  ],
+  "reviewPolicy": "none"
+}

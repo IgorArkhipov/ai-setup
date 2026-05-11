@@ -1,0 +1,14 @@
+{
+  "id": "draft-feature",
+  "agent": "codex",
+  "model": "gpt-5.5",
+  "promptChain": [
+    ".prompts/memory-bank-prime-project-context.md",
+    ".prompts/memory-bank-prime-documentation-context.md",
+    ".prompts/memory-bank-create-feature.md"
+  ],
+  "outputs": [
+    "memory-bank/features/FT-XXX/feature.md"
+  ],
+  "reviewPolicy": "required"
+}

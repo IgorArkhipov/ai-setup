@@ -28,4 +28,10 @@ printf '%s' "$output" | jq -e '
   (.worktree | endswith("/.worktrees/smoke-route"))
 ' >/dev/null
 
+env_output="$("./.ai-setup/scripts/start-dev-task.sh" --type spec --slug env-guard --prompt-file .env.local --dry-run 2>&1 || true)"
+printf '%s' "$env_output" | grep -Fq "refusing to read .env" || {
+	printf 'expected .env* prompt-file rejection, got: %s\n' "$env_output" >&2
+	exit 1
+}
+
 printf 'task-session assets OK\n'

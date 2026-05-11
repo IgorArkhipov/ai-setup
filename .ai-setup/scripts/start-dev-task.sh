@@ -65,6 +65,24 @@ read_prompt_file() {
 	cat "$path"
 }
 
+is_env_path() {
+	case "$1" in
+	.env | .env.* | */.env | */.env.*)
+		return 0
+		;;
+	*)
+		return 1
+		;;
+	esac
+}
+
+reject_env_path() {
+	local path="$1"
+	if is_env_path "$path"; then
+		die "refusing to read .env* path: $path"
+	fi
+}
+
 ensure_worktree_dir_is_ignored() {
 	local repo_root="$1"
 	mkdir -p "$repo_root/.worktrees"
@@ -168,6 +186,9 @@ while [ $# -gt 0 ]; do
 done
 
 [ -z "$prompt" ] || [ -z "$prompt_file" ] || die "use either --prompt or --prompt-file, not both"
+if [ -n "$prompt_file" ]; then
+	reject_env_path "$prompt_file"
+fi
 
 need_cmd git
 need_cmd jq

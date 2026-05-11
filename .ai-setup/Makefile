@@ -25,7 +25,7 @@ GOOGLE_WORKSPACE_SKILLS := \
 	gws-drive \
 	gws-sheets
 
-.PHONY: ai bootstrap mise-package mise-install version check check-task-session extra extra-check check-context codex-context register
+.PHONY: ai bootstrap mise-package mise-install version check check-task-session check-agent-workflow extra extra-check check-context codex-context register
 .PHONY: agents-install agents agents-cli agents-skills extra-skills
 .PHONY: agents-skills-install agents-skills-list agents-skills-check-npx
 
@@ -48,6 +48,9 @@ check:
 
 check-task-session:
 	@"$(ROOT_DIR)"/.ai-setup/scripts/test-task-session.sh
+
+check-agent-workflow:
+	@"$(ROOT_DIR)"/.ai-setup/scripts/test-agent-workflow.sh
 
 extra-check:
 	@CLAUDE_MARKETPLACE_NAMES="$(CLAUDE_MARKETPLACE_NAMES)" \

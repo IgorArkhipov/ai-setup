@@ -1,0 +1,13 @@
+{
+  "id": "review-use-case",
+  "agent": "codex",
+  "model": "gpt-5.5",
+  "promptChain": [
+    ".prompts/memory-bank-prime-documentation-context.md",
+    ".prompts/memory-bank-review-use-case.md"
+  ],
+  "outputs": [
+    "stage-results/review-use-case.md"
+  ],
+  "reviewPolicy": "none"
+}

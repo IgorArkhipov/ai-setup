@@ -81,9 +81,13 @@ check_port_selector
 # check_mise "zellij installed" zellij --version
 
 section "Agent CLIs"
-check_mise "claude installed" claude --version
-check_mise "codex installed" codex --version
-check_mise "playwright-cli installed" playwright-cli --version
+check_direct "claude installed" claude --version
+check_direct "codex installed" codex --version
+check_direct "playwright-cli installed" playwright-cli --version
 check_direct "ccbox installed" ccbox --version
+
+section "Repo workflow assets"
+check_direct "task-session assets" ./.ai-setup/scripts/test-task-session.sh
+check_direct "agent workflow assets" ./.ai-setup/scripts/test-agent-workflow.sh
 
 printf '\nCI smoke checks passed.\n'

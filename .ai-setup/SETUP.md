@@ -123,6 +123,22 @@ Validate the task-session configuration:
 make check-task-session
 ```
 
+Validate the repo-local workflow-runner configuration:
+
+```bash
+make check-agent-workflow
+```
+
+Start a dry-run route-first workflow for AgentScope development:
+
+```bash
+./.ai-setup/scripts/run-agent-workflow.sh start \
+  --workflow route-first \
+  --slug provider-auth \
+  --prompt "Add provider auth detection" \
+  --dry-run
+```
+
 ## What To Preserve In A Derived Project
 
 If you create a course project from this repository, the original `README.md` is expected to be replaced with your project's README.
