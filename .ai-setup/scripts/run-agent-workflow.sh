@@ -103,8 +103,8 @@ stage_file() {
 read_manifest() {
 	local path="$1"
 	[ -f "$path" ] || die "run manifest not found: $path"
-	jq -e '.run_id and .workflow and .current_stage and .next_action' "$path" >/dev/null ||
-		die "run manifest is missing current_stage, next_action, workflow, or run_id: $path"
+	jq -e '.run_id and .workflow and .current_stage and .next_action and (.stage_history | type == "array")' "$path" >/dev/null ||
+		die "run manifest is missing current_stage, next_action, workflow, run_id, or stage_history: $path"
 }
 
 ensure_worktree_root_safe() {
@@ -253,7 +253,8 @@ render_start_json() {
 			state_dir: $state_dir,
 			current_stage: $current_stage,
 			next_action: $next_action,
-			status: $status
+			status: $status,
+			stage_history: []
 		}'
 }
 
@@ -487,17 +488,47 @@ stage)
 	;;
 transition)
 	[ -n "$result_file" ] || die "transition requires --result-file"
+	reject_env_path "$result_file"
 	[ -f "$result_file" ] || die "stage result not found: $result_file"
 	status="$(extract_result_field "Status" "$result_file")"
 	[ -n "$status" ] || die "stage result missing Status: $result_file"
 	open_findings="$(extract_result_field "Open findings" "$result_file")"
 	open_findings="${open_findings:-0}"
+	target_artifact="$(extract_result_field "Target artifact" "$result_file")"
 	case "$open_findings" in
 	'' | *[!0-9]*)
 		die "Open findings must be a non-negative integer: $open_findings"
 		;;
 	esac
 	next_action="$(transition_next_action "$status" "$open_findings")"
+	if [ "$apply" -eq 1 ]; then
+		[ -n "$run_id" ] || die "transition --apply requires --run-id"
+		[ -n "$stage_id" ] || die "transition --apply requires --stage"
+		state_root_abs="$(abs_path "$state_root")"
+		manifest="$state_root_abs/$run_id/run.json"
+		read_manifest "$manifest"
+		tmp_manifest="$(mktemp)"
+		jq \
+			--arg stage "$stage_id" \
+			--arg status "$status" \
+			--arg next_action "$next_action" \
+			--arg result_file "$result_file" \
+			--arg target_artifact "$target_artifact" \
+			--argjson open_findings "$open_findings" \
+			'
+				.next_action = $next_action
+				| .last_result = {
+					stage: $stage,
+					status: $status,
+					next_action: $next_action,
+					open_findings: $open_findings,
+					result_file: $result_file,
+					target_artifact: $target_artifact
+				}
+				| .stage_history = (.stage_history + [.last_result])
+			' "$manifest" >"$tmp_manifest"
+		mv "$tmp_manifest" "$manifest"
+	fi
 	if [ "$json" -eq 1 ]; then
 		jq -n \
 			--arg status "$status" \

@@ -115,7 +115,7 @@ Expected output includes:
 
 The current slice validates the manifest and reports the resumable stage. Later slices will execute the recorded next action.
 
-### 5. Check A Stage Result Transition
+### 5. Prepare A Stage Prompt
 
 Compose a dry-run stage command without executing live Codex:
 
@@ -130,11 +130,29 @@ The output includes the configured agent, model, prompt file path, result file p
 
 Use `--apply` with `stage` to write the composed stage prompt file under `tmp/agent-workflows/<run-id>/stage-prompts/`. The prompt includes run metadata, the original user prompt, configured prompt-chain contents, and the expected output contract.
 
+### 6. Check Or Persist A Stage Result Transition
+
 ```bash
 ./.ai-setup/scripts/run-agent-workflow.sh transition \
   --result-file .ai-setup/test/fixtures/stage-results/accepted.md \
   --dry-run
 ```
+
+Use `--apply` with `--run-id` and `--stage` to persist the decision into `run.json`:
+
+```bash
+./.ai-setup/scripts/run-agent-workflow.sh transition \
+  --run-id <run-id> \
+  --stage route-document \
+  --result-file tmp/agent-workflows/<run-id>/stage-results/route-document.md \
+  --apply
+```
+
+This updates:
+
+- `next_action`
+- `last_result`
+- `stage_history`
 
 Recognized statuses:
 

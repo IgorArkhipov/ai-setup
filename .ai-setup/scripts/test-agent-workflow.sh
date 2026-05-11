@@ -97,7 +97,7 @@ apply_json="$("$runner" start \
 run_id="$(printf '%s' "$apply_json" | jq -r '.run_id')"
 manifest="$sandbox/agent-workflows/$run_id/run.json"
 assert_file "$manifest"
-jq -e '.run_id == "2026-05-11-1433-provider-auth-apply" and .current_stage == "route-document" and .next_action == "run_stage"' "$manifest" >/dev/null
+jq -e '.run_id == "2026-05-11-1433-provider-auth-apply" and .current_stage == "route-document" and .next_action == "run_stage" and (.stage_history | type == "array") and (.stage_history | length == 0)' "$manifest" >/dev/null
 assert_file "$sandbox/agent-workflows/$run_id/prompt.md"
 [ -d "$apply_worktree" ] || fail "apply did not create worktree: $apply_worktree"
 git -C "$apply_worktree" rev-parse --show-toplevel >/dev/null 2>&1 || fail "apply worktree is not a git worktree"
@@ -137,6 +137,26 @@ assert_contains "$stage_prompt_text" "run_id: $run_id"
 assert_contains "$stage_prompt_text" "original_prompt:"
 assert_contains "$stage_prompt_text" "Add provider auth detection"
 assert_contains "$stage_prompt_text" "Expected outputs:"
+
+transition_apply_json="$("$runner" transition \
+	--run-id "$run_id" \
+	--stage route-document \
+	--state-root "$sandbox/agent-workflows" \
+	--result-file "$fixtures_dir/needs_polish.md" \
+	--apply \
+	--json)"
+assert_json_eq "$transition_apply_json" '.status' 'needs_polish'
+assert_json_eq "$transition_apply_json" '.next_action' 'polish_current'
+jq -e '
+	.next_action == "polish_current" and
+	.last_result.status == "needs_polish" and
+	.last_result.open_findings == 2 and
+	.last_result.stage == "route-document" and
+	.last_result.result_file == "'"$fixtures_dir"'/needs_polish.md" and
+	(.stage_history | length == 1) and
+	.stage_history[0].status == "needs_polish" and
+	.stage_history[0].next_action == "polish_current"
+' "$manifest" >/dev/null
 
 bad_id="2026-05-11-1500-bad"
 mkdir -p "$sandbox/agent-workflows/$bad_id"
