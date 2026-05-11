@@ -173,6 +173,8 @@ This updates:
 
 Applied transitions are ordered. The `--stage` value must match the manifest's current `current_stage`; otherwise the runner stops without changing `run.json`. Use dry-run transition checks when you only want to inspect a result fixture or parse a status out of order.
 
+Accepted non-route stage results are completion-gated. When `Status: accepted` and `Open findings: 0`, the declared `Target artifact` must exist in the run worktree before the runner updates `run.json`. Route-stage decisions are exempt because they select the downstream artifact loop rather than proving that artifact already exists.
+
 For document-stage families, applied transitions also update `current_stage` when the decision points to a next runnable stage:
 
 - `route-document` with `accepted` and `Next stage: draft-<kind>` moves to that draft stage;

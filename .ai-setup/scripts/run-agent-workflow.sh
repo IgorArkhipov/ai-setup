@@ -148,6 +148,20 @@ extract_result_field() {
 	awk -F': *' -v field="$field" '$1 == field { print $2; exit }' "$path"
 }
 
+target_artifact_path() {
+	local artifact="$1"
+	local worktree="$2"
+
+	case "$artifact" in
+	/*)
+		printf '%s\n' "$artifact"
+		;;
+	*)
+		printf '%s/%s\n' "$worktree" "$artifact"
+		;;
+	esac
+}
+
 transition_next_action() {
 	local status="$1"
 	local open_findings="$2"
@@ -655,6 +669,12 @@ transition)
 		manifest_stage="$(jq -r '.current_stage' "$manifest")"
 		[ "$stage_id" = "$manifest_stage" ] ||
 			die "cannot apply transition for $stage_id; current stage is $manifest_stage"
+		if [ "$status" = "accepted" ] && [ "$open_findings" -eq 0 ] && [ "$stage_id" != "route-document" ]; then
+			[ -n "$target_artifact" ] || die "accepted result requires Target artifact"
+			reject_env_path "$target_artifact"
+			target_path="$(target_artifact_path "$target_artifact" "$(jq -r '.worktree' "$manifest")")"
+			[ -f "$target_path" ] || die "target artifact not found: $target_path"
+		fi
 		resolve_transition_target "$stage_id" "$decision_action" "$requested_next_stage"
 		tmp_manifest="$(mktemp)"
 		jq \

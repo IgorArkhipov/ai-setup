@@ -209,6 +209,20 @@ wrong_stage_prompt_output="$("$runner" stage \
 	2>&1 || true)"
 assert_contains "$wrong_stage_prompt_output" "current stage is draft-feature"
 
+missing_target_output="$("$runner" transition \
+	--run-id "$run_id" \
+	--stage draft-feature \
+	--state-root "$sandbox/agent-workflows" \
+	--result-file "$fixtures_dir/accepted-missing-target.md" \
+	--apply \
+	2>&1 || true)"
+assert_contains "$missing_target_output" "target artifact not found"
+jq -e '
+	.current_stage == "draft-feature" and
+	.next_action == "run_stage" and
+	(.stage_history | length == 1)
+' "$manifest" >/dev/null
+
 resume_stage_json="$("$runner" resume \
 	--run-id "$run_id" \
 	--state-root "$sandbox/agent-workflows" \

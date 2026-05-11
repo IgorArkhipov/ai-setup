@@ -173,6 +173,7 @@ Status: implemented locally and ready for acceptance review, with local ShellChe
 | `run-agent-workflow.sh resume ... --apply --json` stopped runs | passed | When `next_action` is a stop action, returns `status: stopped` with the persisted `stop_reason` |
 | `run-agent-workflow.sh status` | passed | Human-readable status includes `stop_reason` and last-result details when present |
 | `run-agent-workflow.sh transition ... --apply --json` | passed | Persists review-loop decisions into `run.json`, including `next_action`, `last_result`, and `stage_history` |
+| `run-agent-workflow.sh transition ... --apply` accepted-artifact guard | passed | Refuses to advance accepted non-route stages when the declared `Target artifact` is missing from the run worktree |
 | `run-agent-workflow.sh transition ... --apply --json` stop reasons | passed | Persists `stop_reason` for stop transitions such as `stop_gate` and exposes it through resume/status JSON |
 | `run-agent-workflow.sh transition ... --apply` stage-order guard | passed | Refuses to persist a transition when `--stage` does not match the manifest's `current_stage` |
 | `run-agent-workflow.sh transition ... --apply --json` stage-family routing | passed | Converts draft/review/polish decisions into the next runnable stage or `stop_gate` for accepted review gates |
