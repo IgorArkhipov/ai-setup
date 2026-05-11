@@ -178,6 +178,7 @@ Status: implemented locally and ready for acceptance review, with local ShellChe
 | `run-agent-workflow.sh transition ... --apply --json` stop reasons | passed | Persists `stop_reason` for stop transitions such as `stop_gate` and exposes it through resume/status JSON |
 | `run-agent-workflow.sh transition ... --apply` stage-order guard | passed | Refuses to persist a transition when `--stage` does not match the manifest's `current_stage` |
 | `run-agent-workflow.sh transition ... --apply --json` stage-family routing | passed | Converts draft/review/polish decisions into the next runnable stage or `stop_gate` for accepted review gates |
+| `run-agent-workflow.sh transition ... --stage ... --dry-run --json` stage-aware routing | passed | Previews the resolved runnable stage without changing `run.json` when `--stage` is supplied |
 | `run-agent-workflow.sh transition ... --stage review-feature --apply --json` upstream backtracking | passed | Converts `needs_upstream` review results into a runnable matching `draft-*` stage before re-review |
 | `run-agent-workflow.sh transition ... --stage route-document --apply --json` | passed | Parses accepted route results with `Next stage:` and moves the manifest to the selected draft stage |
 | `run-agent-workflow.sh transition ... --stage route-document --apply --json` no-document route | passed | Accepts `Next stage: none` and stops with `stop_reason: no_governed_document` |

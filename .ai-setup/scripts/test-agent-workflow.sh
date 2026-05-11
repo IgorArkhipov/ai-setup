@@ -145,6 +145,22 @@ assert_contains "$stage_prompt_text" "Expected outputs:"
 assert_contains "$stage_prompt_text" "Next stage:"
 assert_contains "$stage_prompt_text" "none"
 
+route_transition_dry_json="$("$runner" transition \
+	--stage route-document \
+	--result-file "$fixtures_dir/route-feature.md" \
+	--dry-run \
+	--json)"
+assert_json_eq "$route_transition_dry_json" '.next_action' 'run_stage'
+assert_json_eq "$route_transition_dry_json" '.next_stage' 'draft-feature'
+
+upstream_transition_dry_json="$("$runner" transition \
+	--stage review-feature \
+	--result-file "$fixtures_dir/needs_upstream.md" \
+	--dry-run \
+	--json)"
+assert_json_eq "$upstream_transition_dry_json" '.next_action' 'run_stage'
+assert_json_eq "$upstream_transition_dry_json" '.next_stage' 'draft-feature'
+
 none_json="$("$runner" start \
 	--workflow route-first \
 	--slug "No Doc Needed" \

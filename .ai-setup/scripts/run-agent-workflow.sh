@@ -718,6 +718,8 @@ transition)
 				| .stage_history = (.stage_history + [.last_result])
 			' "$manifest" >"$tmp_manifest"
 		mv "$tmp_manifest" "$manifest"
+	elif [ -n "$stage_id" ]; then
+		resolve_transition_target "$stage_id" "$decision_action" "$requested_next_stage"
 	fi
 	if [ "$json" -eq 1 ]; then
 		jq -n \

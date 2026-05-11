@@ -171,7 +171,7 @@ This updates:
 - `stage_history`
 - `stop_reason`, when the transition stops instead of preparing another stage
 
-Applied transitions are ordered. The `--stage` value must match the manifest's current `current_stage`; otherwise the runner stops without changing `run.json`. Use dry-run transition checks when you only want to inspect a result fixture or parse a status out of order.
+Applied transitions are ordered. The `--stage` value must match the manifest's current `current_stage`; otherwise the runner stops without changing `run.json`. Use dry-run transition checks when you only want to inspect a result fixture or parse a status out of order. Add `--stage` to a dry-run transition when you want to preview the resolved workflow target, such as `route-document` to `draft-feature` or `review-feature` back to `draft-feature`.
 
 Accepted non-route stage results are completion-gated. When `Status: accepted` and `Open findings: 0`, the declared `Target artifact` must exist in the run worktree before the runner updates `run.json`. Route-stage decisions are exempt because they select the downstream artifact loop rather than proving that artifact already exists.
 
