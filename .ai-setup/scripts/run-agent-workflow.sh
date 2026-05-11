@@ -550,7 +550,11 @@ status | resume)
 			fi
 			exit 0
 		fi
-		output="$(jq '. + {status: "resume_ready"}' "$manifest")"
+		if [ "$apply" -eq 1 ]; then
+			output="$(jq '. + {status: "stopped"}' "$manifest")"
+		else
+			output="$(jq '. + {status: "resume_ready"}' "$manifest")"
+		fi
 	else
 		output="$(cat "$manifest")"
 	fi

@@ -292,6 +292,10 @@ jq -e '
 resume_stop_json="$("$runner" resume --run-id "$run_id" --state-root "$sandbox/agent-workflows" --dry-run --json)"
 assert_json_eq "$resume_stop_json" '.next_action' 'stop_gate'
 assert_json_eq "$resume_stop_json" '.stop_reason' 'stop_gate'
+resume_stop_apply_json="$("$runner" resume --run-id "$run_id" --state-root "$sandbox/agent-workflows" --apply --json)"
+assert_json_eq "$resume_stop_apply_json" '.status' 'stopped'
+assert_json_eq "$resume_stop_apply_json" '.next_action' 'stop_gate'
+assert_json_eq "$resume_stop_apply_json" '.stop_reason' 'stop_gate'
 status_stop_output="$("$runner" status --run-id "$run_id" --state-root "$sandbox/agent-workflows")"
 assert_contains "$status_stop_output" "stop_reason: stop_gate"
 assert_contains "$status_stop_output" "last_result_stage: review-feature"
