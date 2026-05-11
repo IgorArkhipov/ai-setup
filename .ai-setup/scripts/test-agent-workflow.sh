@@ -249,6 +249,7 @@ assert_json_eq "$resume_stage_json" '.status' 'stage_ready'
 assert_json_eq "$resume_stage_json" '.stage' 'draft-feature'
 resume_stage_prompt="$sandbox/agent-workflows/$run_id/stage-prompts/draft-feature.prompt.md"
 assert_json_eq "$resume_stage_json" '.prompt_file' "$resume_stage_prompt"
+assert_json_eq "$resume_stage_json" '.result_file' "$sandbox/agent-workflows/$run_id/stage-results/draft-feature.md"
 assert_file "$resume_stage_prompt"
 resume_stage_prompt_text="$(cat "$resume_stage_prompt")"
 assert_contains "$resume_stage_prompt_text" "# Agent Workflow Stage: draft-feature"

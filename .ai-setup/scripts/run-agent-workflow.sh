@@ -384,17 +384,9 @@ prepare_stage() {
 	[ -f "$stage_path" ] || die "stage config not found: $stage_path"
 	agent="$(jq -r '.agent' "$stage_path")"
 	model="$(jq -r '.model' "$stage_path")"
-	first_output="$(jq -r '.outputs[0]' "$stage_path")"
 	state_dir="$state_root_abs/$run_id"
 	prompt_path="$state_dir/stage-prompts/$stage_id.prompt.md"
-	case "$first_output" in
-	stage-results/*)
-		result_path="$state_dir/$first_output"
-		;;
-	*)
-		result_path="$repo_root/$first_output"
-		;;
-	esac
+	result_path="$state_dir/stage-results/$stage_id.md"
 	command_text="codex --cd $(jq -r '.worktree' "$manifest") --model $model --no-alt-screen \"$prompt_path\""
 	if [ "$apply" -eq 1 ]; then
 		write_stage_prompt "$stage_id" "$stage_path" "$manifest" "$prompt_path" "$result_path"
