@@ -169,6 +169,7 @@ Status: implemented locally and ready for acceptance review, with local ShellChe
 | `run-agent-workflow.sh start ... --apply --json` | passed | Creates timestamped run state and a git worktree on `task/<run-id>` using a disposable test worktree root |
 | `run-agent-workflow.sh stage ... --apply --json` | passed | Writes a composed stage prompt file with run metadata, original prompt, prompt-chain contents, and expected output contract |
 | `run-agent-workflow.sh transition ... --apply --json` | passed | Persists review-loop decisions into `run.json`, including `next_action`, `last_result`, and `stage_history` |
+| `run-agent-workflow.sh transition ... --apply --json` stage-family routing | passed | Converts draft/review/polish decisions into the next runnable stage or `stop_gate` for accepted review gates |
 | `run-agent-workflow.sh transition --result-file needs_upstream.md --dry-run --json` | passed | Produced `next_action: backtrack_upstream` |
 | `shellcheck init.sh .ai-setup/scripts/*.sh` | not run | `shellcheck` is not installed on the local PATH or through `mise exec` in this environment |
 | `.ai-setup/scripts/test-ci.sh` | passed | Runs bootstrap checks plus `task-session` and `agent workflow` asset checks; agent CLI detection now mirrors PATH-based setup behavior |

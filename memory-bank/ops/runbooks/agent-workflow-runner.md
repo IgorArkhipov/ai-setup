@@ -154,6 +154,13 @@ This updates:
 - `last_result`
 - `stage_history`
 
+For document-stage families, applied transitions also update `current_stage` when the decision points to a next runnable stage:
+
+- `draft-<kind>` with `accepted` moves to `review-<kind>`;
+- `review-<kind>` with `needs_polish` moves to `polish-<kind>`;
+- `polish-<kind>` with `accepted` moves back to `review-<kind>`;
+- `review-<kind>` with `accepted` stops at `stop_gate`.
+
 Recognized statuses:
 
 - `accepted`

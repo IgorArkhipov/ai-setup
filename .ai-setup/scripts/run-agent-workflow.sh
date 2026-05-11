@@ -182,6 +182,59 @@ transition_next_action() {
 	esac
 }
 
+stage_family() {
+	local stage="$1"
+
+	case "$stage" in
+	draft-*)
+		printf '%s\n' "${stage#draft-}"
+		;;
+	review-*)
+		printf '%s\n' "${stage#review-}"
+		;;
+	polish-*)
+		printf '%s\n' "${stage#polish-}"
+		;;
+	*)
+		printf '\n'
+		;;
+	esac
+}
+
+resolve_transition_target() {
+	local stage="$1"
+	local decision_action="$2"
+	local family
+	local candidate
+
+	resolved_next_action="$decision_action"
+	resolved_next_stage=""
+
+	family="$(stage_family "$stage")"
+	case "$decision_action" in
+	advance_or_gate)
+		case "$stage" in
+		draft-* | polish-*)
+			candidate="review-$family"
+			[ -f "$(stage_file "$candidate")" ] || die "next review stage not found: $candidate"
+			resolved_next_stage="$candidate"
+			resolved_next_action="run_stage"
+			;;
+		review-*)
+			resolved_next_action="stop_gate"
+			;;
+		esac
+		;;
+	polish_current)
+		[ -n "$family" ] || die "cannot polish stage without a stage family: $stage"
+		candidate="polish-$family"
+		[ -f "$(stage_file "$candidate")" ] || die "next polish stage not found: $candidate"
+		resolved_next_stage="$candidate"
+		resolved_next_action="run_stage"
+		;;
+	esac
+}
+
 write_stage_prompt() {
 	local stage="$1"
 	local stage_path="$2"
@@ -500,27 +553,35 @@ transition)
 		die "Open findings must be a non-negative integer: $open_findings"
 		;;
 	esac
-	next_action="$(transition_next_action "$status" "$open_findings")"
+	decision_action="$(transition_next_action "$status" "$open_findings")"
+	resolved_next_action="$decision_action"
+	resolved_next_stage=""
 	if [ "$apply" -eq 1 ]; then
 		[ -n "$run_id" ] || die "transition --apply requires --run-id"
 		[ -n "$stage_id" ] || die "transition --apply requires --stage"
 		state_root_abs="$(abs_path "$state_root")"
 		manifest="$state_root_abs/$run_id/run.json"
 		read_manifest "$manifest"
+		resolve_transition_target "$stage_id" "$decision_action"
 		tmp_manifest="$(mktemp)"
 		jq \
 			--arg stage "$stage_id" \
 			--arg status "$status" \
-			--arg next_action "$next_action" \
+			--arg decision_action "$decision_action" \
+			--arg next_action "$resolved_next_action" \
+			--arg next_stage "$resolved_next_stage" \
 			--arg result_file "$result_file" \
 			--arg target_artifact "$target_artifact" \
 			--argjson open_findings "$open_findings" \
 			'
 				.next_action = $next_action
+				| if $next_stage != "" then .current_stage = $next_stage else . end
 				| .last_result = {
 					stage: $stage,
 					status: $status,
+					decision_action: $decision_action,
 					next_action: $next_action,
+					next_stage: $next_stage,
 					open_findings: $open_findings,
 					result_file: $result_file,
 					target_artifact: $target_artifact
@@ -532,12 +593,16 @@ transition)
 	if [ "$json" -eq 1 ]; then
 		jq -n \
 			--arg status "$status" \
-			--arg next_action "$next_action" \
+			--arg next_action "$resolved_next_action" \
+			--arg decision_action "$decision_action" \
+			--arg next_stage "$resolved_next_stage" \
 			--argjson open_findings "$open_findings" \
-			'{status: $status, next_action: $next_action, open_findings: $open_findings}'
+			'{status: $status, decision_action: $decision_action, next_action: $next_action, next_stage: $next_stage, open_findings: $open_findings}'
 	else
 		printf 'status: %s\n' "$status"
-		printf 'next_action: %s\n' "$next_action"
+		printf 'decision_action: %s\n' "$decision_action"
+		printf 'next_action: %s\n' "$resolved_next_action"
+		printf 'next_stage: %s\n' "$resolved_next_stage"
 		printf 'open_findings: %s\n' "$open_findings"
 	fi
 	;;

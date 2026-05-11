@@ -138,24 +138,77 @@ assert_contains "$stage_prompt_text" "original_prompt:"
 assert_contains "$stage_prompt_text" "Add provider auth detection"
 assert_contains "$stage_prompt_text" "Expected outputs:"
 
-transition_apply_json="$("$runner" transition \
+draft_transition_json="$("$runner" transition \
 	--run-id "$run_id" \
-	--stage route-document \
+	--stage draft-feature \
+	--state-root "$sandbox/agent-workflows" \
+	--result-file "$fixtures_dir/accepted.md" \
+	--apply \
+	--json)"
+assert_json_eq "$draft_transition_json" '.status' 'accepted'
+assert_json_eq "$draft_transition_json" '.next_action' 'run_stage'
+jq -e '
+	.current_stage == "review-feature" and
+	.next_action == "run_stage" and
+	.last_result.status == "accepted" and
+	.last_result.decision_action == "advance_or_gate" and
+	.last_result.next_stage == "review-feature" and
+	(.stage_history | length == 1)
+' "$manifest" >/dev/null
+
+review_transition_json="$("$runner" transition \
+	--run-id "$run_id" \
+	--stage review-feature \
 	--state-root "$sandbox/agent-workflows" \
 	--result-file "$fixtures_dir/needs_polish.md" \
 	--apply \
 	--json)"
-assert_json_eq "$transition_apply_json" '.status' 'needs_polish'
-assert_json_eq "$transition_apply_json" '.next_action' 'polish_current'
+assert_json_eq "$review_transition_json" '.status' 'needs_polish'
+assert_json_eq "$review_transition_json" '.next_action' 'run_stage'
 jq -e '
-	.next_action == "polish_current" and
+	.current_stage == "polish-feature" and
+	.next_action == "run_stage" and
 	.last_result.status == "needs_polish" and
 	.last_result.open_findings == 2 and
-	.last_result.stage == "route-document" and
+	.last_result.stage == "review-feature" and
+	.last_result.decision_action == "polish_current" and
+	.last_result.next_stage == "polish-feature" and
 	.last_result.result_file == "'"$fixtures_dir"'/needs_polish.md" and
-	(.stage_history | length == 1) and
-	.stage_history[0].status == "needs_polish" and
-	.stage_history[0].next_action == "polish_current"
+	(.stage_history | length == 2) and
+	.stage_history[0].status == "accepted" and
+	.stage_history[1].next_action == "run_stage"
+' "$manifest" >/dev/null
+
+polish_transition_json="$("$runner" transition \
+	--run-id "$run_id" \
+	--stage polish-feature \
+	--state-root "$sandbox/agent-workflows" \
+	--result-file "$fixtures_dir/accepted.md" \
+	--apply \
+	--json)"
+assert_json_eq "$polish_transition_json" '.next_action' 'run_stage'
+jq -e '
+	.current_stage == "review-feature" and
+	.next_action == "run_stage" and
+	.last_result.decision_action == "advance_or_gate" and
+	.last_result.next_stage == "review-feature" and
+	(.stage_history | length == 3)
+' "$manifest" >/dev/null
+
+review_accept_json="$("$runner" transition \
+	--run-id "$run_id" \
+	--stage review-feature \
+	--state-root "$sandbox/agent-workflows" \
+	--result-file "$fixtures_dir/accepted.md" \
+	--apply \
+	--json)"
+assert_json_eq "$review_accept_json" '.next_action' 'stop_gate'
+jq -e '
+	.current_stage == "review-feature" and
+	.next_action == "stop_gate" and
+	.last_result.decision_action == "advance_or_gate" and
+	.last_result.next_stage == "" and
+	(.stage_history | length == 4)
 ' "$manifest" >/dev/null
 
 bad_id="2026-05-11-1500-bad"
