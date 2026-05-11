@@ -77,16 +77,21 @@ assert_json_eq "$start_json" '.current_stage' 'route-document'
 assert_json_eq "$start_json" '.next_action' 'run_stage'
 
 sandbox="$(mktemp -d)"
-apply_run_id="2026-05-11-1433-provider-auth-apply"
+sandbox_tag="$(basename "$sandbox" | tr '[:upper:]' '[:lower:]')"
+apply_slug="provider-auth-apply-$sandbox_tag"
+none_slug="no-doc-needed-$sandbox_tag"
+step_slug="step-demo-$sandbox_tag"
+pipeline_slug="pipeline-demo-$sandbox_tag"
+apply_run_id="2026-05-11-1433-$apply_slug"
 apply_worktree="$sandbox/worktrees/$apply_run_id"
 apply_branch="task/$apply_run_id"
-none_run_id="2026-05-11-1434-no-doc-needed"
+none_run_id="2026-05-11-1434-$none_slug"
 none_worktree="$sandbox/worktrees/$none_run_id"
 none_branch="task/$none_run_id"
-step_run_id="2026-05-11-1435-step-demo"
+step_run_id="2026-05-11-1435-$step_slug"
 step_worktree="$sandbox/worktrees/$step_run_id"
 step_branch="task/$step_run_id"
-pipeline_run_id="2026-05-11-1436-pipeline-demo"
+pipeline_run_id="2026-05-11-1436-$pipeline_slug"
 pipeline_worktree="$sandbox/worktrees/$pipeline_run_id"
 pipeline_branch="task/$pipeline_run_id"
 
@@ -105,7 +110,7 @@ trap cleanup EXIT
 
 apply_json="$("$runner" start \
 	--workflow route-first \
-	--slug "Provider Auth Apply" \
+	--slug "$apply_slug" \
 	--prompt "Add provider auth detection" \
 	--now "2026-05-11 14:33" \
 	--state-root "$sandbox/agent-workflows" \
@@ -115,7 +120,7 @@ apply_json="$("$runner" start \
 run_id="$(printf '%s' "$apply_json" | jq -r '.run_id')"
 manifest="$sandbox/agent-workflows/$run_id/run.json"
 assert_file "$manifest"
-jq -e '.run_id == "2026-05-11-1433-provider-auth-apply" and .current_stage == "route-document" and .next_action == "run_stage" and (.stage_history | type == "array") and (.stage_history | length == 0)' "$manifest" >/dev/null
+jq -e --arg run_id "$apply_run_id" '.run_id == $run_id and .current_stage == "route-document" and .next_action == "run_stage" and (.stage_history | type == "array") and (.stage_history | length == 0)' "$manifest" >/dev/null
 assert_file "$sandbox/agent-workflows/$run_id/prompt.md"
 [ -d "$apply_worktree" ] || fail "apply did not create worktree: $apply_worktree"
 git -C "$apply_worktree" rev-parse --show-toplevel >/dev/null 2>&1 || fail "apply worktree is not a git worktree"
@@ -177,7 +182,7 @@ assert_json_eq "$upstream_transition_dry_json" '.next_stage' 'draft-feature'
 
 none_json="$("$runner" start \
 	--workflow route-first \
-	--slug "No Doc Needed" \
+	--slug "$none_slug" \
 	--prompt "No governed document is needed" \
 	--now "2026-05-11 14:34" \
 	--state-root "$sandbox/agent-workflows" \
@@ -417,7 +422,7 @@ assert_contains "$stopped_stage_output" "next_action is stop_gate"
 
 step_start_json="$("$runner" start \
 	--workflow route-first \
-	--slug "Step Demo" \
+	--slug "$step_slug" \
 	--prompt "Run one routed feature workflow step" \
 	--now "2026-05-11 14:35" \
 	--state-root "$sandbox/agent-workflows" \
@@ -445,7 +450,7 @@ assert_file "$sandbox/agent-workflows/$step_run_id/stage-results/route-document.
 
 pipeline_json="$("$runner" run \
 	--workflow route-first \
-	--slug "Pipeline Demo" \
+	--slug "$pipeline_slug" \
 	--prompt "Run the routed feature workflow to a review gate" \
 	--now "2026-05-11 14:36" \
 	--state-root "$sandbox/agent-workflows" \
