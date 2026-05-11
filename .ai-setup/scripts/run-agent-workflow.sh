@@ -599,7 +599,7 @@ status | resume)
 			fi
 			exit 0
 		fi
-		if [ "$apply" -eq 1 ]; then
+		if [ "$(jq -r '.next_action' "$manifest")" != "run_stage" ]; then
 			output="$(jq '. + {status: "stopped"}' "$manifest")"
 		else
 			output="$(jq '. + {status: "resume_ready"}' "$manifest")"

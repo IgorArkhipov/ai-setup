@@ -127,7 +127,7 @@ Use `--apply` when `next_action` is `run_stage` to materialize the prompt for th
 
 This writes `tmp/agent-workflows/<run-id>/stage-prompts/<current-stage>.prompt.md` and returns the same stage-ready fields as the explicit `stage` command.
 
-When the manifest has a stop action such as `stop_gate`, `resume --apply --json` returns `status: stopped` with the persisted `stop_reason` instead of preparing another stage.
+When the manifest has a stop action such as `stop_gate`, `resume --dry-run --json` and `resume --apply --json` return `status: stopped` with the persisted `stop_reason` instead of preparing another stage.
 
 ### 5. Prepare A Stage Prompt
 

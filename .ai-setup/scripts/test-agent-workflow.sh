@@ -364,6 +364,7 @@ jq -e '
 	(.stage_history | length == 7)
 ' "$manifest" >/dev/null
 resume_stop_json="$("$runner" resume --run-id "$run_id" --state-root "$sandbox/agent-workflows" --dry-run --json)"
+assert_json_eq "$resume_stop_json" '.status' 'stopped'
 assert_json_eq "$resume_stop_json" '.next_action' 'stop_gate'
 assert_json_eq "$resume_stop_json" '.stop_reason' 'stop_gate'
 resume_stop_apply_json="$("$runner" resume --run-id "$run_id" --state-root "$sandbox/agent-workflows" --apply --json)"
