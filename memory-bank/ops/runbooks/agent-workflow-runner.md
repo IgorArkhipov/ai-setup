@@ -15,7 +15,7 @@ audience: humans_and_agents
 
 ## Summary
 
-Use this runbook when a prompt should enter the repo-local, non-interactive AgentScope development workflow runner.
+Use this runbook when a prompt should enter the repo-local, non-interactive AgentScope development workflow runner, or when an existing run should execute one current stage.
 
 The canonical entrypoint is [`.ai-setup/scripts/run-agent-workflow.sh`](../../../.ai-setup/scripts/run-agent-workflow.sh).
 
@@ -35,7 +35,8 @@ Use [Zellij Task Sessions](zellij-task-sessions.md) instead when you need an int
 
 - The runner rejects `.env*` prompt paths before reading.
 - Run state is non-governed operational state under `tmp/agent-workflows/<run-id>/`.
-- The current slice materializes run state, a timestamped worktree, and stage prompt files. It still does not execute live Claude MCP review automation.
+- `run` and `step` execute stages non-interactively. The default executor is `codex exec`; use `--stage-command` or `AGENT_WORKFLOW_STAGE_COMMAND` when a test harness or alternate agent command should produce the stage result file.
+- Direct Claude Code MCP second-opinion calls are not enforced by the shell runner. Stages must record unavailable second opinion as `needs_human` or `blocked` instead of treating it as passed.
 - `.worktrees/` remains the intended worktree root for live pipeline runs, but workflow checks use disposable test roots.
 
 ## Diagnosis
@@ -93,7 +94,45 @@ This creates:
 - `tmp/agent-workflows/<run-id>/stage-results/`
 - `.worktrees/<run-id>/` on branch `task/<run-id>`
 
-### 3. Inspect Run State
+### 3. Run A Full Pipeline From A Prompt
+
+Use `run --apply` when the workflow should start from a prompt and continue stage by stage until it reaches a stop action such as `stop_gate`, `stop_blocked`, `stop_needs_human`, or `stop_failed`:
+
+```bash
+./.ai-setup/scripts/run-agent-workflow.sh run \
+  --workflow route-first \
+  --slug provider-auth \
+  --prompt "Add provider auth detection" \
+  --apply
+```
+
+The runner creates the run state and worktree, writes each stage prompt under `tmp/agent-workflows/<run-id>/stage-prompts/`, expects each stage result under `tmp/agent-workflows/<run-id>/stage-results/<stage>.md`, applies the transition, and continues while `next_action` is `run_stage`.
+
+Use `--max-steps <n>` to guard against an unexpected loop. Use `--json` to return the final manifest plus the number of executed stages.
+
+For test harnesses or alternate agents, provide a stage command:
+
+```bash
+./.ai-setup/scripts/run-agent-workflow.sh run \
+  --workflow route-first \
+  --slug provider-auth \
+  --prompt "Add provider auth detection" \
+  --stage-command "/path/to/stage-agent" \
+  --apply
+```
+
+The command runs with these environment variables:
+
+- `AGENT_WORKFLOW_RUN_ID`
+- `AGENT_WORKFLOW_STAGE_ID`
+- `AGENT_WORKFLOW_PROMPT_FILE`
+- `AGENT_WORKFLOW_RESULT_FILE`
+- `AGENT_WORKFLOW_WORKTREE`
+- `AGENT_WORKFLOW_STATE_DIR`
+- `AGENT_WORKFLOW_AGENT`
+- `AGENT_WORKFLOW_MODEL`
+
+### 4. Inspect Run State
 
 ```bash
 ./.ai-setup/scripts/run-agent-workflow.sh status \
@@ -107,7 +146,7 @@ Expected output includes:
 - `stop_reason`, when present
 - `last_result_stage`, `last_result_status`, and `last_result_next_action`, when present
 
-### 4. Resume A Run
+### 5. Resume A Run
 
 ```bash
 ./.ai-setup/scripts/run-agent-workflow.sh resume \
@@ -115,7 +154,7 @@ Expected output includes:
   --dry-run
 ```
 
-The current slice validates the manifest and reports the resumable stage. Later slices will execute the recorded next action.
+The runner validates the manifest and reports the resumable stage.
 
 Use `--apply` when `next_action` is `run_stage` to materialize the prompt for the recorded `current_stage`:
 
@@ -129,7 +168,7 @@ This writes `tmp/agent-workflows/<run-id>/stage-prompts/<current-stage>.prompt.m
 
 When the manifest has a stop action such as `stop_gate`, `resume --dry-run --json` and `resume --apply --json` return `status: stopped` with the persisted `stop_reason` instead of preparing another stage.
 
-### 5. Prepare A Stage Prompt
+### 6. Prepare A Stage Prompt
 
 Compose a dry-run stage command without executing live Codex:
 
@@ -146,7 +185,19 @@ Use `--apply` with `stage` to write the composed stage prompt file under `tmp/ag
 
 Applied stage prompt preparation is ordered. The manifest must have `next_action: run_stage`, and the requested `--stage` must match the manifest's current `current_stage`; otherwise the runner stops before writing a prompt. Use `stage --dry-run` when you only want to inspect a stage config or command shape without enforcing the runnable manifest position.
 
-### 6. Check Or Persist A Stage Result Transition
+### 7. Execute One Current Stage
+
+Use `step --apply` when a run already exists and only the current stage should execute before returning control:
+
+```bash
+./.ai-setup/scripts/run-agent-workflow.sh step \
+  --run-id <run-id> \
+  --apply
+```
+
+`step` uses the same executor contract as `run`, writes one stage prompt, requires the stage command to create the declared result file, persists one transition, and stops. This is the non-interactive equivalent of advancing one item in an otherwise interactive workflow.
+
+### 8. Check Or Persist A Stage Result Transition
 
 ```bash
 ./.ai-setup/scripts/run-agent-workflow.sh transition \
@@ -210,7 +261,7 @@ Run-state files are under ignored `tmp/` and can be removed when no longer neede
 rm -rf tmp/agent-workflows/<run-id>
 ```
 
-If a live worktree was created in a later slice, remove it separately:
+If a live worktree was created, remove it separately:
 
 ```bash
 git worktree remove .worktrees/<run-id>

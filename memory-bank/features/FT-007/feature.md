@@ -43,14 +43,14 @@ This feature is specifically about the development process for `tools/agentscope
 - `REQ-04` Use one timestamped worktree per pipeline run, with the user slug preserved as a human label and a filesystem-safe run id such as `YYYY-MM-DD-HHMM-<slug>`.
 - `REQ-05` Store non-governed run state under `tmp/agent-workflows/<run-id>/`, including the original prompt, `run.json`, and parseable stage result files.
 - `REQ-06` Treat every artifact-producing stage as incomplete until required review loops pass. Review findings may trigger current-artifact polish, upstream backtracking, human feedback, or failure.
-- `REQ-07` Execute the first pipeline slice non-interactively with Codex; interactive Zellij stage execution and Claude Code MCP second-opinion automation are follow-up slices.
+- `REQ-07` Execute the pipeline non-interactively with Codex-compatible stage commands; interactive Zellij stage execution and direct Claude Code MCP second-opinion automation are follow-up slices.
 - `REQ-08` Preserve the existing governed source-of-truth rules: `memory-bank` owns intent and lifecycle, `.prompts` supplies reusable prompt chains, `.ai-setup` owns orchestration, and `.env*` files must not be read or used.
 
 ### Non-Scope
 
 - `NS-01` Adding AgentScope product commands or changing the runtime behavior of `tools/agentscope`.
-- `NS-02` Implementing full code execution from `implementation-plan.md` in the first slice.
-- `NS-03` Implementing Claude Code MCP second-opinion execution in the first slice; the first slice may model the checkpoint as pending or unavailable.
+- `NS-02` Implementing full code execution from `implementation-plan.md` in the first non-interactive document workflow.
+- `NS-03` Implementing direct Claude Code MCP second-opinion execution in the shell runner; stages may model the checkpoint as pending or unavailable.
 - `NS-04` Replacing the governed memory-bank lifecycle or making `.prompts` authoritative over active `memory-bank/flows` documents.
 - `NS-05` Creating one worktree per stage.
 
@@ -92,7 +92,7 @@ Add a dedicated `.ai-setup` workflow runner that composes declarative workflows 
 4. The route result selects the next artifact loop: PRD, use case, ADR, feature, or no governed document.
 5. The selected draft stage produces or updates the governed artifact.
 6. The review wrapper runs primary review, records findings, and either accepts the artifact, runs polish and re-review, backtracks to an upstream artifact, or stops for human feedback.
-7. The first slice stops at the hard gate after the selected document is accepted. Later workflows continue to implementation-plan and implementation milestones with the same review invariant.
+7. The runner stops at the hard gate after the selected document is accepted, or continues through later configured workflow stages with the same review invariant.
 
 ### Contracts
 
@@ -117,7 +117,7 @@ Add a dedicated `.ai-setup` workflow runner that composes declarative workflows 
 ### Exit Criteria
 
 - `EC-01` A non-interactive route-first workflow can start from a prompt, create a timestamped run id, create or reuse one worktree, and write run state under `tmp/agent-workflows/<run-id>/`.
-- `EC-02` The first slice can run route, draft, review, polish, and re-review stages for governed documents without touching `tools/agentscope`.
+- `EC-02` The non-interactive runner can run route, draft, review, polish, and re-review stages for governed documents without touching `tools/agentscope`.
 - `EC-03` Review-loop status controls downstream progression: `accepted` advances or stops at a gate, `needs_polish` loops on the current artifact, `needs_upstream` backtracks to the upstream artifact owner, `blocked` and `needs_human` stop, and `failed` reports command/log context.
 - `EC-04` `resume` and `status` can read run state and report or continue from the recorded next action.
 
@@ -141,7 +141,7 @@ Add a dedicated `.ai-setup` workflow runner that composes declarative workflows 
 - `SC-03` A stage definition can be reused by more than one workflow without copying prompt text into the runner script.
 - `SC-04` A user runs `run-agent-workflow.sh status --run-id <run-id>` and sees current stage, last result, next action, and stop reason when present.
 - `SC-05` A review result with findings triggers polish and re-review before the workflow advances.
-- `SC-06` The first slice records unavailable Claude second-opinion as an explicit checkpoint state that maps to `needs_human` or `blocked` when the workflow requires it, rather than treating it as passed.
+- `SC-06` The workflow records unavailable Claude second-opinion as an explicit checkpoint state that maps to `needs_human` or `blocked` when a stage requires it, rather than treating it as passed.
 
 ### Negative / Edge Scenarios
 

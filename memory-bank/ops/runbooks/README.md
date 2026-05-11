@@ -11,7 +11,7 @@ audience: humans_and_agents
 
 # Runbooks Index
 
-- [Agent Workflow Runner](agent-workflow-runner.md) - canonical procedure for starting, checking, and resuming the repo-local non-interactive agentic workflow runner for AgentScope development.
+- [Agent Workflow Runner](agent-workflow-runner.md) - canonical procedure for running, stepping, checking, and resuming the repo-local non-interactive agentic workflow runner for AgentScope development.
 - [Zellij Task Sessions](zellij-task-sessions.md) - canonical procedure for opening a neighboring `zellij` tab or session backed by an isolated git worktree and repo-owned task routing.
 
 Add more runbooks here once a task becomes both repeatable and operationally significant, for example:
