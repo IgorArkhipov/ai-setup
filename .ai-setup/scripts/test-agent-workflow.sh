@@ -231,6 +231,21 @@ assert_contains "$stage_prompt_text" "Target artifact:"
 assert_contains "$stage_prompt_text" "Next stage:"
 assert_contains "$stage_prompt_text" "none"
 
+interactive_stage_json="$("$runner" stage \
+	--run-id "$run_id" \
+	--stage route-document \
+	--state-root "$sandbox/agent-workflows" \
+	--interactive \
+	--apply \
+	--json)"
+interactive_launcher="$sandbox/agent-workflows/$run_id/stage-launchers/route-document.sh"
+assert_json_eq "$interactive_stage_json" '.status' 'interactive_ready'
+assert_json_eq "$interactive_stage_json" '.launcher_file' "$interactive_launcher"
+assert_json_eq "$interactive_stage_json" '.launched' 'false'
+assert_file "$interactive_launcher"
+assert_contains "$(cat "$interactive_launcher")" "codex --cd"
+assert_contains "$(cat "$interactive_launcher")" "$stage_prompt"
+
 route_transition_dry_json="$("$runner" transition \
 	--stage route-document \
 	--result-file "$fixtures_dir/route-feature.md" \

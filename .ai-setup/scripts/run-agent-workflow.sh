@@ -35,6 +35,9 @@ Common options:
   --stage-command CMD   Shell command used by run/step; receives AGENT_WORKFLOW_* env vars
   --claude-review       Run Claude second-opinion review after accepted review stages
   --review-command CMD  Shell command for Claude review; receives AGENT_WORKFLOW_* env vars
+  --interactive         For stage, write a Zellij-ready interactive launcher
+  --launch              With --interactive, start the Zellij tab/session
+  --detached            With --launch, create detached Zellij session
   --max-steps N         Maximum stages executed by run, default: 20
   --apply               Write run state for start
   --dry-run             Validate without live agent execution
@@ -514,6 +517,74 @@ render_stage_json() {
 		}'
 }
 
+write_interactive_launcher() {
+	local launcher_dir
+	local launcher_json_path
+	local manifest_worktree
+	local repo_name
+	local session_name
+	local tab_name
+
+	launcher_dir="$state_dir/stage-launchers"
+	launcher_path="$launcher_dir/$stage_id.sh"
+	launcher_json_path="$launcher_dir/$stage_id.json"
+	manifest_worktree="$(jq -r '.worktree' "$manifest")"
+	repo_name="$(basename "$repo_root")"
+	session_name="$repo_name-$run_id"
+	tab_name="$stage_id"
+	mkdir -p "$launcher_dir"
+
+	cat >"$launcher_path" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$manifest_worktree"
+codex --cd "$manifest_worktree" --model "$model" --no-alt-screen "$prompt_path"
+EOF
+	chmod +x "$launcher_path"
+
+	jq -n \
+		--arg status "interactive_ready" \
+		--arg stage "$stage_id" \
+		--arg prompt_file "$prompt_path" \
+		--arg result_file "$result_path" \
+		--arg launcher_file "$launcher_path" \
+		--arg session "$session_name" \
+		--arg tab "$tab_name" \
+		--argjson launched "$launched" \
+		'{
+			status: $status,
+			stage: $stage,
+			prompt_file: $prompt_file,
+			result_file: $result_file,
+			launcher_file: $launcher_file,
+			session: $session,
+			tab: $tab,
+			launched: $launched
+		}' >"$launcher_json_path"
+}
+
+launch_interactive_stage() {
+	local repo_name
+	local session_name
+	local tab_name
+	local detached_arg
+
+	need_cmd zellij
+	repo_name="$(basename "$repo_root")"
+	session_name="$repo_name-$run_id"
+	tab_name="$stage_id"
+	detached_arg=""
+	if [ "$detached" -eq 1 ]; then
+		detached_arg="--detached"
+	fi
+	if [ -n "${ZELLIJ:-}" ]; then
+		zellij action new-tab --name "$tab_name" -- "$launcher_path"
+	else
+		# shellcheck disable=SC2086
+		zellij --session "$session_name" $detached_arg -- "$launcher_path"
+	fi
+}
+
 prepare_stage() {
 	stage_path="$(stage_file "$stage_id")"
 	[ -f "$stage_path" ] || die "stage config not found: $stage_path"
@@ -759,6 +830,9 @@ implementation_plan=""
 stage_command="${AGENT_WORKFLOW_STAGE_COMMAND:-}"
 review_command="${AGENT_WORKFLOW_REVIEW_COMMAND:-}"
 claude_review=0
+interactive=0
+launch=0
+detached=0
 max_steps=20
 apply=0
 dry_run=0
@@ -838,6 +912,15 @@ while [ $# -gt 0 ]; do
 		;;
 	--claude-review)
 		claude_review=1
+		;;
+	--interactive)
+		interactive=1
+		;;
+	--launch)
+		launch=1
+		;;
+	--detached)
+		detached=1
 		;;
 	--max-steps)
 		shift
@@ -1003,7 +1086,26 @@ stage)
 			die "cannot prepare stage $stage_id; current stage is $manifest_stage"
 	fi
 	prepare_stage
-	if [ "$json" -eq 1 ]; then
+	if [ "$interactive" -eq 1 ]; then
+		[ "$apply" -eq 1 ] || die "stage --interactive requires --apply"
+		launched=false
+		write_interactive_launcher
+		if [ "$launch" -eq 1 ]; then
+			launch_interactive_stage
+			launched=true
+			write_interactive_launcher
+		fi
+		if [ "$json" -eq 1 ]; then
+			cat "$state_dir/stage-launchers/$stage_id.json"
+		else
+			printf 'status: interactive_ready\n'
+			printf 'stage: %s\n' "$stage_id"
+			printf 'prompt_file: %s\n' "$prompt_path"
+			printf 'result_file: %s\n' "$result_path"
+			printf 'launcher_file: %s\n' "$launcher_path"
+			printf 'launched: %s\n' "$launched"
+		fi
+	elif [ "$json" -eq 1 ]; then
 		render_stage_json
 	else
 		printf 'status: stage_ready\n'
