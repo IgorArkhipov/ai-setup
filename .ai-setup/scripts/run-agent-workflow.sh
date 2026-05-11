@@ -210,6 +210,7 @@ resolve_transition_target() {
 
 	resolved_next_action="$decision_action"
 	resolved_next_stage=""
+	resolved_stop_reason=""
 
 	family="$(stage_family "$stage")"
 	case "$decision_action" in
@@ -240,6 +241,10 @@ resolve_transition_target() {
 		resolved_next_action="run_stage"
 		;;
 	esac
+
+	if [ "$resolved_next_action" != "run_stage" ]; then
+		resolved_stop_reason="$resolved_next_action"
+	fi
 }
 
 write_stage_prompt() {
@@ -591,6 +596,7 @@ transition)
 	decision_action="$(transition_next_action "$status" "$open_findings")"
 	resolved_next_action="$decision_action"
 	resolved_next_stage=""
+	resolved_stop_reason=""
 	if [ "$apply" -eq 1 ]; then
 		[ -n "$run_id" ] || die "transition --apply requires --run-id"
 		[ -n "$stage_id" ] || die "transition --apply requires --stage"
@@ -608,6 +614,7 @@ transition)
 			--arg decision_action "$decision_action" \
 			--arg next_action "$resolved_next_action" \
 			--arg next_stage "$resolved_next_stage" \
+			--arg stop_reason "$resolved_stop_reason" \
 			--arg requested_next_stage "$requested_next_stage" \
 			--arg result_file "$result_file" \
 			--arg target_artifact "$target_artifact" \
@@ -615,12 +622,14 @@ transition)
 			'
 				.next_action = $next_action
 				| if $next_stage != "" then .current_stage = $next_stage else . end
+				| if $stop_reason != "" then .stop_reason = $stop_reason else del(.stop_reason) end
 				| .last_result = {
 					stage: $stage,
 					status: $status,
 					decision_action: $decision_action,
 					next_action: $next_action,
 					next_stage: $next_stage,
+					stop_reason: $stop_reason,
 					requested_next_stage: $requested_next_stage,
 					open_findings: $open_findings,
 					result_file: $result_file,
@@ -636,14 +645,16 @@ transition)
 			--arg next_action "$resolved_next_action" \
 			--arg decision_action "$decision_action" \
 			--arg next_stage "$resolved_next_stage" \
+			--arg stop_reason "$resolved_stop_reason" \
 			--arg requested_next_stage "$requested_next_stage" \
 			--argjson open_findings "$open_findings" \
-			'{status: $status, decision_action: $decision_action, next_action: $next_action, next_stage: $next_stage, requested_next_stage: $requested_next_stage, open_findings: $open_findings}'
+			'{status: $status, decision_action: $decision_action, next_action: $next_action, next_stage: $next_stage, stop_reason: $stop_reason, requested_next_stage: $requested_next_stage, open_findings: $open_findings}'
 	else
 		printf 'status: %s\n' "$status"
 		printf 'decision_action: %s\n' "$decision_action"
 		printf 'next_action: %s\n' "$resolved_next_action"
 		printf 'next_stage: %s\n' "$resolved_next_stage"
+		printf 'stop_reason: %s\n' "$resolved_stop_reason"
 		printf 'open_findings: %s\n' "$open_findings"
 	fi
 	;;

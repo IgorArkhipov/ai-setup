@@ -249,10 +249,15 @@ assert_json_eq "$review_accept_json" '.next_action' 'stop_gate'
 jq -e '
 	.current_stage == "review-feature" and
 	.next_action == "stop_gate" and
+	.stop_reason == "stop_gate" and
 	.last_result.decision_action == "advance_or_gate" and
 	.last_result.next_stage == "" and
+	.last_result.stop_reason == "stop_gate" and
 	(.stage_history | length == 5)
 ' "$manifest" >/dev/null
+resume_stop_json="$("$runner" resume --run-id "$run_id" --state-root "$sandbox/agent-workflows" --dry-run --json)"
+assert_json_eq "$resume_stop_json" '.next_action' 'stop_gate'
+assert_json_eq "$resume_stop_json" '.stop_reason' 'stop_gate'
 
 bad_id="2026-05-11-1500-bad"
 mkdir -p "$sandbox/agent-workflows/$bad_id"

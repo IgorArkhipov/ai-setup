@@ -170,6 +170,7 @@ Status: implemented locally and ready for acceptance review, with local ShellChe
 | `run-agent-workflow.sh stage ... --apply --json` | passed | Writes a composed stage prompt file with run metadata, original prompt, prompt-chain contents, and expected output contract |
 | `run-agent-workflow.sh resume ... --apply --json` | passed | When `next_action` is `run_stage`, materializes the manifest's `current_stage` prompt and returns a stage-ready payload |
 | `run-agent-workflow.sh transition ... --apply --json` | passed | Persists review-loop decisions into `run.json`, including `next_action`, `last_result`, and `stage_history` |
+| `run-agent-workflow.sh transition ... --apply --json` stop reasons | passed | Persists `stop_reason` for stop transitions such as `stop_gate` and exposes it through resume/status JSON |
 | `run-agent-workflow.sh transition ... --apply` stage-order guard | passed | Refuses to persist a transition when `--stage` does not match the manifest's `current_stage` |
 | `run-agent-workflow.sh transition ... --apply --json` stage-family routing | passed | Converts draft/review/polish decisions into the next runnable stage or `stop_gate` for accepted review gates |
 | `run-agent-workflow.sh transition ... --stage route-document --apply --json` | passed | Parses accepted route results with `Next stage:` and moves the manifest to the selected draft stage |

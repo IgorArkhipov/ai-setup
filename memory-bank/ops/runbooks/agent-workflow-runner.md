@@ -163,6 +163,7 @@ This updates:
 - `next_action`
 - `last_result`
 - `stage_history`
+- `stop_reason`, when the transition stops instead of preparing another stage
 
 Applied transitions are ordered. The `--stage` value must match the manifest's current `current_stage`; otherwise the runner stops without changing `run.json`. Use dry-run transition checks when you only want to inspect a result fixture or parse a status out of order.
 
