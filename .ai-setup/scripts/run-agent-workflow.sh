@@ -562,6 +562,14 @@ status | resume)
 		printf 'workflow: %s\n' "$(printf '%s' "$output" | jq -r '.workflow')"
 		printf 'current_stage: %s\n' "$(printf '%s' "$output" | jq -r '.current_stage')"
 		printf 'next_action: %s\n' "$(printf '%s' "$output" | jq -r '.next_action')"
+		if [ "$(printf '%s' "$output" | jq -r '.stop_reason // ""')" != "" ]; then
+			printf 'stop_reason: %s\n' "$(printf '%s' "$output" | jq -r '.stop_reason')"
+		fi
+		if [ "$(printf '%s' "$output" | jq -r '.last_result.stage // ""')" != "" ]; then
+			printf 'last_result_stage: %s\n' "$(printf '%s' "$output" | jq -r '.last_result.stage')"
+			printf 'last_result_status: %s\n' "$(printf '%s' "$output" | jq -r '.last_result.status')"
+			printf 'last_result_next_action: %s\n' "$(printf '%s' "$output" | jq -r '.last_result.next_action')"
+		fi
 	fi
 	;;
 stage)

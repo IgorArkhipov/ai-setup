@@ -104,6 +104,8 @@ Expected output includes:
 
 - `current_stage`
 - `next_action`
+- `stop_reason`, when present
+- `last_result_stage`, `last_result_status`, and `last_result_next_action`, when present
 
 ### 4. Resume A Run
 
