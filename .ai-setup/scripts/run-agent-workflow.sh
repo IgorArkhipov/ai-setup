@@ -348,6 +348,7 @@ write_stage_prompt() {
 		printf -- '- %s\n\n' "$result_path"
 		printf 'The stage result must include these parseable fields:\n'
 		printf -- '- Status: accepted | needs_polish | needs_upstream | blocked | needs_human | failed\n'
+		printf -- '- Target artifact: <repo-relative path | absolute path | none>\n'
 		printf -- '- Open findings: <non-negative integer>\n'
 		if [ "$stage" = "route-document" ]; then
 			printf -- '- Next stage: draft-prd | draft-use-case | draft-adr | draft-feature | none\n'

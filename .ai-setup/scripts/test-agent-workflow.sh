@@ -142,6 +142,7 @@ assert_contains "$stage_prompt_text" "run_id: $run_id"
 assert_contains "$stage_prompt_text" "original_prompt:"
 assert_contains "$stage_prompt_text" "Add provider auth detection"
 assert_contains "$stage_prompt_text" "Expected outputs:"
+assert_contains "$stage_prompt_text" "Target artifact:"
 assert_contains "$stage_prompt_text" "Next stage:"
 assert_contains "$stage_prompt_text" "none"
 
@@ -256,6 +257,7 @@ assert_contains "$resume_stage_prompt_text" "previous_result_stage: route-docume
 assert_contains "$resume_stage_prompt_text" "previous_result_status: accepted"
 assert_contains "$resume_stage_prompt_text" "Next stage: draft-feature"
 assert_contains "$resume_stage_prompt_text" "Expected outputs:"
+assert_contains "$resume_stage_prompt_text" "Target artifact:"
 
 draft_transition_json="$("$runner" transition \
 	--run-id "$run_id" \
