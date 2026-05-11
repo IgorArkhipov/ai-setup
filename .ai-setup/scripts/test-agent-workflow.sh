@@ -201,6 +201,14 @@ wrong_stage_output="$("$runner" transition \
 	2>&1 || true)"
 assert_contains "$wrong_stage_output" "current stage is draft-feature"
 
+wrong_stage_prompt_output="$("$runner" stage \
+	--run-id "$run_id" \
+	--stage review-feature \
+	--state-root "$sandbox/agent-workflows" \
+	--apply \
+	2>&1 || true)"
+assert_contains "$wrong_stage_prompt_output" "current stage is draft-feature"
+
 resume_stage_json="$("$runner" resume \
 	--run-id "$run_id" \
 	--state-root "$sandbox/agent-workflows" \
@@ -300,6 +308,13 @@ status_stop_output="$("$runner" status --run-id "$run_id" --state-root "$sandbox
 assert_contains "$status_stop_output" "stop_reason: stop_gate"
 assert_contains "$status_stop_output" "last_result_stage: review-feature"
 assert_contains "$status_stop_output" "last_result_status: accepted"
+stopped_stage_output="$("$runner" stage \
+	--run-id "$run_id" \
+	--stage review-feature \
+	--state-root "$sandbox/agent-workflows" \
+	--apply \
+	2>&1 || true)"
+assert_contains "$stopped_stage_output" "next_action is stop_gate"
 
 bad_id="2026-05-11-1500-bad"
 mkdir -p "$sandbox/agent-workflows/$bad_id"

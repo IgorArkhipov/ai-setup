@@ -144,6 +144,8 @@ The output includes the configured agent, model, prompt file path, result file p
 
 Use `--apply` with `stage` to write the composed stage prompt file under `tmp/agent-workflows/<run-id>/stage-prompts/`. The prompt includes run metadata, the original user prompt, configured prompt-chain contents, and the expected output contract.
 
+Applied stage prompt preparation is ordered. The manifest must have `next_action: run_stage`, and the requested `--stage` must match the manifest's current `current_stage`; otherwise the runner stops before writing a prompt. Use `stage --dry-run` when you only want to inspect a stage config or command shape without enforcing the runnable manifest position.
+
 ### 6. Check Or Persist A Stage Result Transition
 
 ```bash

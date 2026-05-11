@@ -582,6 +582,14 @@ stage)
 	state_root_abs="$(abs_path "$state_root")"
 	manifest="$state_root_abs/$run_id/run.json"
 	read_manifest "$manifest"
+	if [ "$apply" -eq 1 ]; then
+		manifest_next_action="$(jq -r '.next_action' "$manifest")"
+		[ "$manifest_next_action" = "run_stage" ] ||
+			die "cannot prepare stage $stage_id; next_action is $manifest_next_action"
+		manifest_stage="$(jq -r '.current_stage' "$manifest")"
+		[ "$stage_id" = "$manifest_stage" ] ||
+			die "cannot prepare stage $stage_id; current stage is $manifest_stage"
+	fi
 	prepare_stage
 	if [ "$json" -eq 1 ]; then
 		render_stage_json
