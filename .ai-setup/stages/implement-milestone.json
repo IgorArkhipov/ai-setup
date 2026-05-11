@@ -1,0 +1,14 @@
+{
+  "id": "implement-milestone",
+  "agent": "codex",
+  "model": "gpt-5.5",
+  "promptChain": [
+    ".prompts/memory-bank-prime-project-context.md",
+    ".prompts/memory-bank-prime-documentation-context.md"
+  ],
+  "outputs": [
+    "stage-results/implement-milestone.md"
+  ],
+  "reviewPolicy": "required",
+  "targetArtifactRequired": false
+}

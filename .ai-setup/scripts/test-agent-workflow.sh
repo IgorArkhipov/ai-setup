@@ -12,6 +12,7 @@ fixtures_dir=".ai-setup/test/fixtures/stage-results"
 fake_agent="$repo_root/.ai-setup/test/fixtures/fake-stage-agent.sh"
 fake_accepting_agent="$repo_root/.ai-setup/test/fixtures/fake-stage-agent-accepting-review.sh"
 fake_claude_reviewer="$repo_root/.ai-setup/test/fixtures/fake-claude-reviewer.sh"
+fake_implementation_agent="$repo_root/.ai-setup/test/fixtures/fake-implementation-agent.sh"
 
 fail() {
 	printf 'agent-workflow check failed: %s\n' "$1" >&2
@@ -46,10 +47,12 @@ assert_executable "$runner"
 assert_executable "$fake_agent"
 assert_executable "$fake_accepting_agent"
 assert_executable "$fake_claude_reviewer"
+assert_executable "$fake_implementation_agent"
 bash -n "$runner"
 bash -n "$fake_agent"
 bash -n "$fake_accepting_agent"
 bash -n "$fake_claude_reviewer"
+bash -n "$fake_implementation_agent"
 
 jq -e '.id == "route-first" and (.stages | type == "array") and (.stages | length > 0)' "$workflow" >/dev/null
 
@@ -107,6 +110,10 @@ claude_review_slug="claude-review-demo-$sandbox_tag"
 claude_review_run_id="2026-05-11-1438-$claude_review_slug"
 claude_review_worktree="$sandbox/worktrees/$claude_review_run_id"
 claude_review_branch="task/$claude_review_run_id"
+implementation_slug="implementation-demo-$sandbox_tag"
+implementation_run_id="2026-05-11-1439-$implementation_slug"
+implementation_worktree="$sandbox/worktrees/$implementation_run_id"
+implementation_branch="task/$implementation_run_id"
 mismatch_slug="branch-mismatch-$sandbox_tag"
 mismatch_run_id="2026-05-11-1437-$mismatch_slug"
 mismatch_worktree="$sandbox/worktrees/$mismatch_run_id"
@@ -119,12 +126,14 @@ cleanup() {
 	git -C "$repo_root" worktree remove --force "$step_worktree" >/dev/null 2>&1 || true
 	git -C "$repo_root" worktree remove --force "$pipeline_worktree" >/dev/null 2>&1 || true
 	git -C "$repo_root" worktree remove --force "$claude_review_worktree" >/dev/null 2>&1 || true
+	git -C "$repo_root" worktree remove --force "$implementation_worktree" >/dev/null 2>&1 || true
 	git -C "$repo_root" worktree remove --force "$mismatch_worktree" >/dev/null 2>&1 || true
 	git -C "$repo_root" branch -D "$apply_branch" >/dev/null 2>&1 || true
 	git -C "$repo_root" branch -D "$none_branch" >/dev/null 2>&1 || true
 	git -C "$repo_root" branch -D "$step_branch" >/dev/null 2>&1 || true
 	git -C "$repo_root" branch -D "$pipeline_branch" >/dev/null 2>&1 || true
 	git -C "$repo_root" branch -D "$claude_review_branch" >/dev/null 2>&1 || true
+	git -C "$repo_root" branch -D "$implementation_branch" >/dev/null 2>&1 || true
 	git -C "$repo_root" branch -D "$mismatch_branch" >/dev/null 2>&1 || true
 	git -C "$repo_root" branch -D "$mismatch_existing_branch" >/dev/null 2>&1 || true
 	rm -rf "$sandbox"
@@ -607,6 +616,51 @@ jq -e '
 assert_file "$sandbox/agent-workflows/$claude_review_run_id/stage-results/review-feature.md"
 assert_file "$sandbox/agent-workflows/$claude_review_run_id/stage-results/review-feature.claude.md"
 assert_file "$sandbox/agent-workflows/$claude_review_run_id/stage-review-prompts/review-feature.claude.prompt.md"
+
+implementation_plan_fixture="$sandbox/implementation-plan.md"
+cat >"$implementation_plan_fixture" <<'EOF'
+# Implementation Plan Fixture
+
+| Step ID | Actor | Goal | Check command / procedure |
+| --- | --- | --- | --- |
+| `STEP-01` | agent | Add the first fixture milestone | `echo step 1` |
+| `STEP-02` | agent | Add the second fixture milestone | `echo step 2` |
+EOF
+
+implementation_json="$("$runner" run \
+	--workflow implementation-plan \
+	--slug "$implementation_slug" \
+	--implementation-plan "$implementation_plan_fixture" \
+	--now "2026-05-11 14:39" \
+	--state-root "$sandbox/agent-workflows" \
+	--worktree-root "$sandbox/worktrees" \
+	--stage-command "$fake_implementation_agent" \
+	--claude-review \
+	--review-command "$fake_claude_reviewer" \
+	--max-steps 10 \
+	--apply \
+	--json)"
+assert_json_eq "$implementation_json" '.run_id' "$implementation_run_id"
+assert_json_eq "$implementation_json" '.status' 'stopped'
+assert_json_eq "$implementation_json" '.steps' '4'
+assert_json_eq "$implementation_json" '.next_action' 'stop_gate'
+assert_json_eq "$implementation_json" '.stop_reason' 'all_milestones_accepted'
+implementation_manifest="$sandbox/agent-workflows/$implementation_run_id/run.json"
+jq -e '
+	.workflow == "implementation-plan" and
+	.implementation_plan == "'"$implementation_plan_fixture"'" and
+	(.milestones | length == 2) and
+	.current_milestone_index == 1 and
+	.current_milestone.id == "STEP-02" and
+	(.stage_history | length == 4) and
+	.stage_history[0].stage == "implement-milestone" and
+	.stage_history[1].stage == "review-milestone" and
+	.stage_history[1].result_file == "'"$sandbox"'/agent-workflows/'"$implementation_run_id"'/stage-results/review-milestone.claude.md" and
+	.stage_history[2].stage == "implement-milestone" and
+	.stage_history[3].stage == "review-milestone"
+' "$implementation_manifest" >/dev/null
+assert_file "$sandbox/agent-workflows/$implementation_run_id/stage-prompts/implement-milestone.prompt.md"
+assert_file "$sandbox/agent-workflows/$implementation_run_id/stage-results/review-milestone.claude.md"
 
 bad_id="2026-05-11-1500-bad"
 mkdir -p "$sandbox/agent-workflows/$bad_id"

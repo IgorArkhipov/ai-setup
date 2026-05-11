@@ -12,6 +12,13 @@ review_marker="$AGENT_WORKFLOW_STATE_DIR/claude-review-needs-polish.once"
 mkdir -p "$(dirname "$AGENT_WORKFLOW_REVIEW_RESULT_FILE")"
 
 case "$AGENT_WORKFLOW_STAGE_ID" in
+review-milestone)
+	cat >"$AGENT_WORKFLOW_REVIEW_RESULT_FILE" <<EOF
+Status: accepted
+Target artifact: none
+Open findings: 0
+EOF
+	;;
 review-*)
 	if [ ! -f "$review_marker" ]; then
 		touch "$review_marker"

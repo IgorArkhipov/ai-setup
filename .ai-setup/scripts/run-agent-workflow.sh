@@ -23,6 +23,8 @@ Common options:
   --slug SLUG           Human-readable run label
   --prompt TEXT         Inline source prompt
   --prompt-file PATH    Source prompt file; .env* paths are rejected
+  --implementation-plan PATH
+                      Accepted implementation plan for milestone workflow
   --base-ref REF        Base ref for new worktree creation, default: HEAD
   --run-id RUN_ID       Existing workflow run id
   --stage STAGE_ID      Stage id for stage command
@@ -117,6 +119,38 @@ read_manifest() {
 	[ -f "$path" ] || die "run manifest not found: $path"
 	jq -e '.run_id and .workflow and .worktree and .current_stage and .next_action and (.stage_history | type == "array")' "$path" >/dev/null ||
 		die "run manifest is missing current_stage, next_action, workflow, run_id, worktree, or stage_history: $path"
+}
+
+extract_milestones_json() {
+	local plan_path="$1"
+	awk '
+		BEGIN { first = 1; print "[" }
+		/^\|[[:space:]]*`?(STEP|MS|TASK)-[A-Za-z0-9._-]+`?[[:space:]]*\|/ {
+			line = $0
+			gsub(/^\|/, "", line)
+			gsub(/\|$/, "", line)
+			n = split(line, raw, "|")
+			for (i = 1; i <= n; i++) {
+				gsub(/^[[:space:]]+|[[:space:]]+$/, "", raw[i])
+				gsub(/^`|`$/, "", raw[i])
+			}
+			id = raw[1]
+			goal = raw[3]
+			if (goal == "") {
+				goal = raw[2]
+			}
+			gsub(/\\/,"\\\\", id)
+			gsub(/"/,"\\\"", id)
+			gsub(/\\/,"\\\\", goal)
+			gsub(/"/,"\\\"", goal)
+			if (!first) {
+				print ","
+			}
+			printf "  {\"id\":\"%s\",\"goal\":\"%s\"}", id, goal
+			first = 0
+		}
+		END { print "\n]" }
+	' "$plan_path"
 }
 
 ensure_worktree_root_safe() {
@@ -275,6 +309,10 @@ resolve_transition_target() {
 			resolved_next_stage="$requested_next_stage"
 			resolved_next_action="run_stage"
 			;;
+		implement-milestone | polish-milestone)
+			resolved_next_stage="review-milestone"
+			resolved_next_action="run_stage"
+			;;
 		draft-* | polish-*)
 			candidate="review-$family"
 			[ -f "$(stage_file "$candidate")" ] || die "next review stage not found: $candidate"
@@ -295,6 +333,10 @@ resolve_transition_target() {
 		;;
 	backtrack_upstream)
 		case "$stage" in
+		review-milestone | polish-milestone)
+			resolved_next_stage="implement-milestone"
+			resolved_next_action="run_stage"
+			;;
 		review-* | polish-*)
 			[ -n "$family" ] || die "cannot backtrack stage without a stage family: $stage"
 			candidate="draft-$family"
@@ -364,6 +406,16 @@ write_stage_prompt() {
 					printf 'Previous result file is not available at prompt-preparation time.\n'
 				fi
 			fi
+		fi
+
+		if jq -e '.current_milestone?' "$manifest_path" >/dev/null; then
+			printf '\n\n## Current implementation milestone\n\n'
+			jq -r '
+				"- milestone_index: \(.current_milestone_index)",
+				"- milestone_id: \(.current_milestone.id)",
+				"- milestone_goal: \(.current_milestone.goal)",
+				"- implementation_plan: \(.implementation_plan)"
+			' "$manifest_path"
 		fi
 
 		printf '\n\n## Prompt chain\n'
@@ -476,6 +528,16 @@ prepare_stage() {
 	fi
 }
 
+stage_requires_target_artifact() {
+	local stage="$1"
+	local stage_path_value
+
+	[ "$stage" != "route-document" ] || return 1
+	stage_path_value="$(stage_file "$stage")"
+	[ -f "$stage_path_value" ] || die "stage config not found: $stage_path_value"
+	[ "$(jq -r 'if has("targetArtifactRequired") then .targetArtifactRequired else true end' "$stage_path_value")" = "true" ]
+}
+
 render_start_json() {
 	jq -n \
 		--arg run_id "$run_id" \
@@ -487,7 +549,10 @@ render_start_json() {
 		--arg current_stage "$current_stage" \
 		--arg next_action "$next_action" \
 		--arg status "$run_status" \
-		'{
+		--arg implementation_plan "$implementation_plan_abs" \
+		--argjson milestones "$milestones_json" \
+		'
+		{
 			run_id: $run_id,
 			workflow: $workflow,
 			slug: $slug,
@@ -498,15 +563,33 @@ render_start_json() {
 			next_action: $next_action,
 			status: $status,
 			stage_history: []
-		}'
+		}
+		| if $implementation_plan != "" then
+			.implementation_plan = $implementation_plan
+			| .milestones = $milestones
+			| .current_milestone_index = 0
+			| .current_milestone = $milestones[0]
+		else . end
+		'
 }
 
 initialize_run_state() {
 	[ -n "$slug" ] || die "$command requires --slug"
 	[ -z "$prompt" ] || [ -z "$prompt_file" ] || die "use either --prompt or --prompt-file, not both"
-	[ -n "$prompt" ] || [ -n "$prompt_file" ] || die "$command requires --prompt or --prompt-file"
+	[ -n "$prompt" ] || [ -n "$prompt_file" ] || [ -n "$implementation_plan" ] || die "$command requires --prompt, --prompt-file, or --implementation-plan"
 	if [ -n "$prompt_file" ]; then
 		reject_env_path "$prompt_file"
+	fi
+	if [ -n "$implementation_plan" ]; then
+		reject_env_path "$implementation_plan"
+		implementation_plan_abs="$(abs_path "$implementation_plan")"
+		[ -f "$implementation_plan_abs" ] || die "implementation plan not found: $implementation_plan_abs"
+		milestones_json="$(extract_milestones_json "$implementation_plan_abs")"
+		[ "$(printf '%s' "$milestones_json" | jq 'length')" -gt 0 ] ||
+			die "implementation plan has no milestone rows: $implementation_plan_abs"
+	else
+		implementation_plan_abs=""
+		milestones_json="[]"
 	fi
 
 	wf_file="$(workflow_file "$workflow")"
@@ -535,7 +618,11 @@ initialize_run_state() {
 		if [ -n "$prompt_file" ]; then
 			cp "$prompt_file" "$state_dir/prompt.md"
 		else
-			printf '%s\n' "$prompt" >"$state_dir/prompt.md"
+			if [ -n "$prompt" ]; then
+				printf '%s\n' "$prompt" >"$state_dir/prompt.md"
+			else
+				printf 'Execute accepted implementation plan: %s\n' "$implementation_plan_abs" >"$state_dir/prompt.md"
+			fi
 		fi
 		render_start_json >"$state_dir/run.json"
 	fi
@@ -554,6 +641,9 @@ run_stage_agent() {
 			AGENT_WORKFLOW_RESULT_FILE="$result_path" \
 			AGENT_WORKFLOW_WORKTREE="$manifest_worktree" \
 			AGENT_WORKFLOW_STATE_DIR="$state_dir" \
+			AGENT_WORKFLOW_IMPLEMENTATION_PLAN="$(jq -r '.implementation_plan // ""' "$manifest")" \
+			AGENT_WORKFLOW_CURRENT_MILESTONE_ID="$(jq -r '.current_milestone.id // ""' "$manifest")" \
+			AGENT_WORKFLOW_CURRENT_MILESTONE_GOAL="$(jq -r '.current_milestone.goal // ""' "$manifest")" \
 			AGENT_WORKFLOW_AGENT="$agent" \
 			AGENT_WORKFLOW_MODEL="$model" \
 			sh -c "$command_body"
@@ -597,6 +687,9 @@ run_claude_review_agent() {
 			AGENT_WORKFLOW_REVIEW_RESULT_FILE="$review_result_path" \
 			AGENT_WORKFLOW_WORKTREE="$manifest_worktree" \
 			AGENT_WORKFLOW_STATE_DIR="$state_dir" \
+			AGENT_WORKFLOW_IMPLEMENTATION_PLAN="$(jq -r '.implementation_plan // ""' "$manifest")" \
+			AGENT_WORKFLOW_CURRENT_MILESTONE_ID="$(jq -r '.current_milestone.id // ""' "$manifest")" \
+			AGENT_WORKFLOW_CURRENT_MILESTONE_GOAL="$(jq -r '.current_milestone.goal // ""' "$manifest")" \
 			AGENT_WORKFLOW_AGENT="claude" \
 			AGENT_WORKFLOW_MODEL="$model" \
 			sh -c "$command_body"
@@ -662,6 +755,7 @@ base_ref="HEAD"
 now=""
 result_file=""
 stage_id=""
+implementation_plan=""
 stage_command="${AGENT_WORKFLOW_STAGE_COMMAND:-}"
 review_command="${AGENT_WORKFLOW_REVIEW_COMMAND:-}"
 claude_review=0
@@ -691,6 +785,11 @@ while [ $# -gt 0 ]; do
 		shift
 		[ $# -gt 0 ] || die "--prompt-file requires a value"
 		prompt_file="$1"
+		;;
+	--implementation-plan)
+		shift
+		[ $# -gt 0 ] || die "--implementation-plan requires a value"
+		implementation_plan="$1"
 		;;
 	--run-id)
 		shift
@@ -947,13 +1046,31 @@ transition)
 		manifest_stage="$(jq -r '.current_stage' "$manifest")"
 		[ "$stage_id" = "$manifest_stage" ] ||
 			die "cannot apply transition for $stage_id; current stage is $manifest_stage"
-		if [ "$status" = "accepted" ] && [ "$open_findings" -eq 0 ] && [ "$stage_id" != "route-document" ]; then
+		if [ "$status" = "accepted" ] && [ "$open_findings" -eq 0 ] && stage_requires_target_artifact "$stage_id"; then
 			[ -n "$target_artifact" ] || die "accepted result requires Target artifact"
 			reject_env_path "$target_artifact"
 			target_path="$(target_artifact_path "$target_artifact" "$(jq -r '.worktree' "$manifest")")"
 			[ -f "$target_path" ] || die "target artifact not found: $target_path"
 		fi
 		resolve_transition_target "$stage_id" "$decision_action" "$requested_next_stage"
+		milestone_has_next=0
+		milestone_next_index=0
+		if [ "$(jq -r '.workflow' "$manifest")" = "implementation-plan" ] &&
+			[ "$stage_id" = "review-milestone" ] &&
+			[ "$status" = "accepted" ] &&
+			[ "$open_findings" -eq 0 ]; then
+			milestone_next_index="$(($(jq -r '.current_milestone_index' "$manifest") + 1))"
+			if [ "$milestone_next_index" -lt "$(jq -r '.milestones | length' "$manifest")" ]; then
+				milestone_has_next=1
+				resolved_next_action="run_stage"
+				resolved_next_stage="implement-milestone"
+				resolved_stop_reason=""
+			else
+				resolved_next_action="stop_gate"
+				resolved_next_stage=""
+				resolved_stop_reason="all_milestones_accepted"
+			fi
+		fi
 		tmp_manifest="$(mktemp)"
 		jq \
 			--arg stage "$stage_id" \
@@ -966,10 +1083,16 @@ transition)
 			--arg result_file "$result_file" \
 			--arg target_artifact "$target_artifact" \
 			--argjson open_findings "$open_findings" \
+			--argjson milestone_has_next "$milestone_has_next" \
+			--argjson milestone_next_index "$milestone_next_index" \
 			'
 				.next_action = $next_action
 				| if $next_stage != "" then .current_stage = $next_stage else . end
 				| if $stop_reason != "" then .stop_reason = $stop_reason else del(.stop_reason) end
+				| if $milestone_has_next == 1 then
+					.current_milestone_index = $milestone_next_index
+					| .current_milestone = .milestones[$milestone_next_index]
+				else . end
 				| .last_result = {
 					stage: $stage,
 					status: $status,

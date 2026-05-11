@@ -1,0 +1,13 @@
+{
+  "id": "implementation-plan",
+  "description": "Execute an accepted implementation plan milestone by milestone, with mandatory review after each milestone.",
+  "initialStage": "implement-milestone",
+  "hardGates": [
+    "all-milestones-accepted"
+  ],
+  "stages": [
+    "implement-milestone",
+    "review-milestone",
+    "polish-milestone"
+  ]
+}
