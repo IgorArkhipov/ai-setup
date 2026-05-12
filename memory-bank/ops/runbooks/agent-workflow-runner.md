@@ -29,6 +29,8 @@ Use this flow when:
 - an agentic workflow run needs a timestamped run id and resumable state;
 - a document-producing stage must be followed by review, polish, and re-review before downstream work continues.
 
+Use [Agent Execution Bridge](agent-execution-bridge.md) when the current stage should be executed by a Codex subagent, Claude MCP, a remote worker, or another adapter through an agent-neutral request file.
+
 Use [Zellij Task Sessions](zellij-task-sessions.md) instead when you need an interactive neighboring shell or Zellij session.
 
 ## Safety Notes
@@ -36,6 +38,7 @@ Use [Zellij Task Sessions](zellij-task-sessions.md) instead when you need an int
 - The runner rejects `.env*` prompt paths before reading.
 - Run state is non-governed operational state under `tmp/agent-workflows/<run-id>/`.
 - `run` and `step` execute stages non-interactively. The default executor is `codex exec`; use `--stage-command` or `AGENT_WORKFLOW_STAGE_COMMAND` when a test harness or alternate agent command should produce the stage result file.
+- Applied stage preparation writes an agent-neutral request file under `tmp/agent-workflows/<run-id>/stage-requests/`. The request file is the stable adapter boundary; shell environment variables are compatibility helpers.
 - `--claude-review` runs a Claude second-opinion review after accepted review stages. If Claude is unavailable or cannot complete the review, the stage result must stop as `needs_human`, `blocked`, or `failed`; do not treat missing review as accepted.
 - `.worktrees/` remains the intended worktree root for live pipeline runs, but workflow checks use disposable test roots.
 
@@ -125,6 +128,7 @@ The command runs with these environment variables:
 
 - `AGENT_WORKFLOW_RUN_ID`
 - `AGENT_WORKFLOW_STAGE_ID`
+- `AGENT_WORKFLOW_REQUEST_FILE`
 - `AGENT_WORKFLOW_PROMPT_FILE`
 - `AGENT_WORKFLOW_RESULT_FILE`
 - `AGENT_WORKFLOW_WORKTREE`
@@ -145,6 +149,7 @@ Add `--claude-review` when accepted review stages should receive an independent 
 
 For test harnesses or alternate Claude wrappers, set `--review-command` or `AGENT_WORKFLOW_REVIEW_COMMAND`. Review commands receive the stage environment plus:
 
+- `AGENT_WORKFLOW_REVIEW_REQUEST_FILE`
 - `AGENT_WORKFLOW_REVIEW_PROMPT_FILE`
 - `AGENT_WORKFLOW_REVIEW_RESULT_FILE`
 - `AGENT_WORKFLOW_IMPLEMENTATION_PLAN`
@@ -230,6 +235,8 @@ Compose a dry-run stage command without executing live Codex:
 The output includes the configured agent, model, prompt file path, result file path, and command text.
 
 Use `--apply` with `stage` to write the composed stage prompt file under `tmp/agent-workflows/<run-id>/stage-prompts/`. The prompt includes run metadata, the original user prompt, previous-stage result metadata and content when present, configured prompt-chain contents, and the expected output contract. Stage results must include `Status`, `Target artifact`, and `Open findings`; route results also include `Next stage`.
+
+Applied stage preparation also writes `tmp/agent-workflows/<run-id>/stage-requests/<stage>.request.json`. This request contains the prompt file, result file, worktree, state directory, agent/model hints, implementation plan path, and current milestone metadata. Use [Agent Execution Bridge](agent-execution-bridge.md) when an external adapter or current-session subagent should consume that request instead of launching a standalone shell session.
 
 Applied stage prompt preparation is ordered. The manifest must have `next_action: run_stage`, and the requested `--stage` must match the manifest's current `current_stage`; otherwise the runner stops before writing a prompt. Use `stage --dry-run` when you only want to inspect a stage config or command shape without enforcing the runnable manifest position.
 

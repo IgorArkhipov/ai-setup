@@ -543,6 +543,7 @@ render_stage_json() {
 		--arg model "$model" \
 		--arg prompt_file "$prompt_path" \
 		--arg result_file "$result_path" \
+		--arg request_file "$request_path" \
 		--arg command "$command_text" \
 		--argjson prompt_chain "$prompt_chain_json" \
 		'{
@@ -552,9 +553,60 @@ render_stage_json() {
 			model: $model,
 			prompt_file: $prompt_file,
 			result_file: $result_file,
+			request_file: $request_file,
 			command: $command,
 			prompt_chain: $prompt_chain
 		}'
+}
+
+write_stage_request() {
+	local request_kind="$1"
+	local request_file_path="$2"
+	local prompt_file_path="$3"
+	local result_file_path="$4"
+	local manifest_worktree
+	local implementation_plan
+	local milestone_id
+	local milestone_goal
+
+	manifest_worktree="$(jq -r '.worktree' "$manifest")"
+	implementation_plan="$(jq -r '.implementation_plan // ""' "$manifest")"
+	milestone_id="$(jq -r '.current_milestone.id // ""' "$manifest")"
+	milestone_goal="$(jq -r '.current_milestone.goal // ""' "$manifest")"
+	mkdir -p "$(dirname "$request_file_path")"
+	jq -n \
+		--arg schema "agent-workflow-stage-request/v1" \
+		--arg kind "$request_kind" \
+		--arg run_id "$run_id" \
+		--arg workflow "$(jq -r '.workflow' "$manifest")" \
+		--arg stage_id "$stage_id" \
+		--arg prompt_file "$prompt_file_path" \
+		--arg result_file "$result_file_path" \
+		--arg worktree "$manifest_worktree" \
+		--arg state_dir "$state_dir" \
+		--arg agent "$agent" \
+		--arg model "$model" \
+		--arg implementation_plan "$implementation_plan" \
+		--arg milestone_id "$milestone_id" \
+		--arg milestone_goal "$milestone_goal" \
+		'{
+			schema: $schema,
+			kind: $kind,
+			run_id: $run_id,
+			workflow: $workflow,
+			stage_id: $stage_id,
+			prompt_file: $prompt_file,
+			result_file: $result_file,
+			worktree: $worktree,
+			state_dir: $state_dir,
+			agent_hint: $agent,
+			model_hint: $model,
+			implementation_plan: $implementation_plan,
+			current_milestone: {
+				id: $milestone_id,
+				goal: $milestone_goal
+			}
+		}' >"$request_file_path"
 }
 
 write_interactive_launcher() {
@@ -633,9 +685,11 @@ prepare_stage() {
 	state_dir="$state_root_abs/$run_id"
 	prompt_path="$state_dir/stage-prompts/$stage_id.prompt.md"
 	result_path="$state_dir/stage-results/$stage_id.md"
+	request_path="$state_dir/stage-requests/$stage_id.request.json"
 	command_text="codex exec --cd $(jq -r '.worktree' "$manifest") --model $model \"\$(cat $prompt_path)\""
 	if [ "$apply" -eq 1 ]; then
 		write_stage_prompt "$stage_id" "$stage_path" "$manifest" "$prompt_path" "$result_path"
+		write_stage_request "stage" "$request_path" "$prompt_path" "$result_path"
 	fi
 }
 
@@ -748,6 +802,7 @@ run_stage_agent() {
 	if [ -n "$command_body" ]; then
 		AGENT_WORKFLOW_RUN_ID="$run_id" \
 			AGENT_WORKFLOW_STAGE_ID="$stage_id" \
+			AGENT_WORKFLOW_REQUEST_FILE="$request_path" \
 			AGENT_WORKFLOW_PROMPT_FILE="$prompt_path" \
 			AGENT_WORKFLOW_RESULT_FILE="$result_path" \
 			AGENT_WORKFLOW_WORKTREE="$manifest_worktree" \
@@ -781,18 +836,26 @@ should_run_claude_review() {
 run_claude_review_agent() {
 	local manifest_worktree
 	local command_body
+	local primary_agent
 
 	manifest_worktree="$(jq -r '.worktree' "$manifest")"
 	review_prompt_path="$state_dir/stage-review-prompts/$stage_id.claude.prompt.md"
 	review_result_path="$state_dir/stage-results/$stage_id.claude.md"
+	review_request_path="$state_dir/stage-review-requests/$stage_id.claude.request.json"
 	write_claude_review_prompt "$review_prompt_path" "$review_result_path" "$result_path"
+	primary_agent="$agent"
+	agent="claude"
+	write_stage_request "review" "$review_request_path" "$review_prompt_path" "$review_result_path"
+	agent="$primary_agent"
 
 	command_body="${review_command:-}"
 	if [ -n "$command_body" ]; then
 		AGENT_WORKFLOW_RUN_ID="$run_id" \
 			AGENT_WORKFLOW_STAGE_ID="$stage_id" \
+			AGENT_WORKFLOW_REQUEST_FILE="$review_request_path" \
 			AGENT_WORKFLOW_PROMPT_FILE="$prompt_path" \
 			AGENT_WORKFLOW_RESULT_FILE="$result_path" \
+			AGENT_WORKFLOW_REVIEW_REQUEST_FILE="$review_request_path" \
 			AGENT_WORKFLOW_REVIEW_PROMPT_FILE="$review_prompt_path" \
 			AGENT_WORKFLOW_REVIEW_RESULT_FILE="$review_result_path" \
 			AGENT_WORKFLOW_WORKTREE="$manifest_worktree" \

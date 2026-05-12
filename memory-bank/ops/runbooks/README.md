@@ -12,6 +12,7 @@ audience: humans_and_agents
 # Runbooks Index
 
 - [Agent Workflow Runner](agent-workflow-runner.md) - canonical procedure for running, stepping, checking, resuming, Claude-reviewing, and milestone-executing repo-local non-interactive agentic workflows for AgentScope development.
+- [Agent Execution Bridge](agent-execution-bridge.md) - agent-neutral request/result contract for executing workflow stages through Codex subagents, Claude MCP, shell commands, remote workers, or human adapters.
 - [Zellij Task Sessions](zellij-task-sessions.md) - canonical procedure for opening a neighboring `zellij` tab or session backed by an isolated git worktree and repo-owned task routing.
 
 Add more runbooks here once a task becomes both repeatable and operationally significant, for example:

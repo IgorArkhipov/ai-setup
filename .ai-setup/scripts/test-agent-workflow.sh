@@ -6,6 +6,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
 
 runner=".ai-setup/scripts/run-agent-workflow.sh"
+bridge=".ai-setup/scripts/agent-bridge.sh"
 workflow=".ai-setup/workflows/route-first.json"
 stages_dir=".ai-setup/stages"
 fixtures_dir=".ai-setup/test/fixtures/stage-results"
@@ -44,11 +45,13 @@ assert_json_eq() {
 
 assert_file "$workflow"
 assert_executable "$runner"
+assert_executable "$bridge"
 assert_executable "$fake_agent"
 assert_executable "$fake_accepting_agent"
 assert_executable "$fake_claude_reviewer"
 assert_executable "$fake_implementation_agent"
 bash -n "$runner"
+bash -n "$bridge"
 bash -n "$fake_agent"
 bash -n "$fake_accepting_agent"
 bash -n "$fake_claude_reviewer"
@@ -219,8 +222,11 @@ stage_apply_json="$("$runner" stage \
 	--apply \
 	--json)"
 stage_prompt="$sandbox/agent-workflows/$run_id/stage-prompts/route-document.prompt.md"
+stage_request="$sandbox/agent-workflows/$run_id/stage-requests/route-document.request.json"
 assert_json_eq "$stage_apply_json" '.prompt_file' "$stage_prompt"
+assert_json_eq "$stage_apply_json" '.request_file' "$stage_request"
 assert_file "$stage_prompt"
+assert_file "$stage_request"
 stage_prompt_text="$(cat "$stage_prompt")"
 assert_contains "$stage_prompt_text" "# Agent Workflow Stage: route-document"
 assert_contains "$stage_prompt_text" "run_id: $run_id"
@@ -230,6 +236,26 @@ assert_contains "$stage_prompt_text" "Expected outputs:"
 assert_contains "$stage_prompt_text" "Target artifact:"
 assert_contains "$stage_prompt_text" "Next stage:"
 assert_contains "$stage_prompt_text" "none"
+jq -e '
+	.schema == "agent-workflow-stage-request/v1" and
+	.kind == "stage" and
+	.run_id == "'"$run_id"'" and
+	.workflow == "route-first" and
+	.stage_id == "route-document" and
+	.prompt_file == "'"$stage_prompt"'" and
+	.result_file == "'"$sandbox"'/agent-workflows/'"$run_id"'/stage-results/route-document.md" and
+	.worktree == "'"$apply_worktree"'" and
+	.state_dir == "'"$sandbox"'/agent-workflows/'"$run_id"'" and
+	.agent_hint == "codex" and
+	.model_hint == "gpt-5.5"
+' "$stage_request" >/dev/null
+bridge_validate_json="$("$bridge" validate --request "$stage_request" --json)"
+assert_json_eq "$bridge_validate_json" '.status' 'valid'
+assert_json_eq "$bridge_validate_json" '.kind' 'stage'
+bridge_run_json="$("$bridge" run-command --request "$stage_request" --command "$fake_agent" --json)"
+assert_json_eq "$bridge_run_json" '.status' 'completed'
+assert_json_eq "$bridge_run_json" '.result_file' "$sandbox/agent-workflows/$run_id/stage-results/route-document.md"
+assert_file "$sandbox/agent-workflows/$run_id/stage-results/route-document.md"
 
 interactive_stage_json="$("$runner" stage \
 	--run-id "$run_id" \
@@ -631,6 +657,15 @@ jq -e '
 assert_file "$sandbox/agent-workflows/$claude_review_run_id/stage-results/review-feature.md"
 assert_file "$sandbox/agent-workflows/$claude_review_run_id/stage-results/review-feature.claude.md"
 assert_file "$sandbox/agent-workflows/$claude_review_run_id/stage-review-prompts/review-feature.claude.prompt.md"
+assert_file "$sandbox/agent-workflows/$claude_review_run_id/stage-review-requests/review-feature.claude.request.json"
+jq -e '
+	.schema == "agent-workflow-stage-request/v1" and
+	.kind == "review" and
+	.stage_id == "review-feature" and
+	.agent_hint == "claude" and
+	.prompt_file == "'"$sandbox"'/agent-workflows/'"$claude_review_run_id"'/stage-review-prompts/review-feature.claude.prompt.md" and
+	.result_file == "'"$sandbox"'/agent-workflows/'"$claude_review_run_id"'/stage-results/review-feature.claude.md"
+' "$sandbox/agent-workflows/$claude_review_run_id/stage-review-requests/review-feature.claude.request.json" >/dev/null
 
 implementation_plan_fixture="$sandbox/implementation-plan.md"
 cat >"$implementation_plan_fixture" <<'EOF'
