@@ -20,6 +20,7 @@ Options:
   --prompt-file PATH   Read the task prompt from a file
   --base-ref REF       Base ref for new worktree creation (default: HEAD)
   --detached           Start a new Zellij session without attaching to it
+  --handoff-only       Prepare the routed shell/session without launching the agent
   --dry-run            Print the resolved plan without creating anything
   -h, --help           Show this help
 EOF
@@ -137,6 +138,21 @@ run_init_step() {
 	(cd "$worktree_path" && mise trust && direnv allow)
 }
 
+zellij_session_exists() {
+	local session_name="$1"
+	local sessions
+
+	sessions="$("$zellij_bin" list-sessions 2>/dev/null || true)"
+	case "$sessions" in
+	*"$session_name"*)
+		return 0
+		;;
+	*)
+		return 1
+		;;
+	esac
+}
+
 type=""
 slug=""
 branch=""
@@ -144,6 +160,7 @@ prompt=""
 prompt_file=""
 base_ref="HEAD"
 detached=0
+handoff_only=0
 dry_run=0
 
 while [ $# -gt 0 ]; do
@@ -180,6 +197,9 @@ while [ $# -gt 0 ]; do
 		;;
 	--detached)
 		detached=1
+		;;
+	--handoff-only)
+		handoff_only=1
 		;;
 	--dry-run)
 		dry_run=1
@@ -273,6 +293,7 @@ if [ "$dry_run" -eq 1 ]; then
 		--arg tab "$tab_name" \
 		--arg baseRef "$base_ref" \
 		--argjson detached "$detached" \
+		--argjson handoffOnly "$handoff_only" \
 		'{
 			type: $type,
 			workflow: $workflow,
@@ -284,15 +305,21 @@ if [ "$dry_run" -eq 1 ]; then
 			session: $session,
 			tab: $tab,
 			baseRef: $baseRef,
-			detached: $detached
+			detached: $detached,
+			handoffOnly: $handoffOnly
 		}'
 	exit 0
 fi
 
-codex_bin="$(resolve_tool codex)"
 zellij_bin="$(resolve_tool zellij)"
 direnv_bin="$(resolve_tool direnv)"
-PATH="$(dirname "$codex_bin"):$(dirname "$zellij_bin"):$(dirname "$direnv_bin"):${PATH}"
+if [ "$handoff_only" -eq 1 ]; then
+	codex_bin="codex"
+	PATH="$(dirname "$zellij_bin"):$(dirname "$direnv_bin"):${PATH}"
+else
+	codex_bin="$(resolve_tool codex)"
+	PATH="$(dirname "$codex_bin"):$(dirname "$zellij_bin"):$(dirname "$direnv_bin"):${PATH}"
+fi
 export PATH
 export ZELLIJ_SOCKET_DIR="${ZELLIJ_SOCKET_DIR:-/tmp/zellij-${UID:-$(id -u)}}"
 mkdir -p "$ZELLIJ_SOCKET_DIR"
@@ -316,6 +343,7 @@ jq -n \
 	--arg tab "$tab_name" \
 	--arg promptFile "$prompt_path" \
 	--arg launcher "$launcher_path" \
+	--argjson handoffOnly "$handoff_only" \
 	'{
 		type: $type,
 		workflow: $workflow,
@@ -325,9 +353,10 @@ jq -n \
 		branch: $branch,
 		worktree: $worktree,
 		session: $session,
-	tab: $tab,
-	promptFile: $promptFile,
-	launcher: $launcher
+		tab: $tab,
+		promptFile: $promptFile,
+		launcher: $launcher,
+		handoffOnly: $handoffOnly
 	}' >"$manifest_path"
 
 cat >"$launcher_path" <<EOF
@@ -350,7 +379,11 @@ printf '  model:    %s\n' $(printf '%q' "$model")
 printf '  prompt:   %s\n\n' $(printf '%q' "$prompt_path")
 
 prompt="\$(cat $(printf '%q' "$prompt_path"))"
-if $(printf '%q' "$codex_bin") --cd $(printf '%q' "$worktree_path") --model $(printf '%q' "$model") --no-alt-screen "\$prompt"; then
+if [ $(printf '%q' "$handoff_only") -eq 1 ]; then
+	printf 'Handoff-only mode: agent launch skipped by request.\n'
+	printf 'To launch manually from this shell when safe, run:\n'
+	printf '  codex --cd %q --model %q --no-alt-screen "\$(cat %q)"\n' $(printf '%q' "$worktree_path") $(printf '%q' "$model") $(printf '%q' "$prompt_path")
+elif $(printf '%q' "$codex_bin") --cd $(printf '%q' "$worktree_path") --model $(printf '%q' "$model") --no-alt-screen "\$prompt"; then
 	:
 else
 	status=\$?
@@ -370,12 +403,17 @@ if [ -n "${ZELLIJ:-}" ]; then
 	printf 'Opened Zellij tab %s in the current session\n' "$tab_name"
 else
 	if [ "$detached" -eq 1 ]; then
-		"$zellij_bin" options \
+		if "$zellij_bin" options \
 			--session-name "$session_name" \
 			--attach-to-session false \
 			--default-cwd "$worktree_path" \
-			--default-shell "$launcher_path"
-		printf 'Started detached Zellij session %s\n' "$session_name"
+			--default-shell "$launcher_path"; then
+			printf 'Started detached Zellij session %s\n' "$session_name"
+		elif zellij_session_exists "$session_name"; then
+			printf 'Started or confirmed detached Zellij session %s; zellij client returned non-zero after session creation/check\n' "$session_name"
+		else
+			die "failed to start detached Zellij session: $session_name"
+		fi
 	else
 		printf 'Starting Zellij session %s\n' "$session_name"
 		cd "$worktree_path"
