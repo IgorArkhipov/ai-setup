@@ -131,6 +131,20 @@ branch refs/heads/task/hw-3-orchestration-demo-20260511-2312
 task/hw-3-orchestration-demo-20260511-2312
 ```
 
+The branch was also pushed as a committed handoff artifact:
+
+```text
+fba2640 Add HW3 worktree handoff artifact
+```
+
+It contains:
+
+```text
+homeworks/hw-3/worktree-handoff.md
+```
+
+This makes the created worktree observable as a normal reviewable Git branch, not only as a local directory.
+
 ### Zellij Session
 
 With `ZELLIJ_SOCKET_DIR=/tmp/zellij-502`, `zellij list-sessions` showed:
