@@ -31,6 +31,8 @@ The referenced Week 4 requirement says the minimum homework package should:
 | Runner prompt or script | `runner-prompt.md` contains a bounded runner prompt and a machine-checkable response footer. |
 | Resumable state-pack | `state-pack/active-context.md` and `state-pack/session-handoff.md` describe current focus, verified facts, open risks, stop reason, and exact resume action. |
 | Intentional stop/resume trace | `traces/stop-resume-trace.md` records Run 1 stopping and Run 2 resuming from state artifacts. |
+| Evidence that the runner used saved state | `evidence/runner-resume-invocation-2026-05-14.md` records the runner inputs, extracted active context, extracted handoff, runner decision, changed artifacts, and machine-checkable footer. |
+| Clean subagent resume proof | `subagent-simulation/runner-prompt.md` was given to an isolated subagent without inherited conversation context, and `evidence/subagent-runner-resume-2026-05-14.md` records the saved facts it extracted from active context and handoff before writing its only owned artifact. |
 
 ## Files
 
@@ -40,6 +42,12 @@ homeworks/hw-4/runner-prompt.md
 homeworks/hw-4/state-pack/active-context.md
 homeworks/hw-4/state-pack/session-handoff.md
 homeworks/hw-4/traces/stop-resume-trace.md
+homeworks/hw-4/evidence/runner-resume-invocation-2026-05-14.md
+homeworks/hw-4/subagent-simulation/runner-prompt.md
+homeworks/hw-4/subagent-simulation/state-pack/active-context.md
+homeworks/hw-4/subagent-simulation/state-pack/session-handoff.md
+homeworks/hw-4/subagent-simulation/traces/runner-trace.md
+homeworks/hw-4/evidence/subagent-runner-resume-2026-05-14.md
 homeworks/hw-4/report.md
 ```
 
@@ -86,6 +94,54 @@ The resumed run then completed the runner prompt, active context, trace, and rep
 ```text
 homeworks/hw-4/traces/stop-resume-trace.md
 ```
+
+## Runner Resume Evidence
+
+The first package version had a weak spot: it described a stop/resume trace, but did not separately prove that the runner consumed the saved active context and handoff.
+
+That gap is now covered by:
+
+```text
+homeworks/hw-4/evidence/runner-resume-invocation-2026-05-14.md
+```
+
+That evidence file records:
+
+- the runner prompt and process spec used;
+- the state-pack files read before acting;
+- the context extracted from `active-context.md`;
+- the context extracted from `session-handoff.md`;
+- the bounded runner decision;
+- the artifacts changed from that saved context;
+- a machine-checkable footer with process status, step worked, checks performed, next action, and stop reason.
+
+This is the direct evidence that the agent resumed from available process-state artifacts instead of relying only on chat memory.
+
+## Isolated Subagent Simulation
+
+The strongest proof is the subagent simulation package:
+
+```text
+homeworks/hw-4/subagent-simulation/
+```
+
+The parent prepared a fresh active context and handoff, then launched a worker subagent with `fork_context: false`. The subagent received only one operational instruction: read and follow `homeworks/hw-4/subagent-simulation/runner-prompt.md`.
+
+The simulation runner prompt gave the subagent a strict write boundary:
+
+```text
+homeworks/hw-4/evidence/subagent-runner-resume-2026-05-14.md
+```
+
+The subagent evidence file shows that it read:
+
+- the runner prompt;
+- the process spec;
+- the subagent active context;
+- the subagent session handoff;
+- the subagent trace.
+
+It then extracted the current goal, current step, stop reason, next action, write boundary, and no-escalation status from those saved state files before creating the evidence file. This demonstrates the actual homework goal: a fresh agent can resume a previous process state from disk without relying on the parent conversation.
 
 ## Verification
 
