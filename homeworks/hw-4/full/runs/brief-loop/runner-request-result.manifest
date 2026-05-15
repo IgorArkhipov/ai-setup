@@ -1,0 +1,8 @@
+process_spec=homeworks/hw-4/full/process-specs/brief-improve-loop.md
+prompt=homeworks/hw-4/full/prompts/brief-improve.md
+target=homeworks/hw-4/full/work-item/brief.initial.md
+source=homeworks/hw-4/full/work-item/issue.md
+state_dir=homeworks/hw-4/full/runs/brief-loop
+result=homeworks/hw-4/full/runs/brief-loop/result.md
+request=homeworks/hw-4/full/runs/brief-loop/runner-request-result.md
+mode=prepare
