@@ -19,13 +19,17 @@ audience: humans_and_agents
 
 # Agent Process Operations
 
-This document adapts reusable operating patterns from the Thinknetica AI SWE process materials into this repository's memory-bank workflow. It is a process layer, not a product or feature layer: it explains how agents should run, pause, resume, and escalate governed work.
+This document adapts reusable operating patterns into this repository's memory-bank workflow. It is a process layer, not a product or feature layer: it explains how agents should run, pause, resume, and escalate governed work.
 
 External source materials:
 
 - `process-state-for-long-runs`: `https://ai-swe-1.thinknetica.com/materials/verification/process-state-for-long-runs/`
 - `process-specs-for-agents`: `https://ai-swe-1.thinknetica.com/materials/specification/process-specs-for-agents/`
 - `human-in-the-loop`: `https://ai-swe-1.thinknetica.com/materials/orchestration/human-in-the-loop/`
+
+Local template:
+
+- `templates/protocol/lifecycle-protocol.md`
 
 ## Boundary
 
@@ -59,6 +63,27 @@ Diagram selection:
 | `sequenceDiagram` | Ownership transfer matters. | Agent, human, reviewer, or stage handoffs. |
 
 For memory-bank feature work, default to a `flowchart`. Add `stateDiagram-v2` for long runs with handoff/resume. Add `sequenceDiagram` for HITL or escalation paths where decision ownership matters.
+
+## Lifecycle Protocols
+
+Use a lifecycle `protocol.md` when a standardized workflow must govern a long, risky, multi-agent, or checkpoint-heavy change before execution begins. A plan controls the work sequence; a protocol controls allowed behavior, permissions, gates, external process state, evidence, rollback, and stop conditions.
+
+Create `protocol.md` before downstream intent/design work and before any risky action when the task needs this level of control. If downstream artifacts or code changes already exist, record them honestly as baseline facts rather than pretending the protocol came first. In this repository, adapt external phase names such as `Brief` and `Spec Pack` to the current governed document model. Do not create new legacy `brief.md`, `spec.md`, or `plan.md` feature-package artifacts.
+
+A lifecycle protocol must include:
+
+1. Metadata with `Status`, `Current phase`, and `Current gate`.
+2. Goal and explicit in-scope and out-of-scope boundaries.
+3. Current facts separated from unchecked hypotheses, with evidence.
+4. Roles and permissions that make allowed and forbidden actions clear.
+5. Human Gates H1/H2/H3 for scoped execution, commit or production go/no-go, and destructive or irreversible actions.
+6. Hard stop conditions for production impact, secrets, destructive actions, unrelated diffs, missing rollback, and unclear approval.
+7. An execution plan that references the governed artifacts it may create or update.
+8. Verification kept separate from release or operation.
+9. Rollback or recovery described before risky actions.
+10. An Evidence Log, Decisions, Open Questions, and exactly one concrete Next Action.
+
+During execution, `protocol.md` is external process state. A new session or a different agent must be able to continue from `State`, `Human Gates`, `Hard Stop Conditions`, `Execution Plan`, `Evidence Log`, `Decisions`, `Open Questions`, and `Next Action` without relying on chat memory.
 
 ## Observable Runner Contract
 

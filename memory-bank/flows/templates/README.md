@@ -9,6 +9,7 @@ derived_from:
   - use-case/UC-XXX.md
   - feature/README.md
   - feature/implementation-plan.md
+  - protocol/lifecycle-protocol.md
   - feature/short.md
   - feature/large.md
   - adr/ADR-XXX.md
@@ -26,6 +27,7 @@ The `memory-bank/flows/templates/` directory stores the reference templates for 
 - [FT-XXX: Feature Template - Short](feature/short.md) - the minimal canonical feature document for a small feature. Answers: what does a short feature document look like?
 - [FT-XXX: Feature Template - Large](feature/large.md) - a canonical feature document with assumptions, blockers, contracts, and a richer verification layer. Answers: what does a large feature document look like?
 - [FT-XXX: Implementation Plan](feature/implementation-plan.md) - the template for a derived execution plan. Answers: how should sequencing and checkpoints be described?
+- [Lifecycle Protocol Template](protocol/lifecycle-protocol.md) - the template for `protocol.md`. Answers: how should a repeatable process contract capture gates, permissions, evidence, rollback, and external process state?
 - [ADR-XXX: Short Decision Name](adr/ADR-XXX.md) - the ADR template. Answers: how should an architectural decision be captured?
 
 ## Minimum Inputs Before Drafting
@@ -39,6 +41,7 @@ If the minimum input for a document is missing, stop and ask instead of inventin
 | ADR | source feature or upstream doc, decision statement, blocking context, decision drivers, meaningful options, feature or upstream document that needs the decision | there is no real choice to make, the decision owner is unclear, or the work is only implementation sequencing |
 | Feature package | source task or request, delivery slice, explicit in-scope and out-of-scope statements, expected user-visible or operational outcome, verification direction | scope is still initiative-level, the slice is not vertically coherent, or acceptance cannot yet be described |
 | Implementation plan | active sibling `feature.md`, grounded repository context, expected touchpoints, sequencing constraints, test strategy | `feature.md` is still draft, repository grounding has not happened, or plan work would redefine canonical scope or design |
+| Lifecycle protocol | source task or request, lifecycle to govern, goal and scope, current facts or baseline evidence, roles and gates, hard stops, rollback or recovery expectation | risky work has already started without a baseline, gates are unclear, rollback is missing for high-risk work, or the protocol would redefine feature scope instead of governing process behavior |
 
 ## Review Heuristics To Preserve
 
@@ -65,6 +68,14 @@ The governed templates remain the source of truth. The checks below summarize re
 - Step order should respect dependencies and avoid cycles.
 - The plan should call out required test updates, migrations, documentation changes, rollout checks, or follow-up verification when they are part of the change.
 - Grounding should be against real repository paths and patterns rather than an imagined architecture.
+
+### Lifecycle Protocols
+
+- The protocol should exist before risky work starts, or honestly record existing downstream work as baseline.
+- Goal, scope, current facts, roles, permissions, gates, hard stops, verification, rollback, evidence, decisions, open questions, and next action should be explicit.
+- Verified facts should be separated from unchecked hypotheses.
+- H1/H2/H3 gates should make approval boundaries concrete.
+- The protocol should be resumable from `protocol.md` without relying on chat memory.
 
 ## Prompting Notes
 

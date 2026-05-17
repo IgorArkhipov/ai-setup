@@ -57,6 +57,15 @@ Each executable skill file in this directory should start with YAML frontmatter 
 - `implementation-plan-review.md`
   Review `implementation-plan.md` against the derived-plan rules.
 
+- `lifecycle-protocol-generation.md`
+  Create or update an English lifecycle `protocol.md`, then run lifecycle-protocol review.
+
+- `lifecycle-protocol-review.md`
+  Review a lifecycle `protocol.md` before agents use it for execution.
+
+- `lifecycle-protocol-execution.md`
+  Execute an approved lifecycle `protocol.md` one bounded step at a time.
+
 - `review-loop.md`
   Re-run review after fixes and escalate to Claude Code MCP when needed.
 
