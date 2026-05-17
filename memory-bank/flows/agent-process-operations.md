@@ -21,15 +21,10 @@ audience: humans_and_agents
 
 This document adapts reusable operating patterns into this repository's memory-bank workflow. It is a process layer, not a product or feature layer: it explains how agents should run, pause, resume, and escalate governed work.
 
-External source materials:
-
-- `process-state-for-long-runs`: `https://ai-swe-1.thinknetica.com/materials/verification/process-state-for-long-runs/`
-- `process-specs-for-agents`: `https://ai-swe-1.thinknetica.com/materials/specification/process-specs-for-agents/`
-- `human-in-the-loop`: `https://ai-swe-1.thinknetica.com/materials/orchestration/human-in-the-loop/`
-
 Local template:
 
 - `templates/protocol/lifecycle-protocol.md`
+- `templates/protocol/operational-protocol.md`
 
 ## Boundary
 
@@ -84,6 +79,26 @@ A lifecycle protocol must include:
 10. An Evidence Log, Decisions, Open Questions, and exactly one concrete Next Action.
 
 During execution, `protocol.md` is external process state. A new session or a different agent must be able to continue from `State`, `Human Gates`, `Hard Stop Conditions`, `Execution Plan`, `Evidence Log`, `Decisions`, `Open Questions`, and `Next Action` without relying on chat memory.
+
+## Operational Protocols
+
+Use an operational `protocol.md` when a specific workflow is already scoped and ready to execute, but still needs explicit permissions, gates, evidence, rollback, and stop conditions. Operational protocols are narrower than lifecycle protocols: they do not govern the whole upstream lifecycle unless that lifecycle is already complete or intentionally out of scope.
+
+An operational protocol must include:
+
+1. Metadata with `Status: draft`, `Current phase: ready_to_execute`, and `Current gate: H0`.
+2. Goal and explicit in-scope and out-of-scope boundaries.
+3. Current baseline facts with evidence.
+4. Operating constraints for technical, security or compliance, and production-safety limits.
+5. Roles and permissions that make allowed and forbidden actions clear.
+6. Human Gates H1/H2/H3 for starting execution, acceptance or commit-point continuation, and destructive or irreversible actions.
+7. Hard stop conditions for secrets, unclear rollout ownership, missing rollback before high-risk action, and workflow-specific risks.
+8. An execution plan focused on Preflight, Implementation, and Verification And Acceptance unless the operation needs a stricter custom split.
+9. Verification checks kept separate from acceptance decisions.
+10. Rollback or recovery described before risky actions.
+11. An Evidence Log, Decisions, Open Questions, and exactly one concrete Next Action.
+
+During execution, the agent must start from `protocol.md`, confirm the current gate allows the requested action, execute only the bounded current step or Next Action, update protocol state after substantial work, and stop before any gate or hard stop boundary.
 
 ## Observable Runner Contract
 

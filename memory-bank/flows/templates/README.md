@@ -10,6 +10,7 @@ derived_from:
   - feature/README.md
   - feature/implementation-plan.md
   - protocol/lifecycle-protocol.md
+  - protocol/operational-protocol.md
   - feature/short.md
   - feature/large.md
   - adr/ADR-XXX.md
@@ -28,6 +29,7 @@ The `memory-bank/flows/templates/` directory stores the reference templates for 
 - [FT-XXX: Feature Template - Large](feature/large.md) - a canonical feature document with assumptions, blockers, contracts, and a richer verification layer. Answers: what does a large feature document look like?
 - [FT-XXX: Implementation Plan](feature/implementation-plan.md) - the template for a derived execution plan. Answers: how should sequencing and checkpoints be described?
 - [Lifecycle Protocol Template](protocol/lifecycle-protocol.md) - the template for `protocol.md`. Answers: how should a repeatable process contract capture gates, permissions, evidence, rollback, and external process state?
+- [Operational Protocol Template](protocol/operational-protocol.md) - the template for an operational `protocol.md`. Answers: how should a specific operational workflow capture execution permissions, gates, evidence, rollback, and stop conditions?
 - [ADR-XXX: Short Decision Name](adr/ADR-XXX.md) - the ADR template. Answers: how should an architectural decision be captured?
 
 ## Minimum Inputs Before Drafting
@@ -42,6 +44,7 @@ If the minimum input for a document is missing, stop and ask instead of inventin
 | Feature package | source task or request, delivery slice, explicit in-scope and out-of-scope statements, expected user-visible or operational outcome, verification direction | scope is still initiative-level, the slice is not vertically coherent, or acceptance cannot yet be described |
 | Implementation plan | active sibling `feature.md`, grounded repository context, expected touchpoints, sequencing constraints, test strategy | `feature.md` is still draft, repository grounding has not happened, or plan work would redefine canonical scope or design |
 | Lifecycle protocol | source task or request, lifecycle to govern, goal and scope, current facts or baseline evidence, roles and gates, hard stops, rollback or recovery expectation | risky work has already started without a baseline, gates are unclear, rollback is missing for high-risk work, or the protocol would redefine feature scope instead of governing process behavior |
+| Operational protocol | source task or request, specific operational workflow, goal and scope, baseline evidence, roles and permissions, gate triggers, verification checks, rollback or recovery expectation | the workflow is not yet scoped, upstream lifecycle phases are still missing, gate ownership is unclear, or the protocol would hide product or architecture decisions |
 
 ## Review Heuristics To Preserve
 
@@ -76,6 +79,14 @@ The governed templates remain the source of truth. The checks below summarize re
 - Verified facts should be separated from unchecked hypotheses.
 - H1/H2/H3 gates should make approval boundaries concrete.
 - The protocol should be resumable from `protocol.md` without relying on chat memory.
+
+### Operational Protocols
+
+- The protocol should fit a specific operational workflow rather than a broad lifecycle.
+- Goal, scope, baseline facts, roles, permissions, H1/H2/H3 gates, hard stops, verification, rollback, evidence, open questions, decisions, and next action should be explicit.
+- Preflight should prove execution can start before implementation or command execution proceeds.
+- Verification should be separated from acceptance decisions.
+- The operational state should be resumable from `protocol.md` without relying on chat memory.
 
 ## Prompting Notes
 

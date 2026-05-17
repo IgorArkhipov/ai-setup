@@ -31,6 +31,9 @@ Reusable prompts for creating or updating governed documentation from `memory-ba
 - `memory-bank-create-lifecycle-protocol.md`
   Draft or update a lifecycle `protocol.md` for a repeatable agent workflow.
 
+- `memory-bank-create-operational-protocol.md`
+  Draft or update an operational `protocol.md` for a specific workflow.
+
 - `memory-bank-route-review.md`
   Decide which governed review prompt should be applied to an existing document.
 
@@ -52,8 +55,14 @@ Reusable prompts for creating or updating governed documentation from `memory-ba
 - `memory-bank-review-lifecycle-protocol.md`
   Review a lifecycle `protocol.md` before agents use it for execution.
 
+- `memory-bank-review-operational-protocol.md`
+  Review an operational `protocol.md` before agents use it for execution.
+
 - `memory-bank-execute-lifecycle-protocol.md`
   Execute an approved lifecycle `protocol.md` one bounded step at a time.
+
+- `memory-bank-execute-operational-protocol.md`
+  Execute an approved operational `protocol.md` one bounded step at a time.
 
 - `memory-bank-second-opinion-claude-review.md`
   Wrapper prompt for a Claude Code MCP independent re-review of any governed document review.

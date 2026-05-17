@@ -66,6 +66,15 @@ Each executable skill file in this directory should start with YAML frontmatter 
 - `lifecycle-protocol-execution.md`
   Execute an approved lifecycle `protocol.md` one bounded step at a time.
 
+- `operational-protocol-generation.md`
+  Create or update an English operational `protocol.md`, then run operational-protocol review.
+
+- `operational-protocol-review.md`
+  Review an operational `protocol.md` before agents use it for execution.
+
+- `operational-protocol-execution.md`
+  Execute an approved operational `protocol.md` one bounded step at a time.
+
 - `review-loop.md`
   Re-run review after fixes and escalate to Claude Code MCP when needed.
 

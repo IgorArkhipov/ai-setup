@@ -1,5 +1,8 @@
 You are creating or updating a lifecycle `protocol.md` for this repository.
 
+Preserve the source intent, but adapt wording to the governed vocabulary used by this repository.
+
+Source interpretation from the lifecycle protocol template:
 - create `protocol.md` before Brief-level work and before any risky action;
 - first record the process contract: gates, permissions, state, and evidence;
 - then move document-by-document through the lifecycle that the protocol permits;
