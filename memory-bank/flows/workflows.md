@@ -40,6 +40,20 @@ Business requirements  ← human | agent →  Code
 
 ## Workflow Types
 
+### 0. Lifecycle Protocol-Governed Feature
+
+Use this when:
+
+- the input is a top-level problem space, feature intention, or long-running development operation;
+- the work is likely to need multiple agent sessions, review gates, or lower-level document loops;
+- the agent needs external process state before deciding whether the downstream owner is a PRD, use case, ADR, feature package, or implementation plan.
+
+Flow:
+
+`problem prompt -> protocol.md -> protocol review/grooming -> fresh protocol execution -> governed document routing -> feature package / PRD / use case / ADR as needed -> implementation plan -> execution -> verification -> handoff`
+
+In this workflow, `protocol.md` is the starting point. Do not create `feature.md`, `implementation-plan.md`, PRD, use case, or ADR first just because the eventual feature seems likely. Those artifacts are created during protocol execution after the reviewed protocol says which document owner is needed and which gate permits it.
+
 ### 1. Small Feature
 
 Use this when:

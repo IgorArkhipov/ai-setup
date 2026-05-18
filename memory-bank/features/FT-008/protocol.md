@@ -382,6 +382,7 @@ Do not update unrelated feature packages.
 | 2026-05-17 | verification | Ran `git diff --check` | Passed |
 | 2026-05-17 | security_note | Ran `cd tools/agentscope && npm audit --audit-level=high` | Exit 0; npm reports one moderate `postcss` advisory |
 | 2026-05-17 | human_review | Human review found the run did not preserve protocol-first ordering | Confirmed from session history; recorded in `homeworks/hw-5/task-1/execution-report.md` |
+| 2026-05-17 | process_correction | Updated active Memory Bank flow and template docs | Future lifecycle-governed feature work must create and groom `protocol.md` before downstream feature docs |
 
 ## Decisions
 

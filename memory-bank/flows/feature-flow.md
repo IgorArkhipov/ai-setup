@@ -25,9 +25,12 @@ audience: humans_and_agents
 
 This document defines the order in which feature artifacts appear. An agent should move a feature package through stages and should not create downstream artifacts before their upstream owner is mature enough.
 
+When a task is governed by a lifecycle protocol, `protocol.md` may be the first artifact. In that protocol-first mode, the normal feature package bootstrap below is performed by the approved protocol execution, not by the initial drafting step. The agent must create and groom `protocol.md` first, then let the fresh protocol execution decide whether to create a PRD, use case, ADR, `feature.md`, or another governed document. Do not create `feature.md`, `implementation-plan.md`, or registry entries merely to give the protocol a place to live.
+
 ## Package Rules
 
 1. All documents for one feature live in `memory-bank/features/FT-XXX/`.
+   Exception: a lifecycle-governed feature may temporarily contain only `protocol.md` while the protocol is being created and groomed. That directory is a protocol staging location until protocol execution creates `README.md` and `feature.md`.
 2. **Feature = vertical slice.** One feature is one user-visible unit of value that cuts through every affected layer of the system: UI, API, storage, and infra. Horizontal slicing such as "all endpoints" or "all UI" is acceptable only for pure infra or refactoring tasks and must be justified explicitly through `NS-*`.
 3. `feature.md` is the canonical owner of intent, delivery-scoped target outcome or KPI, design, and verification for the delivery unit.
 4. `README.md` is created together with `feature.md` and remains the routing layer through the whole lifecycle.
@@ -70,6 +73,7 @@ Each gate is a set of verifiable predicates. A transition is allowed if and only
 
 ### Bootstrap Feature Package
 
+- [ ] if a lifecycle protocol governs this work, the reviewed `protocol.md` permits feature bootstrap as the current or next action
 - [ ] `README.md` is created from the `templates/feature/README.md` template
 - [ ] `feature.md` is created from the `short.md` or `large.md` template
 - [ ] `implementation-plan.md` does not exist

@@ -41,9 +41,9 @@ If the minimum input for a document is missing, stop and ask instead of inventin
 | PRD | initiative source or request, target user or segment, concrete problem, desired outcome, initial scope boundary | the problem is still solution-shaped, the user is unknown, success cannot be described, or the work is really one feature not an initiative |
 | Use case | source request or upstream doc, stable actor, trigger, preconditions, main flow, expected postconditions, upstream PRD if one exists | the flow is still local to one feature, the actor or trigger is unclear, or business rules are missing |
 | ADR | source feature or upstream doc, decision statement, blocking context, decision drivers, meaningful options, feature or upstream document that needs the decision | there is no real choice to make, the decision owner is unclear, or the work is only implementation sequencing |
-| Feature package | source task or request, delivery slice, explicit in-scope and out-of-scope statements, expected user-visible or operational outcome, verification direction | scope is still initiative-level, the slice is not vertically coherent, or acceptance cannot yet be described |
+| Feature package | source task or request, delivery slice, explicit in-scope and out-of-scope statements, expected user-visible or operational outcome, verification direction | scope is still initiative-level, the slice is not vertically coherent, acceptance cannot yet be described, or a lifecycle protocol is required but has not been created and groomed first |
 | Implementation plan | active sibling `feature.md`, grounded repository context, expected touchpoints, sequencing constraints, test strategy | `feature.md` is still draft, repository grounding has not happened, or plan work would redefine canonical scope or design |
-| Lifecycle protocol | source task or request, lifecycle to govern, goal and scope, current facts or baseline evidence, roles and gates, hard stops, rollback or recovery expectation | risky work has already started without a baseline, gates are unclear, rollback is missing for high-risk work, or the protocol would redefine feature scope instead of governing process behavior |
+| Lifecycle protocol | source task or request or top-level problem-space prompt, lifecycle to govern, goal and scope, current facts or baseline evidence, roles and gates, hard stops, rollback or recovery expectation | risky work has already started without a baseline, gates are unclear, rollback is missing for high-risk work, or the protocol would redefine feature scope instead of governing process behavior |
 | Operational protocol | source task or request, specific operational workflow, goal and scope, baseline evidence, roles and permissions, gate triggers, verification checks, rollback or recovery expectation | the workflow is not yet scoped, upstream lifecycle phases are still missing, gate ownership is unclear, or the protocol would hide product or architecture decisions |
 
 ## Review Heuristics To Preserve
@@ -74,6 +74,7 @@ The governed templates remain the source of truth. The checks below summarize re
 
 ### Lifecycle Protocols
 
+- For top-level feature development, the lifecycle protocol is created and groomed before feature documents. The approved protocol execution creates or updates PRD, use case, ADR, `feature.md`, and `implementation-plan.md` only when its current state and gates allow those artifacts.
 - The protocol should exist before risky work starts, or honestly record existing downstream work as baseline.
 - Goal, scope, current facts, roles, permissions, gates, hard stops, verification, rollback, evidence, decisions, open questions, and next action should be explicit.
 - Verified facts should be separated from unchecked hypotheses.

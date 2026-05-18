@@ -26,7 +26,9 @@ The protocol is not a replacement for a feature document or implementation plan.
 - `implementation-plan.md` owns derived execution sequencing for code or documentation changes;
 - `protocol.md` owns process permissions, state, gates, evidence, rollback, and allowed transitions.
 
-Create `protocol.md` before downstream intent/design work and before any risky action when the task needs this level of control. If downstream artifacts or code changes already exist, record them honestly as baseline facts.
+Create `protocol.md` before downstream intent/design work and before any risky action when the task needs this level of control. For top-level feature-development prompts, `protocol.md` is the first artifact. Groom the protocol first, then execute it in a fresh run; the first protocol execution phases create or update downstream governed documents such as PRD, use case, ADR, `feature.md`, and `implementation-plan.md` only after the protocol permits them.
+
+If the final feature id is already known, `memory-bank/features/FT-XXX/protocol.md` may exist before `README.md` and `feature.md`; treat the directory as a protocol staging location until the approved protocol execution performs normal feature bootstrap. If downstream artifacts or code changes already exist, record them honestly as baseline facts.
 
 ## Instantiated Frontmatter
 
@@ -64,6 +66,7 @@ English interpretation:
 Repository adaptation:
 
 - `<how external phase names or process ideas map to this repository's governed documents>`
+- For feature-development protocols, `protocol.md` is created and groomed before PRD, use case, ADR, `feature.md`, or `implementation-plan.md` unless those artifacts already exist and are recorded as baseline facts.
 
 ## Metadata
 
@@ -232,6 +235,7 @@ Exit criteria:
 
 ### Phase 1: Governed Intent / Design
 
+- [ ] Decide which downstream governed document owns the current missing intent: PRD, use case, ADR, feature package, or no new document.
 - [ ] Create or update only the governed intent/design artifacts allowed by this protocol.
 - [ ] Keep product scope, architecture, and acceptance in their canonical owners.
 - [ ] Review the governed artifacts before downstream execution.

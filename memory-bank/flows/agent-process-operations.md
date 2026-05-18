@@ -63,7 +63,11 @@ For memory-bank feature work, default to a `flowchart`. Add `stateDiagram-v2` fo
 
 Use a lifecycle `protocol.md` when a standardized workflow must govern a long, risky, multi-agent, or checkpoint-heavy change before execution begins. A plan controls the work sequence; a protocol controls allowed behavior, permissions, gates, external process state, evidence, rollback, and stop conditions.
 
-Create `protocol.md` before downstream intent/design work and before any risky action when the task needs this level of control. If downstream artifacts or code changes already exist, record them honestly as baseline facts rather than pretending the protocol came first. In this repository, adapt external phase names such as `Brief` and `Spec Pack` to the current governed document model. Do not create new legacy `brief.md`, `spec.md`, or `plan.md` feature-package artifacts.
+Create `protocol.md` before downstream intent/design work and before any risky action when the task needs this level of control. When the input is only a top-level problem space or feature intention, `protocol.md` is the starting artifact: create and groom the protocol first, then execute the approved protocol in a fresh run. The early execution phases decide which downstream governed documents are needed and create or update them under protocol control: PRD, use case, ADR, `feature.md`, and then `implementation-plan.md` when the feature is design-ready.
+
+If the final feature package path is already known, the protocol may be placed at `memory-bank/features/FT-XXX/protocol.md` before the package's `README.md` and `feature.md` exist. In that case, the feature package is only a protocol staging location until protocol execution performs the normal feature bootstrap. Do not update the feature registry as a completed feature package, and do not create `feature.md` or `implementation-plan.md`, before the protocol's reviewed execution plan allows it.
+
+If downstream artifacts or code changes already exist, record them honestly as baseline facts rather than pretending the protocol came first. In this repository, adapt external phase names such as `Brief` and `Spec Pack` to the current governed document model. Do not create new legacy `brief.md`, `spec.md`, or `plan.md` feature-package artifacts.
 
 A lifecycle protocol must include:
 
@@ -79,6 +83,8 @@ A lifecycle protocol must include:
 10. An Evidence Log, Decisions, Open Questions, and exactly one concrete Next Action.
 
 During execution, `protocol.md` is external process state. A new session or a different agent must be able to continue from `State`, `Human Gates`, `Hard Stop Conditions`, `Execution Plan`, `Evidence Log`, `Decisions`, `Open Questions`, and `Next Action` without relying on chat memory.
+
+Protocol execution must not treat pre-created feature documents as proof that the lifecycle was followed. If feature docs were created before the protocol was reviewed, the protocol must name that as a baseline/process finding and either restart from a clean protocol-first state or continue explicitly as a recovery run.
 
 ## Operational Protocols
 
