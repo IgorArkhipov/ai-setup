@@ -428,6 +428,14 @@ resolve_transition_target() {
 			resolved_next_action="stop_gate"
 			resolved_stop_reason="lifecycle_protocol_executed"
 			;;
+		review-operational-protocol)
+			resolved_next_stage="execute-operational-protocol"
+			resolved_next_action="run_stage"
+			;;
+		execute-operational-protocol)
+			resolved_next_action="stop_gate"
+			resolved_stop_reason="operational_protocol_executed"
+			;;
 		implement-milestone | polish-milestone)
 			resolved_next_stage="review-milestone"
 			resolved_next_action="run_stage"

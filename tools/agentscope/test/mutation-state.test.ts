@@ -6,6 +6,7 @@ import { acquireMutationLock } from "../src/core/mutation-lock.js";
 import {
   appendAuditEntry,
   initializeMutationState,
+  listBackupManifests,
   loadBackup,
   persistBackup,
 } from "../src/core/mutation-state.js";
@@ -18,6 +19,18 @@ afterEach(() => {
     sandboxes.pop()?.cleanup();
   }
 });
+
+function writeBackupManifest(
+  sandbox: ReturnType<typeof createMutationSandbox>,
+  backupId: string,
+  manifest: Record<string, unknown>,
+): string {
+  const backupRoot = path.join(sandbox.appStateRoot, "backups", backupId);
+  mkdirSync(path.join(backupRoot, "blobs"), { recursive: true });
+  writeFileSync(path.join(backupRoot, "manifest.json"), JSON.stringify(manifest, null, 2));
+
+  return backupRoot;
+}
 
 describe("mutation state", () => {
   it("creates state directories, persists backups, reloads manifests, and appends audit logs", () => {
@@ -107,12 +120,7 @@ describe("mutation state", () => {
   it("rejects invalid manifests during restore lookup", () => {
     const sandbox = createMutationSandbox();
     sandboxes.push(sandbox);
-    const backupRoot = path.join(sandbox.appStateRoot, "backups", "backup-bad");
-    mkdirSync(backupRoot, { recursive: true });
-    writeFileSync(
-      path.join(backupRoot, "manifest.json"),
-      JSON.stringify({ version: 1, backupId: "backup-bad" }),
-    );
+    writeBackupManifest(sandbox, "backup-bad", { version: 1, backupId: "backup-bad" });
 
     expect(() => loadBackup(sandbox.appStateRoot, "backup-bad")).toThrow(
       "backup manifest createdAt must be a non-empty string",
@@ -180,47 +188,153 @@ describe("mutation state", () => {
   it("rejects invalid blob ids loaded from a manifest", () => {
     const sandbox = createMutationSandbox();
     sandboxes.push(sandbox);
-    const backupRoot = path.join(sandbox.appStateRoot, "backups", "backup-blob");
-    mkdirSync(path.join(backupRoot, "blobs"), { recursive: true });
-    writeFileSync(
-      path.join(backupRoot, "manifest.json"),
-      JSON.stringify(
+    writeBackupManifest(sandbox, "backup-blob", {
+      version: 1,
+      backupId: "backup-blob",
+      createdAt: "2026-04-08T10:00:00.000Z",
+      selection: null,
+      targetEnabled: true,
+      affectedTargets: [
         {
-          version: 1,
-          backupId: "backup-blob",
-          createdAt: "2026-04-08T10:00:00.000Z",
-          selection: null,
-          targetEnabled: true,
-          affectedTargets: [
-            {
-              type: "path",
-              path: sandbox.pathFor(".fake-toggle/files/original-name.txt"),
-            },
-          ],
-          entries: [
-            {
-              entryId: "entry-1",
-              target: {
-                type: "path",
-                path: sandbox.pathFor(".fake-toggle/files/original-name.txt"),
-              },
-              existed: true,
-              pathKind: "file",
-              payload: {
-                storage: "blob",
-                blobId: "../escape.bin",
-                size: 10,
-              },
-            },
-          ],
+          type: "path",
+          path: sandbox.pathFor(".fake-toggle/files/original-name.txt"),
         },
-        null,
-        2,
-      ),
-    );
+      ],
+      entries: [
+        {
+          entryId: "entry-1",
+          target: {
+            type: "path",
+            path: sandbox.pathFor(".fake-toggle/files/original-name.txt"),
+          },
+          existed: true,
+          pathKind: "file",
+          payload: {
+            storage: "blob",
+            blobId: "../escape.bin",
+            size: 10,
+          },
+        },
+      ],
+    });
 
     expect(() => loadBackup(sandbox.appStateRoot, "backup-blob").readBlob("../escape.bin")).toThrow(
       "invalid blob id",
     );
+  });
+
+  it("loads sqlite-item backup entries with inline payloads", () => {
+    const sandbox = createMutationSandbox();
+    sandboxes.push(sandbox);
+    const target = {
+      type: "sqlite-item",
+      databasePath: sandbox.pathFor(".fake-toggle/state.sqlite"),
+      tableName: "ItemTable",
+      keyColumn: "key",
+      keyValue: "mcp",
+      valueColumn: "value",
+    };
+
+    writeBackupManifest(sandbox, "backup-sqlite-inline", {
+      version: 1,
+      backupId: "backup-sqlite-inline",
+      createdAt: "2026-04-08T10:00:00.000Z",
+      targetEnabled: null,
+      affectedTargets: [target],
+      entries: [
+        {
+          entryId: "entry-sqlite",
+          target,
+          existed: true,
+          payload: {
+            storage: "inline",
+            dataBase64: Buffer.from("original").toString("base64"),
+            size: 8,
+          },
+        },
+      ],
+    });
+
+    expect(loadBackup(sandbox.appStateRoot, "backup-sqlite-inline").manifest).toEqual({
+      version: 1,
+      backupId: "backup-sqlite-inline",
+      createdAt: "2026-04-08T10:00:00.000Z",
+      selection: null,
+      targetEnabled: null,
+      affectedTargets: [target],
+      entries: [
+        {
+          entryId: "entry-sqlite",
+          target,
+          existed: true,
+          payload: {
+            storage: "inline",
+            dataBase64: Buffer.from("original").toString("base64"),
+            size: 8,
+          },
+        },
+      ],
+    });
+  });
+
+  it("lists backup manifests with deterministic newest-first ordering", () => {
+    const sandbox = createMutationSandbox();
+    sandboxes.push(sandbox);
+    const target = {
+      type: "path",
+      path: sandbox.pathFor(".fake-toggle/files/original-name.txt"),
+    };
+
+    writeBackupManifest(sandbox, "backup-b", {
+      version: 1,
+      backupId: "backup-b",
+      createdAt: "2026-04-08T10:00:00.000Z",
+      affectedTargets: [target],
+      entries: [
+        {
+          entryId: "entry-b",
+          target,
+          existed: false,
+          pathKind: null,
+          payload: null,
+        },
+      ],
+    });
+    writeBackupManifest(sandbox, "backup-a", {
+      version: 1,
+      backupId: "backup-a",
+      createdAt: "2026-04-08T10:00:00.000Z",
+      affectedTargets: [target],
+      entries: [
+        {
+          entryId: "entry-a",
+          target,
+          existed: false,
+          pathKind: null,
+          payload: null,
+        },
+      ],
+    });
+    writeBackupManifest(sandbox, "backup-latest", {
+      version: 1,
+      backupId: "backup-latest",
+      createdAt: "2026-04-08T10:01:00.000Z",
+      affectedTargets: [target],
+      entries: [
+        {
+          entryId: "entry-latest",
+          target,
+          existed: false,
+          pathKind: null,
+          payload: null,
+        },
+      ],
+    });
+
+    expect(listBackupManifests(sandbox.appStateRoot).map((manifest) => manifest.backupId)).toEqual([
+      "backup-latest",
+      "backup-a",
+      "backup-b",
+    ]);
   });
 });

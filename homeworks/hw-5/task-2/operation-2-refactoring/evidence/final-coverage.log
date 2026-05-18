@@ -1,0 +1,14 @@
+> vitest run --coverage
+ RUN  v4.1.6 /Users/igor.arkhipov/Documents/Work/Ruby/thinknetica/ai-setup/tools/agentscope
+      Coverage enabled with v8
+ Test Files  23 passed (23)
+      Tests  164 passed (164)
+   Start at  19:00:34
+   Duration  772ms (transform 1.54s, setup 0ms, import 2.72s, tests 2.36s, environment 1ms)
+ % Coverage report from v8
+=============================== Coverage summary ===============================
+Statements   : 82.08% ( 1796/2188 )
+Branches     : 71.09% ( 1087/1529 )
+Functions    : 92.4% ( 377/408 )
+Lines        : 82.18% ( 1772/2156 )
+================================================================================

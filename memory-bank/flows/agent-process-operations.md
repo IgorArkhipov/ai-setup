@@ -26,6 +26,10 @@ Local template:
 - `templates/protocol/lifecycle-protocol.md`
 - `templates/protocol/operational-protocol.md`
 
+Default operational protocol location:
+
+- `.protocols/<operation-slug>/protocol.md`
+
 ## Boundary
 
 Do not mix the process method with the state of one run.
@@ -89,6 +93,8 @@ Protocol execution must not treat pre-created feature documents as proof that th
 ## Operational Protocols
 
 Use an operational `protocol.md` when a specific workflow is already scoped and ready to execute, but still needs explicit permissions, gates, evidence, rollback, and stop conditions. Operational protocols are narrower than lifecycle protocols: they do not govern the whole upstream lifecycle unless that lifecycle is already complete or intentionally out of scope.
+
+Durable operational protocols should be created under `.protocols/<operation-slug>/protocol.md` unless a task explicitly asks for a different evidence location. Homework, audit, or training packages may copy final protocols and execution records into their own package trees, but those copies should state whether they are durable operating state or evidence snapshots.
 
 An operational protocol must include:
 

@@ -1,0 +1,12 @@
+{
+  "id": "operational-protocol",
+  "description": "Create, review, polish, and execute an operational protocol for one scoped repository operation.",
+  "initialStage": "draft-operational-protocol",
+  "hardGates": ["operational-protocol-executed"],
+  "stages": [
+    "draft-operational-protocol",
+    "review-operational-protocol",
+    "polish-operational-protocol",
+    "execute-operational-protocol"
+  ]
+}

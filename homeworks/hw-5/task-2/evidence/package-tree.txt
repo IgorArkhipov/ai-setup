@@ -1,0 +1,26 @@
+homeworks/hw-5/task-2/
+  README.md
+  execution-summary.md
+  requirements-en.md
+  runner-automation.md
+  evidence/
+    package-tree.txt
+  operation-1-dependency-update/
+    execution-result.md
+    initial-prompt.md
+    protocol-polish.md
+    protocol-review.accepted.md
+    protocol-review.initial.md
+    protocol.md
+    evidence/
+      coverage-before-refactoring.log
+  operation-2-refactoring/
+    execution-result.md
+    initial-prompt.md
+    protocol-polish.md
+    protocol-review.accepted.md
+    protocol-review.initial.md
+    protocol.md
+    evidence/
+      analysis-candidates.md
+      final-coverage.log

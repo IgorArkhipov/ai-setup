@@ -20,6 +20,8 @@ Before drafting:
 1. Confirm the source material is available as a reachable page, pasted excerpt, local document, or explicit user summary.
 2. Confirm this is a specific operational workflow rather than a full lifecycle process. Use the lifecycle protocol template when the work needs upstream intent/design phases before execution.
 3. Confirm the protocol's target path and scope. If none is provided, propose the smallest appropriate path.
+   - Default durable target path: `.protocols/<operation-slug>/protocol.md`.
+   - Use a package-local evidence path only when the task explicitly asks for that storage location, and record that relationship in Repository adaptation.
 4. Stop and ask for clarification if any minimum input is missing:
    - the operational workflow to execute;
    - goal and scope;

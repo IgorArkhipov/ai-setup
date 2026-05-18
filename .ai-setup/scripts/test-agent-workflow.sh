@@ -123,6 +123,33 @@ lifecycle_execute_transition="$("$runner" transition \
 assert_json_eq "$lifecycle_execute_transition" '.next_action' 'stop_gate'
 assert_json_eq "$lifecycle_execute_transition" '.stop_reason' 'lifecycle_protocol_executed'
 
+operational_start_json="$("$runner" start \
+	--workflow operational-protocol \
+	--slug "Dependency Update" \
+	--prompt "Create and execute operational protocol for AgentScope dependency update" \
+	--now "2026-05-17 18:35" \
+	--dry-run \
+	--json)"
+assert_json_eq "$operational_start_json" '.run_id' '2026-05-17-1835-dependency-update'
+assert_json_eq "$operational_start_json" '.workflow' 'operational-protocol'
+assert_json_eq "$operational_start_json" '.current_stage' 'draft-operational-protocol'
+assert_json_eq "$operational_start_json" '.next_action' 'run_stage'
+assert_json_eq "$operational_start_json" '.claude_review_policy' 'accepted-review'
+
+operational_review_transition="$("$runner" transition \
+	--stage review-operational-protocol \
+	--result-file "$fixtures_dir/accepted.md" \
+	--json)"
+assert_json_eq "$operational_review_transition" '.next_action' 'run_stage'
+assert_json_eq "$operational_review_transition" '.next_stage' 'execute-operational-protocol'
+
+operational_execute_transition="$("$runner" transition \
+	--stage execute-operational-protocol \
+	--result-file "$fixtures_dir/accepted.md" \
+	--json)"
+assert_json_eq "$operational_execute_transition" '.next_action' 'stop_gate'
+assert_json_eq "$operational_execute_transition" '.stop_reason' 'operational_protocol_executed'
+
 sandbox="$(mktemp -d)"
 sandbox_tag="$(basename "$sandbox" | tr '[:upper:]' '[:lower:]')"
 apply_slug="provider-auth-apply-$sandbox_tag"

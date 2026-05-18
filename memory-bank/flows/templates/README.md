@@ -44,7 +44,7 @@ If the minimum input for a document is missing, stop and ask instead of inventin
 | Feature package | source task or request, delivery slice, explicit in-scope and out-of-scope statements, expected user-visible or operational outcome, verification direction | scope is still initiative-level, the slice is not vertically coherent, acceptance cannot yet be described, or a lifecycle protocol is required but has not been created and groomed first |
 | Implementation plan | active sibling `feature.md`, grounded repository context, expected touchpoints, sequencing constraints, test strategy | `feature.md` is still draft, repository grounding has not happened, or plan work would redefine canonical scope or design |
 | Lifecycle protocol | source task or request or top-level problem-space prompt, lifecycle to govern, goal and scope, current facts or baseline evidence, roles and gates, hard stops, rollback or recovery expectation | risky work has already started without a baseline, gates are unclear, rollback is missing for high-risk work, or the protocol would redefine feature scope instead of governing process behavior |
-| Operational protocol | source task or request, specific operational workflow, goal and scope, baseline evidence, roles and permissions, gate triggers, verification checks, rollback or recovery expectation | the workflow is not yet scoped, upstream lifecycle phases are still missing, gate ownership is unclear, or the protocol would hide product or architecture decisions |
+| Operational protocol | source task or request, specific operational workflow, goal and scope, baseline evidence, roles and permissions, gate triggers, verification checks, rollback or recovery expectation, target path under `.protocols/<operation-slug>/protocol.md` unless a package-local evidence path is explicitly requested | the workflow is not yet scoped, upstream lifecycle phases are still missing, gate ownership is unclear, or the protocol would hide product or architecture decisions |
 
 ## Review Heuristics To Preserve
 
@@ -84,6 +84,7 @@ The governed templates remain the source of truth. The checks below summarize re
 ### Operational Protocols
 
 - The protocol should fit a specific operational workflow rather than a broad lifecycle.
+- Durable operational protocols should live under `.protocols/<operation-slug>/protocol.md`; package-local copies should be clearly marked as evidence snapshots when the task asks for that layout.
 - Goal, scope, baseline facts, roles, permissions, H1/H2/H3 gates, hard stops, verification, rollback, evidence, open questions, decisions, and next action should be explicit.
 - Preflight should prove execution can start before implementation or command execution proceeds.
 - Verification should be separated from acceptance decisions.

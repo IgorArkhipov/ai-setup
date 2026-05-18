@@ -9,7 +9,7 @@ derived_from:
 status: active
 audience: humans_and_agents
 template_for: operational_protocol
-template_target_path: ../../../features/FT-XXX/protocol.md
+template_target_path: ../../../../.protocols/<operation-slug>/protocol.md
 ---
 
 # Operational Protocol Template
@@ -29,6 +29,8 @@ The protocol is not a replacement for a feature document or implementation plan.
 - operational `protocol.md` owns execution permissions, state, gates, evidence, rollback, and allowed operational transitions for the specific workflow.
 
 Use this template for custom operational cases such as controlled command runs, scoped repository changes, verification procedures, non-production or production operations, and other repeatable procedures where the agent must not proceed from chat memory alone.
+
+By default, instantiate durable operational protocols at `.protocols/<operation-slug>/protocol.md`. If a homework, audit, or training run requires a package-local evidence record, copy or instantiate the protocol under that package only when the task explicitly asks for that storage location, and state that relationship in the protocol's Repository adaptation section.
 
 ## Instantiated Frontmatter
 
