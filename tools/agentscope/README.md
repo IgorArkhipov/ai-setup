@@ -25,6 +25,7 @@ Sanitized examples live under `test/fixtures/` and are intentionally narrow. The
 - `node dist/cli.js list [--json] [--provider <id>] [--layer <global|project|all>] --project-root <path> --app-state-root <path> --cursor-root <path>`
 - `node dist/cli.js toggle --provider <id> --kind <kind> --id <id> --layer <layer> [--json] [--apply] --project-root <path> --app-state-root <path> --cursor-root <path>`
 - `node dist/cli.js restore <backup-id> [--json] --project-root <path> --app-state-root <path> --cursor-root <path>`
+- `node dist/cli.js mcp --project-root <path> --app-state-root <path> --cursor-root <path>`
 
 `doctor` treats committed fixture drift as fatal. Provider-local read and parse problems are reported separately so discovery can stay visible in `list`.
 
@@ -33,6 +34,92 @@ Sanitized examples live under `test/fixtures/` and are intentionally narrow. The
 `toggle` is dry-run by default. It prints the selected item, target enabled state, planned operations, affected paths or stores, and an explicit line stating that no writes were performed. Add `--apply` to route the plan through the guarded mutation engine.
 
 `restore` replays one saved backup by id through the same lock and low-level IO layer used by apply.
+
+## Local MCP Server
+
+`agentscope mcp` runs a local stdio MCP server. It writes MCP JSON-RPC traffic only to stdout, so client logs and errors must go to stderr. The server exposes these tools:
+
+- `agentscope_get_inventory_summary`
+- `agentscope_list_items`
+- `agentscope_plan_toggle_item`
+- `agentscope_apply_toggle_item`
+- `agentscope_plan_toggle_items`
+- `agentscope_apply_toggle_items`
+- `agentscope_list_backups`
+- `agentscope_restore_backup`
+- `agentscope_run_doctor`
+
+Read-only and plan tools do not mutate provider files. Apply tools require `requireConfirmation: true`; bulk apply also requires the reviewed `planFingerprint` and `maxItems` guard returned by `agentscope_plan_toggle_items`.
+
+AgentScope does not install itself into Claude Code, Codex, Cursor, or any other client. Add the local server manually using the config mechanism for the client you want to use.
+
+Claude Code example:
+
+```json
+{
+  "mcpServers": {
+    "agentscope": {
+      "command": "node",
+      "args": [
+        "/absolute/path/to/tools/agentscope/dist/cli.js",
+        "mcp",
+        "--project-root",
+        "/absolute/path/to/project",
+        "--app-state-root",
+        "/absolute/path/to/agentscope-state",
+        "--cursor-root",
+        "/absolute/path/to/Cursor/User"
+      ]
+    }
+  }
+}
+```
+
+Codex example:
+
+```toml
+[mcp_servers.agentscope]
+command = "node"
+args = [
+  "/absolute/path/to/tools/agentscope/dist/cli.js",
+  "mcp",
+  "--project-root",
+  "/absolute/path/to/project",
+  "--app-state-root",
+  "/absolute/path/to/agentscope-state",
+  "--cursor-root",
+  "/absolute/path/to/Cursor/User",
+]
+```
+
+Cursor example:
+
+```json
+{
+  "mcpServers": {
+    "agentscope": {
+      "command": "node",
+      "args": [
+        "/absolute/path/to/tools/agentscope/dist/cli.js",
+        "mcp",
+        "--project-root",
+        "/absolute/path/to/project",
+        "--app-state-root",
+        "/absolute/path/to/agentscope-state",
+        "--cursor-root",
+        "/absolute/path/to/Cursor/User"
+      ]
+    }
+  }
+}
+```
+
+Useful natural-language workflows:
+
+- "Ask AgentScope for an inventory summary and list all project skills."
+- "Plan disabling this one Claude project skill, show me the operations, then apply it after I confirm."
+- "Plan disabling all global skills, show blocked items and the fingerprint, then apply only if the item count is what I expect."
+- "List recent AgentScope backups and restore this backup id."
 
 ## Mutation State
 

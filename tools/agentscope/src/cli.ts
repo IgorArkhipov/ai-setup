@@ -10,6 +10,7 @@ import { renderProviders } from "./commands/providers.js";
 import { runRestore } from "./commands/restore.js";
 import { runSnapshot } from "./commands/snapshot.js";
 import { runToggle } from "./commands/toggle.js";
+import { runAgentScopeMcpStdio } from "./mcp/server.js";
 
 interface CliIo {
   stdout: (message: string) => void;
@@ -174,6 +175,25 @@ function createCli(packageRoot: string, io: CliIo) {
           cursorRoot: options.cursorRoot,
         }),
       );
+    });
+
+  cli
+    .command("mcp", "Run the AgentScope local MCP server over stdio")
+    .option("--project-root <path>", "Override the project root")
+    .option("--app-state-root <path>", "Override the app state root")
+    .option("--cursor-root <path>", "Override the Cursor root")
+    .action((options) => {
+      void runAgentScopeMcpStdio({
+        packageRoot,
+        fixturesRoot,
+        projectRoot: options.projectRoot,
+        appStateRoot: options.appStateRoot,
+        cursorRoot: options.cursorRoot,
+      }).catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        io.stderr(message);
+        exitCode = 1;
+      });
     });
 
   return {

@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { CapturedBackupEntry } from "./mutation-io.js";
 import type {
@@ -294,6 +294,22 @@ export function loadBackup(appStateRoot: string, backupId: string): LoadedBackup
       return readFileSync(blobPath);
     },
   };
+}
+
+export function listBackupManifests(appStateRoot: string): BackupManifest[] {
+  const backupsRoot = path.join(appStateRoot, "backups");
+  if (!existsSync(backupsRoot)) {
+    return [];
+  }
+
+  return readdirSync(backupsRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => loadBackup(appStateRoot, entry.name).manifest)
+    .sort((left, right) => {
+      return (
+        right.createdAt.localeCompare(left.createdAt) || left.backupId.localeCompare(right.backupId)
+      );
+    });
 }
 
 export function appendAuditEntry(appStateRoot: string, entry: AuditEntry): void {

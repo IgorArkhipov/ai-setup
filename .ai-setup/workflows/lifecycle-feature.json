@@ -1,0 +1,12 @@
+{
+  "id": "lifecycle-feature",
+  "description": "Create, review, polish, and execute a lifecycle protocol for one governed feature intention.",
+  "initialStage": "draft-lifecycle-protocol",
+  "hardGates": ["lifecycle-protocol-executed"],
+  "stages": [
+    "draft-lifecycle-protocol",
+    "review-lifecycle-protocol",
+    "polish-lifecycle-protocol",
+    "execute-lifecycle-protocol"
+  ]
+}

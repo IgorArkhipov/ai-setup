@@ -8,6 +8,7 @@ cd "$repo_root"
 runner=".ai-setup/scripts/run-agent-workflow.sh"
 bridge=".ai-setup/scripts/agent-bridge.sh"
 workflow=".ai-setup/workflows/route-first.json"
+workflows_dir=".ai-setup/workflows"
 stages_dir=".ai-setup/stages"
 fixtures_dir=".ai-setup/test/fixtures/stage-results"
 fake_agent="$repo_root/.ai-setup/test/fixtures/fake-stage-agent.sh"
@@ -59,19 +60,22 @@ bash -n "$fake_implementation_agent"
 
 jq -e '.id == "route-first" and (.stages | type == "array") and (.stages | length > 0)' "$workflow" >/dev/null
 
-while IFS= read -r stage_id; do
-	stage_path="$stages_dir/$stage_id.json"
-	assert_file "$stage_path"
-	jq -e --arg id "$stage_id" '.id == $id and (.promptChain | type == "array")' "$stage_path" >/dev/null
-	while IFS= read -r prompt_path; do
-		case "$prompt_path" in
-		.env* | */.env*)
-			fail "stage $stage_id references forbidden .env* path: $prompt_path"
-			;;
-		esac
-		assert_file "$prompt_path"
-	done < <(jq -r '.promptChain[]' "$stage_path")
-done < <(jq -r '.stages[]' "$workflow")
+while IFS= read -r workflow_path; do
+	jq -e '(.id | type == "string") and (.stages | type == "array") and (.stages | length > 0)' "$workflow_path" >/dev/null
+	while IFS= read -r stage_id; do
+		stage_path="$stages_dir/$stage_id.json"
+		assert_file "$stage_path"
+		jq -e --arg id "$stage_id" '.id == $id and (.promptChain | type == "array")' "$stage_path" >/dev/null
+		while IFS= read -r prompt_path; do
+			case "$prompt_path" in
+			.env* | */.env*)
+				fail "stage $stage_id references forbidden .env* path: $prompt_path"
+				;;
+			esac
+			assert_file "$prompt_path"
+		done < <(jq -r '.promptChain[]' "$stage_path")
+	done < <(jq -r '.stages[]' "$workflow_path")
+done < <(find "$workflows_dir" -name '*.json' | sort)
 
 env_output="$("$runner" start --workflow route-first --slug env-guard --prompt-file .envrc --dry-run 2>&1 || true)"
 assert_contains "$env_output" ".env"
@@ -90,6 +94,32 @@ assert_json_eq "$start_json" '.run_id' '2026-05-11-1432-provider-auth'
 assert_json_eq "$start_json" '.branch' 'task/2026-05-11-1432-provider-auth'
 assert_json_eq "$start_json" '.current_stage' 'route-document'
 assert_json_eq "$start_json" '.next_action' 'run_stage'
+
+lifecycle_start_json="$("$runner" start \
+	--workflow lifecycle-feature \
+	--slug "MCP Control Plane" \
+	--prompt "Create lifecycle protocol and execute AgentScope MCP control plane" \
+	--now "2026-05-17 10:00" \
+	--dry-run \
+	--json)"
+assert_json_eq "$lifecycle_start_json" '.run_id' '2026-05-17-1000-mcp-control-plane'
+assert_json_eq "$lifecycle_start_json" '.workflow' 'lifecycle-feature'
+assert_json_eq "$lifecycle_start_json" '.current_stage' 'draft-lifecycle-protocol'
+assert_json_eq "$lifecycle_start_json" '.next_action' 'run_stage'
+
+lifecycle_review_transition="$("$runner" transition \
+	--stage review-lifecycle-protocol \
+	--result-file "$fixtures_dir/accepted.md" \
+	--json)"
+assert_json_eq "$lifecycle_review_transition" '.next_action' 'run_stage'
+assert_json_eq "$lifecycle_review_transition" '.next_stage' 'execute-lifecycle-protocol'
+
+lifecycle_execute_transition="$("$runner" transition \
+	--stage execute-lifecycle-protocol \
+	--result-file "$fixtures_dir/accepted.md" \
+	--json)"
+assert_json_eq "$lifecycle_execute_transition" '.next_action' 'stop_gate'
+assert_json_eq "$lifecycle_execute_transition" '.stop_reason' 'lifecycle_protocol_executed'
 
 sandbox="$(mktemp -d)"
 sandbox_tag="$(basename "$sandbox" | tr '[:upper:]' '[:lower:]')"

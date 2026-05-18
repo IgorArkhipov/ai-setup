@@ -1,0 +1,29 @@
+homeworks/hw-5/task-1/
+  README.md
+  requirements-en.md
+  protocol-grooming.md
+  runner-automation.md
+  execution-report.md
+  evidence/
+    package-tree.txt
+
+memory-bank/features/FT-008/
+  README.md
+  protocol.md
+  feature.md
+  implementation-plan.md
+
+.ai-setup lifecycle runner additions:
+  .ai-setup/workflows/lifecycle-feature.json
+  .ai-setup/stages/draft-lifecycle-protocol.json
+  .ai-setup/stages/review-lifecycle-protocol.json
+  .ai-setup/stages/polish-lifecycle-protocol.json
+  .ai-setup/stages/execute-lifecycle-protocol.json
+  .prompts/memory-bank-polish-lifecycle-protocol.md
+
+AgentScope MCP implementation:
+  tools/agentscope/src/mcp/server.ts
+  tools/agentscope/src/mcp/tools.ts
+  tools/agentscope/src/mcp/helpers.ts
+  tools/agentscope/src/mcp/schemas.ts
+  tools/agentscope/test/mcp-server.test.ts

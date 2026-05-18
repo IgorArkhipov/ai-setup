@@ -352,6 +352,14 @@ resolve_transition_target() {
 			resolved_next_stage="$requested_next_stage"
 			resolved_next_action="run_stage"
 			;;
+		review-lifecycle-protocol)
+			resolved_next_stage="execute-lifecycle-protocol"
+			resolved_next_action="run_stage"
+			;;
+		execute-lifecycle-protocol)
+			resolved_next_action="stop_gate"
+			resolved_stop_reason="lifecycle_protocol_executed"
+			;;
 		implement-milestone | polish-milestone)
 			resolved_next_stage="review-milestone"
 			resolved_next_action="run_stage"
