@@ -3,6 +3,7 @@
 set -euo pipefail
 
 : "${AGENT_WORKFLOW_STAGE_ID:?}"
+: "${AGENT_WORKFLOW_RESULT_FILE:?}"
 : "${AGENT_WORKFLOW_REVIEW_RESULT_FILE:?}"
 : "${AGENT_WORKFLOW_STATE_DIR:?}"
 
@@ -36,7 +37,36 @@ EOF
 	fi
 	;;
 *)
-	printf 'Claude review should not run for stage: %s\n' "$AGENT_WORKFLOW_STAGE_ID" >&2
-	exit 1
+	primary_target_artifact="$(awk '
+		{
+			sub(/\r$/, "", $0)
+			if (index($0, "Target artifact:") == 1) {
+				value = substr($0, length("Target artifact:") + 1)
+				sub(/^ */, "", value)
+				print value
+				exit
+			}
+		}
+	' "$AGENT_WORKFLOW_RESULT_FILE")"
+	primary_target_artifact="${primary_target_artifact:-none}"
+	primary_next_stage="$(awk '
+		{
+			sub(/\r$/, "", $0)
+			if (index($0, "Next stage:") == 1) {
+				value = substr($0, length("Next stage:") + 1)
+				sub(/^ */, "", value)
+				print value
+				exit
+			}
+		}
+	' "$AGENT_WORKFLOW_RESULT_FILE")"
+	cat >"$AGENT_WORKFLOW_REVIEW_RESULT_FILE" <<EOF
+Status: accepted
+Target artifact: $primary_target_artifact
+Open findings: 0
+EOF
+	if [ -n "$primary_next_stage" ]; then
+		printf 'Next stage: %s\n' "$primary_next_stage" >>"$AGENT_WORKFLOW_REVIEW_RESULT_FILE"
+	fi
 	;;
 esac

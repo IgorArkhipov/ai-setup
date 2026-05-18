@@ -33,7 +33,8 @@ Common options:
   --now "YYYY-MM-DD HH:MM"
   --result-file PATH    Stage result file for transition checks
   --stage-command CMD   Shell command used by run/step; receives AGENT_WORKFLOW_* env vars
-  --claude-review       Run Claude second-opinion review after accepted review stages
+  --claude-review-policy POLICY
+                      Claude review policy: off, accepted-review, or every-step
   --review-command CMD  Shell command for Claude review; receives AGENT_WORKFLOW_* env vars
   --interactive         For stage, write a Zellij-ready interactive launcher
   --launch              With --interactive, start the Zellij tab/session
@@ -82,6 +83,73 @@ reject_env_path() {
 	local path="$1"
 	if is_env_path "$path"; then
 		die "refusing to read .env* path: $path"
+	fi
+}
+
+normalize_claude_review_policy() {
+	local raw
+
+	raw="$(printf '%s' "$1" |
+		tr '[:upper:]' '[:lower:]' |
+		sed 's/^[[:space:]]*//; s/[[:space:]]*$//; s/[[:space:]_]/-/g; s/--*/-/g')"
+
+	case "$raw" in
+	"" | off | none | false | disabled)
+		printf 'off\n'
+		;;
+	accepted-review | accepted-review-stage | accepted-review-stages | review-stage | review-stages | current | standard | conservative | on | true)
+		printf 'accepted-review\n'
+		;;
+	every-step | every-stage | all-stage | all-stages | always | all)
+		printf 'every-step\n'
+		;;
+	*)
+		die "unknown Claude review policy: $1"
+		;;
+	esac
+}
+
+extract_claude_review_policy_from_stream() {
+	awk '
+		{
+			sub(/\r$/, "", $0)
+			line = $0
+			lower = tolower(line)
+			if (match(lower, /(claude[ _-]code[ _-]mcp[ _-])?review[ _-]?policy[[:space:]]*:/)) {
+				value = substr(line, RSTART + RLENGTH)
+				sub(/^[[:space:]]+/, "", value)
+				sub(/[[:space:]]*(#.*)?$/, "", value)
+				print value
+				exit
+			}
+			if (match(lower, /claude_review_policy[[:space:]]*:/)) {
+				value = substr(line, RSTART + RLENGTH)
+				sub(/^[[:space:]]+/, "", value)
+				sub(/[[:space:]]*(#.*)?$/, "", value)
+				print value
+				exit
+			}
+		}
+	'
+}
+
+active_claude_review_policy() {
+	local manifest_policy
+
+	if [ -n "${claude_review_policy:-}" ]; then
+		printf '%s\n' "$claude_review_policy"
+		return 0
+	fi
+
+	manifest_policy=""
+	if [ -n "${manifest:-}" ] && [ -f "$manifest" ]; then
+		manifest_policy="$(jq -r '.claude_review_policy // ""' "$manifest")"
+	fi
+
+	if [ -n "$manifest_policy" ]; then
+		normalize_claude_review_policy "$manifest_policy"
+	else
+		printf 'off\n'
 	fi
 }
 
@@ -376,11 +444,25 @@ resolve_transition_target() {
 		esac
 		;;
 	polish_current)
-		[ -n "$family" ] || die "cannot polish stage without a stage family: $stage"
-		candidate="polish-$family"
-		[ -f "$(stage_file "$candidate")" ] || die "next polish stage not found: $candidate"
-		resolved_next_stage="$candidate"
-		resolved_next_action="run_stage"
+		case "$stage" in
+		implement-milestone | review-milestone | polish-milestone)
+			candidate="polish-milestone"
+			[ -f "$(stage_file "$candidate")" ] || die "next polish stage not found: $candidate"
+			resolved_next_stage="$candidate"
+			resolved_next_action="run_stage"
+			;;
+		*)
+			if [ -n "$family" ]; then
+				candidate="polish-$family"
+				[ -f "$(stage_file "$candidate")" ] || die "next polish stage not found: $candidate"
+				resolved_next_stage="$candidate"
+				resolved_next_action="run_stage"
+			else
+				resolved_next_action="stop_blocked"
+				resolved_stop_reason="needs_polish_without_polish_stage"
+			fi
+			;;
+		esac
 		;;
 	backtrack_upstream)
 		case "$stage" in
@@ -429,7 +511,8 @@ write_stage_prompt() {
 			"- branch: \(.branch)",
 			"- worktree: \(.worktree)",
 			"- current_stage: \(.current_stage)",
-			"- next_action: \(.next_action)"
+			"- next_action: \(.next_action)",
+			"- claude_review_policy: \(.claude_review_policy // "off")"
 		' "$manifest_path"
 
 		printf '\n## Original prompt\n\n'
@@ -500,11 +583,13 @@ write_claude_review_prompt() {
 	local target_artifact_value
 	local target_artifact_abs
 	local manifest_worktree
+	local requested_next_stage_value
 	local prompt_dir
 
 	prompt_dir="${review_prompt_path%/*}"
 	mkdir -p "$prompt_dir"
 	target_artifact_value="$(extract_result_field "Target artifact" "$primary_result_path")"
+	requested_next_stage_value="$(extract_result_field "Next stage" "$primary_result_path")"
 	manifest_worktree="$(jq -r '.worktree' "$manifest")"
 	target_artifact_abs=""
 	if [ -n "$target_artifact_value" ] && [ "$target_artifact_value" != "none" ]; then
@@ -524,7 +609,8 @@ write_claude_review_prompt() {
 			"- run_id: \(.run_id)",
 			"- workflow: \(.workflow)",
 			"- current_stage: \(.current_stage)",
-			"- worktree: \(.worktree)"
+			"- worktree: \(.worktree)",
+			"- claude_review_policy: \(.claude_review_policy // "off")"
 		' "$manifest"
 		printf -- '- primary_result_file: %s\n' "$primary_result_path"
 		printf -- '- target_artifact: %s\n' "${target_artifact_value:-none}"
@@ -538,6 +624,10 @@ write_claude_review_prompt() {
 		printf 'Status: accepted | needs_polish | needs_upstream | blocked | needs_human | failed\n'
 		printf 'Target artifact: %s\n' "${target_artifact_value:-none}"
 		printf 'Open findings: <non-negative integer>\n\n'
+		if [ "$stage_id" = "route-document" ]; then
+			printf 'Next stage: %s\n\n' "${requested_next_stage_value:-none}"
+			printf 'For route-document, preserve or correct Next stage in the review result; accepted route results require it.\n\n'
+		fi
 		printf 'Use accepted only when the artifact is ready. Use needs_polish for current-artifact fixes, needs_upstream when the plan/design/input must change first, and needs_human when a human decision is required.\n'
 	} >"$review_prompt_path"
 }
@@ -549,6 +639,7 @@ render_stage_json() {
 		--arg stage "$stage_id" \
 		--arg agent "$agent" \
 		--arg model "$model" \
+		--arg claude_review_policy "$(active_claude_review_policy)" \
 		--arg prompt_file "$prompt_path" \
 		--arg result_file "$result_path" \
 		--arg request_file "$request_path" \
@@ -559,6 +650,7 @@ render_stage_json() {
 			stage: $stage,
 			agent: $agent,
 			model: $model,
+			claude_review_policy: $claude_review_policy,
 			prompt_file: $prompt_file,
 			result_file: $result_file,
 			request_file: $request_file,
@@ -594,6 +686,7 @@ write_stage_request() {
 		--arg state_dir "$state_dir" \
 		--arg agent "$agent" \
 		--arg model "$model" \
+		--arg claude_review_policy "$(active_claude_review_policy)" \
 		--arg implementation_plan "$implementation_plan" \
 		--arg milestone_id "$milestone_id" \
 		--arg milestone_goal "$milestone_goal" \
@@ -609,6 +702,7 @@ write_stage_request() {
 			state_dir: $state_dir,
 			agent_hint: $agent,
 			model_hint: $model,
+			claude_review_policy: $claude_review_policy,
 			implementation_plan: $implementation_plan,
 			current_milestone: {
 				id: $milestone_id,
@@ -722,6 +816,7 @@ render_start_json() {
 		--arg current_stage "$current_stage" \
 		--arg next_action "$next_action" \
 		--arg status "$run_status" \
+		--arg claude_review_policy "$claude_review_policy" \
 		--arg implementation_plan "$implementation_plan_abs" \
 		--argjson milestones "$milestones_json" \
 		'
@@ -734,6 +829,7 @@ render_start_json() {
 			state_dir: $state_dir,
 			current_stage: $current_stage,
 			next_action: $next_action,
+			claude_review_policy: $claude_review_policy,
 			status: $status,
 			stage_history: []
 		}
@@ -747,11 +843,18 @@ render_start_json() {
 }
 
 initialize_run_state() {
+	local detected_policy
+	local prompt_file_abs
+
 	[ -n "$slug" ] || die "$command requires --slug"
 	[ -z "$prompt" ] || [ -z "$prompt_file" ] || die "use either --prompt or --prompt-file, not both"
 	[ -n "$prompt" ] || [ -n "$prompt_file" ] || [ -n "$implementation_plan" ] || die "$command requires --prompt, --prompt-file, or --implementation-plan"
 	if [ -n "$prompt_file" ]; then
 		reject_env_path "$prompt_file"
+		prompt_file_abs="$(abs_path "$prompt_file")"
+		[ -f "$prompt_file_abs" ] || die "prompt file not found: $prompt_file_abs"
+	else
+		prompt_file_abs=""
 	fi
 	if [ -n "$implementation_plan" ]; then
 		reject_env_path "$implementation_plan"
@@ -763,6 +866,20 @@ initialize_run_state() {
 	else
 		implementation_plan_abs=""
 		milestones_json="[]"
+	fi
+
+	if [ -z "$claude_review_policy" ]; then
+		detected_policy=""
+		if [ -n "$prompt" ]; then
+			detected_policy="$(printf '%s\n' "$prompt" | extract_claude_review_policy_from_stream)"
+		elif [ -n "$prompt_file_abs" ]; then
+			detected_policy="$(extract_claude_review_policy_from_stream <"$prompt_file_abs")"
+		fi
+		if [ -n "$detected_policy" ]; then
+			claude_review_policy="$(normalize_claude_review_policy "$detected_policy")"
+		else
+			claude_review_policy="accepted-review"
+		fi
 	fi
 
 	wf_file="$(workflow_file "$workflow")"
@@ -789,7 +906,7 @@ initialize_run_state() {
 		ensure_worktree "$worktree_path" "$branch" "$base_ref"
 		mkdir -p "$state_dir/stage-results"
 		if [ -n "$prompt_file" ]; then
-			cp "$prompt_file" "$state_dir/prompt.md"
+			cp "$prompt_file_abs" "$state_dir/prompt.md"
 		else
 			if [ -n "$prompt" ]; then
 				printf '%s\n' "$prompt" >"$state_dir/prompt.md"
@@ -820,6 +937,7 @@ run_stage_agent() {
 			AGENT_WORKFLOW_CURRENT_MILESTONE_GOAL="$(jq -r '.current_milestone.goal // ""' "$manifest")" \
 			AGENT_WORKFLOW_AGENT="$agent" \
 			AGENT_WORKFLOW_MODEL="$model" \
+			AGENT_WORKFLOW_CLAUDE_REVIEW_POLICY="$(active_claude_review_policy)" \
 			sh -c "$command_body"
 	else
 		need_cmd codex
@@ -830,14 +948,30 @@ run_stage_agent() {
 }
 
 should_run_claude_review() {
-	[ "$claude_review" -eq 1 ] || return 1
-	case "$stage_id" in
-	review-*) ;;
-	*)
+	local policy
+
+	policy="$(active_claude_review_policy)"
+	[ "$(extract_result_field "Status" "$result_path")" = "accepted" ] || return 1
+
+	case "$policy" in
+	off)
 		return 1
 		;;
+	accepted-review)
+		case "$stage_id" in
+		review-*) ;;
+		*)
+			return 1
+			;;
+		esac
+		;;
+	every-step)
+		;;
+	*)
+		die "unknown Claude review policy: $policy"
+		;;
 	esac
-	[ "$(extract_result_field "Status" "$result_path")" = "accepted" ] || return 1
+
 	return 0
 }
 
@@ -873,6 +1007,7 @@ run_claude_review_agent() {
 			AGENT_WORKFLOW_CURRENT_MILESTONE_GOAL="$(jq -r '.current_milestone.goal // ""' "$manifest")" \
 			AGENT_WORKFLOW_AGENT="claude" \
 			AGENT_WORKFLOW_MODEL="$model" \
+			AGENT_WORKFLOW_CLAUDE_REVIEW_POLICY="$(active_claude_review_policy)" \
 			sh -c "$command_body"
 	else
 		need_cmd claude
@@ -939,7 +1074,7 @@ stage_id=""
 implementation_plan=""
 stage_command="${AGENT_WORKFLOW_STAGE_COMMAND:-}"
 review_command="${AGENT_WORKFLOW_REVIEW_COMMAND:-}"
-claude_review=0
+claude_review_policy=""
 interactive=0
 launch=0
 detached=0
@@ -1020,8 +1155,10 @@ while [ $# -gt 0 ]; do
 		[ $# -gt 0 ] || die "--review-command requires a value"
 		review_command="$1"
 		;;
-	--claude-review)
-		claude_review=1
+	--claude-review-policy)
+		shift
+		[ $# -gt 0 ] || die "--claude-review-policy requires a value"
+		claude_review_policy="$(normalize_claude_review_policy "$1")"
 		;;
 	--interactive)
 		interactive=1

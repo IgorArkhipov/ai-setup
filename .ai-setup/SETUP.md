@@ -149,14 +149,13 @@ Create the timestamped run state and worktree when you are ready to materialize 
   --apply
 ```
 
-Run the same pipeline with Claude second-opinion review after accepted review stages:
+Run the same pipeline with the default Claude second-opinion review after accepted review stages:
 
 ```bash
 ./.ai-setup/scripts/run-agent-workflow.sh run \
   --workflow route-first \
   --slug provider-auth \
   --prompt "Add provider auth detection" \
-  --claude-review \
   --apply
 ```
 
@@ -167,7 +166,6 @@ Execute an accepted governed implementation plan milestone by milestone:
   --workflow implementation-plan \
   --slug provider-auth-implementation \
   --implementation-plan memory-bank/features/FT-007/implementation-plan.md \
-  --claude-review \
   --apply
 ```
 

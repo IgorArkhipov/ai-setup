@@ -39,7 +39,7 @@ Use [Zellij Task Sessions](zellij-task-sessions.md) instead when you need an int
 - Run state is non-governed operational state under `tmp/agent-workflows/<run-id>/`.
 - `run` and `step` execute stages non-interactively. The default executor is `codex exec`; use `--stage-command` or `AGENT_WORKFLOW_STAGE_COMMAND` when a test harness or alternate agent command should produce the stage result file.
 - Applied stage preparation writes an agent-neutral request file under `tmp/agent-workflows/<run-id>/stage-requests/`. The request file is the stable adapter boundary; shell environment variables are compatibility helpers.
-- `--claude-review` runs a Claude second-opinion review after accepted review stages. If Claude is unavailable or cannot complete the review, the stage result must stop as `needs_human`, `blocked`, or `failed`; do not treat missing review as accepted.
+- Claude second-opinion review is controlled by `claude_review_policy`. If Claude is unavailable or cannot complete a required review, the stage result must stop as `needs_human`, `blocked`, or `failed`; do not treat missing review as accepted.
 - `.worktrees/` remains the intended worktree root for live pipeline runs, but workflow checks use disposable test roots.
 
 ## Diagnosis
@@ -136,16 +136,32 @@ The command runs with these environment variables:
 - `AGENT_WORKFLOW_AGENT`
 - `AGENT_WORKFLOW_MODEL`
 
-Add `--claude-review` when accepted review stages should receive an independent Claude second-opinion pass before the runner advances:
+Claude review has three policies:
+
+- `off`: no automatic Claude second-opinion pass;
+- `accepted-review`: run Claude after accepted `review-*` stages only; this is the default when the initial prompt does not request another policy;
+- `every-step`: run Claude after every accepted workflow stage before the runner transitions to the next stage.
+
+Set the policy explicitly with `--claude-review-policy` when a run needs stricter or looser review:
 
 ```bash
 ./.ai-setup/scripts/run-agent-workflow.sh run \
   --workflow route-first \
   --slug provider-auth \
   --prompt "Add provider auth detection" \
-  --claude-review \
+  --claude-review-policy every-step \
   --apply
 ```
+
+Or set it in the first prompt so the run manifest carries the policy through later `run`, `step`, and `resume` calls:
+
+```markdown
+Add provider auth detection.
+
+Claude review policy: every-step
+```
+
+Use `Claude review policy: off` or `--claude-review-policy off` only when a test harness or human-approved run should skip automatic Claude review.
 
 For test harnesses or alternate Claude wrappers, set `--review-command` or `AGENT_WORKFLOW_REVIEW_COMMAND`. Review commands receive the stage environment plus:
 
@@ -158,6 +174,8 @@ For test harnesses or alternate Claude wrappers, set `--review-command` or `AGEN
 
 The review command must write the normal parseable stage-result contract to `AGENT_WORKFLOW_REVIEW_RESULT_FILE`. If that result is `needs_polish`, the runner moves into the matching polish stage and then re-runs review.
 
+For `every-step`, the Claude review result replaces the primary stage result for transition purposes. For route stages, accepted Claude review results must preserve or correct `Next stage`. If Claude returns `needs_polish` for a stage that has no matching polish stage, the runner stops blocked instead of advancing.
+
 ### 4. Run An Implementation Plan By Milestone
 
 Use the `implementation-plan` workflow when a governed `implementation-plan.md` has been accepted and should be executed milestone by milestone:
@@ -167,7 +185,6 @@ Use the `implementation-plan` workflow when a governed `implementation-plan.md` 
   --workflow implementation-plan \
   --slug provider-auth-implementation \
   --implementation-plan memory-bank/features/FT-007/implementation-plan.md \
-  --claude-review \
   --apply
 ```
 

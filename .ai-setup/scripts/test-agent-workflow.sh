@@ -94,6 +94,7 @@ assert_json_eq "$start_json" '.run_id' '2026-05-11-1432-provider-auth'
 assert_json_eq "$start_json" '.branch' 'task/2026-05-11-1432-provider-auth'
 assert_json_eq "$start_json" '.current_stage' 'route-document'
 assert_json_eq "$start_json" '.next_action' 'run_stage'
+assert_json_eq "$start_json" '.claude_review_policy' 'accepted-review'
 
 lifecycle_start_json="$("$runner" start \
 	--workflow lifecycle-feature \
@@ -106,6 +107,7 @@ assert_json_eq "$lifecycle_start_json" '.run_id' '2026-05-17-1000-mcp-control-pl
 assert_json_eq "$lifecycle_start_json" '.workflow' 'lifecycle-feature'
 assert_json_eq "$lifecycle_start_json" '.current_stage' 'draft-lifecycle-protocol'
 assert_json_eq "$lifecycle_start_json" '.next_action' 'run_stage'
+assert_json_eq "$lifecycle_start_json" '.claude_review_policy' 'accepted-review'
 
 lifecycle_review_transition="$("$runner" transition \
 	--stage review-lifecycle-protocol \
@@ -143,6 +145,10 @@ claude_review_slug="claude-review-demo-$sandbox_tag"
 claude_review_run_id="2026-05-11-1438-$claude_review_slug"
 claude_review_worktree="$sandbox/worktrees/$claude_review_run_id"
 claude_review_branch="task/$claude_review_run_id"
+claude_every_step_slug="claude-every-step-demo-$sandbox_tag"
+claude_every_step_run_id="2026-05-11-1440-$claude_every_step_slug"
+claude_every_step_worktree="$sandbox/worktrees/$claude_every_step_run_id"
+claude_every_step_branch="task/$claude_every_step_run_id"
 implementation_slug="implementation-demo-$sandbox_tag"
 implementation_run_id="2026-05-11-1439-$implementation_slug"
 implementation_worktree="$sandbox/worktrees/$implementation_run_id"
@@ -159,6 +165,7 @@ cleanup() {
 	git -C "$repo_root" worktree remove --force "$step_worktree" >/dev/null 2>&1 || true
 	git -C "$repo_root" worktree remove --force "$pipeline_worktree" >/dev/null 2>&1 || true
 	git -C "$repo_root" worktree remove --force "$claude_review_worktree" >/dev/null 2>&1 || true
+	git -C "$repo_root" worktree remove --force "$claude_every_step_worktree" >/dev/null 2>&1 || true
 	git -C "$repo_root" worktree remove --force "$implementation_worktree" >/dev/null 2>&1 || true
 	git -C "$repo_root" worktree remove --force "$mismatch_worktree" >/dev/null 2>&1 || true
 	git -C "$repo_root" branch -D "$apply_branch" >/dev/null 2>&1 || true
@@ -166,6 +173,7 @@ cleanup() {
 	git -C "$repo_root" branch -D "$step_branch" >/dev/null 2>&1 || true
 	git -C "$repo_root" branch -D "$pipeline_branch" >/dev/null 2>&1 || true
 	git -C "$repo_root" branch -D "$claude_review_branch" >/dev/null 2>&1 || true
+	git -C "$repo_root" branch -D "$claude_every_step_branch" >/dev/null 2>&1 || true
 	git -C "$repo_root" branch -D "$implementation_branch" >/dev/null 2>&1 || true
 	git -C "$repo_root" branch -D "$mismatch_branch" >/dev/null 2>&1 || true
 	git -C "$repo_root" branch -D "$mismatch_existing_branch" >/dev/null 2>&1 || true
@@ -619,7 +627,9 @@ assert_file "$sandbox/agent-workflows/$step_run_id/stage-results/route-document.
 pipeline_json="$("$runner" run \
 	--workflow route-first \
 	--slug "$pipeline_slug" \
-	--prompt "Run the routed feature workflow to a review gate" \
+	--prompt "Run the routed feature workflow to a review gate
+
+Claude review policy: off" \
 	--now "2026-05-11 14:36" \
 	--state-root "$sandbox/agent-workflows" \
 	--worktree-root "$sandbox/worktrees" \
@@ -635,6 +645,7 @@ assert_json_eq "$pipeline_json" '.next_action' 'stop_gate'
 assert_json_eq "$pipeline_json" '.stop_reason' 'stop_gate'
 pipeline_manifest="$sandbox/agent-workflows/$pipeline_run_id/run.json"
 jq -e '
+	.claude_review_policy == "off" and
 	.current_stage == "review-feature" and
 	.next_action == "stop_gate" and
 	(.stage_history | length == 5) and
@@ -660,7 +671,6 @@ claude_review_json="$("$runner" run \
 	--state-root "$sandbox/agent-workflows" \
 	--worktree-root "$sandbox/worktrees" \
 	--stage-command "$fake_accepting_agent" \
-	--claude-review \
 	--review-command "$fake_claude_reviewer" \
 	--max-steps 10 \
 	--apply \
@@ -672,6 +682,7 @@ assert_json_eq "$claude_review_json" '.current_stage' 'review-feature'
 assert_json_eq "$claude_review_json" '.next_action' 'stop_gate'
 claude_review_manifest="$sandbox/agent-workflows/$claude_review_run_id/run.json"
 jq -e '
+	.claude_review_policy == "accepted-review" and
 	.current_stage == "review-feature" and
 	.next_action == "stop_gate" and
 	(.stage_history | length == 5) and
@@ -693,9 +704,80 @@ jq -e '
 	.kind == "review" and
 	.stage_id == "review-feature" and
 	.agent_hint == "claude" and
+	.claude_review_policy == "accepted-review" and
 	.prompt_file == "'"$sandbox"'/agent-workflows/'"$claude_review_run_id"'/stage-review-prompts/review-feature.claude.prompt.md" and
 	.result_file == "'"$sandbox"'/agent-workflows/'"$claude_review_run_id"'/stage-results/review-feature.claude.md"
-' "$sandbox/agent-workflows/$claude_review_run_id/stage-review-requests/review-feature.claude.request.json" >/dev/null
+	' "$sandbox/agent-workflows/$claude_review_run_id/stage-review-requests/review-feature.claude.request.json" >/dev/null
+
+old_claude_flag_output="$("$runner" run \
+	--workflow route-first \
+	--slug "old-claude-flag-$sandbox_tag" \
+	--prompt "Reject old Claude review shorthand" \
+	--now "2026-05-11 14:41" \
+	--state-root "$sandbox/agent-workflows" \
+	--worktree-root "$sandbox/worktrees" \
+	--stage-command "$fake_accepting_agent" \
+	--claude-review \
+	--review-command "$fake_claude_reviewer" \
+	--apply \
+	2>&1 || true)"
+assert_contains "$old_claude_flag_output" "unknown argument: --claude-review"
+
+claude_every_step_prompt="$sandbox/claude-every-step-prompt.md"
+cat >"$claude_every_step_prompt" <<'EOF'
+Run the routed feature workflow with Claude Code MCP review after every completed step.
+
+Claude review policy: every-step
+EOF
+
+claude_every_step_json="$("$runner" run \
+	--workflow route-first \
+	--slug "$claude_every_step_slug" \
+	--prompt-file "$claude_every_step_prompt" \
+	--now "2026-05-11 14:40" \
+	--state-root "$sandbox/agent-workflows" \
+	--worktree-root "$sandbox/worktrees" \
+	--stage-command "$fake_accepting_agent" \
+	--review-command "$fake_claude_reviewer" \
+	--max-steps 10 \
+	--apply \
+	--json)"
+assert_json_eq "$claude_every_step_json" '.run_id' "$claude_every_step_run_id"
+assert_json_eq "$claude_every_step_json" '.status' 'stopped'
+assert_json_eq "$claude_every_step_json" '.steps' '5'
+assert_json_eq "$claude_every_step_json" '.current_stage' 'review-feature'
+assert_json_eq "$claude_every_step_json" '.next_action' 'stop_gate'
+claude_every_step_manifest="$sandbox/agent-workflows/$claude_every_step_run_id/run.json"
+jq -e '
+	.claude_review_policy == "every-step" and
+	.current_stage == "review-feature" and
+	.next_action == "stop_gate" and
+	(.stage_history | length == 5) and
+	.stage_history[0].stage == "route-document" and
+	.stage_history[0].result_file == "'"$sandbox"'/agent-workflows/'"$claude_every_step_run_id"'/stage-results/route-document.claude.md" and
+	.stage_history[1].stage == "draft-feature" and
+	.stage_history[1].result_file == "'"$sandbox"'/agent-workflows/'"$claude_every_step_run_id"'/stage-results/draft-feature.claude.md" and
+	.stage_history[2].stage == "review-feature" and
+	.stage_history[2].status == "needs_polish" and
+	.stage_history[2].result_file == "'"$sandbox"'/agent-workflows/'"$claude_every_step_run_id"'/stage-results/review-feature.claude.md" and
+	.stage_history[3].stage == "polish-feature" and
+	.stage_history[3].result_file == "'"$sandbox"'/agent-workflows/'"$claude_every_step_run_id"'/stage-results/polish-feature.claude.md" and
+	.stage_history[4].stage == "review-feature" and
+	.stage_history[4].status == "accepted" and
+	.stage_history[4].result_file == "'"$sandbox"'/agent-workflows/'"$claude_every_step_run_id"'/stage-results/review-feature.claude.md"
+' "$claude_every_step_manifest" >/dev/null
+assert_file "$sandbox/agent-workflows/$claude_every_step_run_id/stage-results/route-document.claude.md"
+assert_file "$sandbox/agent-workflows/$claude_every_step_run_id/stage-results/draft-feature.claude.md"
+assert_file "$sandbox/agent-workflows/$claude_every_step_run_id/stage-results/review-feature.claude.md"
+assert_file "$sandbox/agent-workflows/$claude_every_step_run_id/stage-results/polish-feature.claude.md"
+assert_file "$sandbox/agent-workflows/$claude_every_step_run_id/stage-review-prompts/route-document.claude.prompt.md"
+assert_file "$sandbox/agent-workflows/$claude_every_step_run_id/stage-review-requests/draft-feature.claude.request.json"
+jq -e '
+	.kind == "review" and
+	.stage_id == "draft-feature" and
+	.agent_hint == "claude" and
+	.claude_review_policy == "every-step"
+' "$sandbox/agent-workflows/$claude_every_step_run_id/stage-review-requests/draft-feature.claude.request.json" >/dev/null
 
 implementation_plan_fixture="$sandbox/implementation-plan.md"
 cat >"$implementation_plan_fixture" <<'EOF'
@@ -717,7 +799,7 @@ implementation_json="$("$runner" run \
 	--state-root "$sandbox/agent-workflows" \
 	--worktree-root "$sandbox/worktrees" \
 	--stage-command "$fake_implementation_agent" \
-	--claude-review \
+	--claude-review-policy accepted-review \
 	--review-command "$fake_claude_reviewer" \
 	--max-steps 10 \
 	--apply \

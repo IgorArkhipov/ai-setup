@@ -189,6 +189,8 @@ Generated governed documents should be reviewed before downstream work starts fr
 1. After drafting a PRD, use-case, feature, ADR, or implementation plan, run the matching review against the active flow and template rules.
 2. If review changes the document materially, review it again before treating it as accepted input for the next stage.
 3. If the first review finds significant issues, the document boundary is debatable, or independent confirmation is needed, trigger a second-opinion review rather than silently continuing.
+4. Runner-created workflow runs default to `accepted-review`, so accepted review stages receive a Claude second opinion unless the initial prompt or CLI explicitly sets another policy.
+5. Workflow runs may tighten this default by setting `Claude review policy: every-step` in the initial prompt, or by passing the equivalent runner option. When this policy is active, every accepted stage must receive a Claude second-opinion result before the runner advances.
 
 ## Routing Rules
 

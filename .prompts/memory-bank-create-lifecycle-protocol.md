@@ -8,6 +8,8 @@ Source interpretation from the lifecycle protocol template:
 - then move document-by-document through the lifecycle that the protocol permits;
 - in this repository, map legacy or external phase names such as `Brief` and `Spec Pack` to the current governed owners instead of creating new legacy `brief.md`, `spec.md`, or `plan.md` feature-package artifacts;
 - `protocol.md` must answer "where are we now, and what is allowed next?" without relying on chat memory.
+- by default, runner-created workflow runs use `accepted-review`, so accepted review stages require Claude Code MCP second opinion before downstream transition unless the initial prompt or CLI explicitly sets another policy;
+- if the source prompt or run metadata sets `Claude review policy: every-step`, carry that policy into the protocol permissions, gates, execution plan, and copy-ready runner prompt so every completed stage requires Claude Code MCP second opinion before downstream transition.
 
 Constraints:
 - Do not read or use `.env*` files.
@@ -51,7 +53,8 @@ Drafting rules:
 10. Hard stop conditions must include production impact, secrets, destructive or irreversible actions, unrelated diffs, missing rollback before high-risk action, and unclear approval scope.
 11. Execution must return exactly one process status: `continue`, `done`, `blocked`, or `escalation`. Inside the protocol state, use `waiting_human` or `blocked` when approval or a hard stop prevents progress.
 12. Do not redefine canonical product scope, architecture, acceptance, or implementation facts owned by `feature.md`, ADRs, use cases, or implementation plans.
-13. If the protocol is meant to run future agents, include a copy-ready runner prompt inside `protocol.md`.
+13. Record the active Claude review policy. If it is `every-step`, each phase or step must name the Claude review evidence required before the next transition.
+14. If the protocol is meant to run future agents, include a copy-ready runner prompt inside `protocol.md`.
 
 Expected deliverable:
 - a lifecycle `protocol.md` at the confirmed target path

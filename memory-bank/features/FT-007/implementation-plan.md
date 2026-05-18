@@ -147,7 +147,7 @@ Build the non-interactive `.ai-setup` workflow-runner for FT-007: a route-first 
 FT-007 slice 1 is ready for acceptance when:
 
 - `run-agent-workflow.sh` supports `run`, `step`, `start`, `status`, `resume`, `stage`, and `transition` in testable mode.
-- `run-agent-workflow.sh run --claude-review` can run a second-opinion review after accepted review stages and route findings back through polish/re-review.
+- `run-agent-workflow.sh run --claude-review-policy accepted-review` can run a second-opinion review after accepted review stages and route findings back through polish/re-review.
 - `run-agent-workflow.sh run --workflow implementation-plan --implementation-plan <path>` can execute parsed plan milestones one by one and review every milestone before advancing.
 - `route-first` workflow and document-stage configs validate against existing `.prompts` files.
 - Run ids, worktree paths, branch names, and run-state paths use `YYYY-MM-DD-HHMM-<slug>` consistently.
@@ -172,7 +172,7 @@ Status: implemented locally and ready for acceptance review, with local ShellChe
 | `run-agent-workflow.sh stage ... --apply --json` | passed | Writes a composed stage prompt file with run metadata, original prompt, previous-stage result context, prompt-chain contents, and expected output contract |
 | `run-agent-workflow.sh step ... --stage-command <fixture> --apply --json` | passed | Executes one current stage, writes one stage result, persists one transition, and returns control with `status: step_complete` |
 | `run-agent-workflow.sh run ... --stage-command <fixture> --apply --json` | passed | Starts from a prompt and executes route, draft, review, polish, and re-review stages until `stop_gate` |
-| `run-agent-workflow.sh run ... --claude-review --review-command <fixture> --apply --json` | passed | Runs Claude second-opinion review after accepted review stages; review findings trigger polish and re-review |
+| `run-agent-workflow.sh run ... --claude-review-policy accepted-review --review-command <fixture> --apply --json` | passed | Runs Claude second-opinion review after accepted review stages; review findings trigger polish and re-review |
 | `run-agent-workflow.sh run --workflow implementation-plan --implementation-plan <path> ... --apply --json` | passed | Extracts implementation-plan milestone rows, executes implementation/review for each milestone, and stops at `all_milestones_accepted` |
 | `run-agent-workflow.sh stage ... --interactive --apply --json` | passed | Writes a Zellij-ready stage launcher and reports `interactive_ready` without starting a live terminal unless `--launch` is supplied |
 | `run-agent-workflow.sh stage ... --apply` output contract | passed | Generated prompts require parseable `Status`, `Target artifact`, and `Open findings` fields, plus `Next stage` for route decisions |

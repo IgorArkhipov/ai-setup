@@ -8,6 +8,7 @@ Constraints:
 - Read every current state artifact named by the protocol before selecting work.
 - If the protocol belongs to a feature package, read the sibling `feature.md`, `implementation-plan.md` if it exists, and the feature-package `README.md`.
 - Do not execute a protocol with unresolved review findings unless the user explicitly asks for a dry run or a bounded repair step.
+- Respect the run's `claude_review_policy` metadata. When it is `every-step`, do not treat a completed stage as ready to transition until the runner has produced or is about to require the corresponding Claude Code MCP second-opinion result.
 
 Execution rules:
 1. Identify the protocol Goal, Entry Criteria, Lifecycle States, Step Contract, Escalation Rules, Exit Criteria, Observable Runner Contract, and Handoff/Resume Rules.
@@ -21,7 +22,8 @@ Execution rules:
 9. Leave an evidence trace after the step: what changed, what was verified, and what remains.
 10. If the next step requires approval or hits a hard stop condition, stop before the risky action, set protocol state to `waiting_human` or `blocked` when permitted, and return status `escalation` or `blocked`.
 11. If exit criteria are met, stop with status `done`.
-12. If the protocol can continue safely but the caller did not authorize an automatic multi-step run, stop with status `continue` and name the next step.
+12. If Claude review policy is `every-step`, record the Claude review result path or the missing-review blocker in the evidence for the step.
+13. If the protocol can continue safely but the caller did not authorize an automatic multi-step run, stop with status `continue` and name the next step.
 
 Response format:
 
