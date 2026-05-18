@@ -1,0 +1,20 @@
+.
+  README.md
+  evidence
+  evidence/package-tree.txt
+  execution-summary.md
+  initial-prompt.md
+  protocol-polish.md
+  protocol-review.md
+  protocol.md
+  simulated-feature-docs
+  simulated-feature-docs/README.md
+  simulated-feature-docs/feature.md
+  simulated-feature-docs/implementation-plan.md
+  stage-results
+  stage-results/draft-lifecycle-protocol.md
+  stage-results/execute-lifecycle-protocol.md
+  stage-results/polish-lifecycle-protocol.md
+  stage-results/review-lifecycle-protocol.accepted.md
+  stage-results/review-lifecycle-protocol.initial.md
+  workflow-run.json

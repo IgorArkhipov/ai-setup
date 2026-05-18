@@ -1,0 +1,86 @@
+{
+  "run_id": "2026-05-17-1730-ft-008-clear-readonly",
+  "workflow": "lifecycle-feature",
+  "slug": "ft-008-clear-readonly",
+  "branch": "task/2026-05-17-1730-ft-008-clear-readonly",
+  "worktree": "/Users/igor.arkhipov/Documents/Work/Ruby/thinknetica/ai-setup/.worktrees/2026-05-17-1730-ft-008-clear-readonly",
+  "state_dir": "/Users/igor.arkhipov/Documents/Work/Ruby/thinknetica/ai-setup/tmp/agent-workflows/2026-05-17-1730-ft-008-clear-readonly",
+  "current_stage": "execute-lifecycle-protocol",
+  "next_action": "stop_gate",
+  "status": "created",
+  "stage_history": [
+    {
+      "stage": "draft-lifecycle-protocol",
+      "status": "accepted",
+      "decision_action": "advance_or_gate",
+      "next_action": "run_stage",
+      "next_stage": "review-lifecycle-protocol",
+      "stop_reason": "",
+      "requested_next_stage": "",
+      "open_findings": 0,
+      "result_file": "tmp/agent-workflows/2026-05-17-1730-ft-008-clear-readonly/stage-results/draft-lifecycle-protocol.md",
+      "target_artifact": "memory-bank/features/FT-008-clear-run/protocol.md"
+    },
+    {
+      "stage": "review-lifecycle-protocol",
+      "status": "needs_polish",
+      "decision_action": "polish_current",
+      "next_action": "run_stage",
+      "next_stage": "polish-lifecycle-protocol",
+      "stop_reason": "",
+      "requested_next_stage": "",
+      "open_findings": 2,
+      "result_file": "tmp/agent-workflows/2026-05-17-1730-ft-008-clear-readonly/stage-results/review-lifecycle-protocol.md",
+      "target_artifact": "memory-bank/features/FT-008-clear-run/protocol.md"
+    },
+    {
+      "stage": "polish-lifecycle-protocol",
+      "status": "accepted",
+      "decision_action": "advance_or_gate",
+      "next_action": "run_stage",
+      "next_stage": "review-lifecycle-protocol",
+      "stop_reason": "",
+      "requested_next_stage": "",
+      "open_findings": 0,
+      "result_file": "tmp/agent-workflows/2026-05-17-1730-ft-008-clear-readonly/stage-results/polish-lifecycle-protocol.md",
+      "target_artifact": "memory-bank/features/FT-008-clear-run/protocol.md"
+    },
+    {
+      "stage": "review-lifecycle-protocol",
+      "status": "accepted",
+      "decision_action": "advance_or_gate",
+      "next_action": "run_stage",
+      "next_stage": "execute-lifecycle-protocol",
+      "stop_reason": "",
+      "requested_next_stage": "",
+      "open_findings": 0,
+      "result_file": "tmp/agent-workflows/2026-05-17-1730-ft-008-clear-readonly/stage-results/review-lifecycle-protocol.md",
+      "target_artifact": "memory-bank/features/FT-008-clear-run/protocol.md"
+    },
+    {
+      "stage": "execute-lifecycle-protocol",
+      "status": "accepted",
+      "decision_action": "advance_or_gate",
+      "next_action": "stop_gate",
+      "next_stage": "",
+      "stop_reason": "lifecycle_protocol_executed",
+      "requested_next_stage": "",
+      "open_findings": 0,
+      "result_file": "tmp/agent-workflows/2026-05-17-1730-ft-008-clear-readonly/stage-results/execute-lifecycle-protocol.md",
+      "target_artifact": "memory-bank/features/FT-008-clear-run/protocol.md"
+    }
+  ],
+  "last_result": {
+    "stage": "execute-lifecycle-protocol",
+    "status": "accepted",
+    "decision_action": "advance_or_gate",
+    "next_action": "stop_gate",
+    "next_stage": "",
+    "stop_reason": "lifecycle_protocol_executed",
+    "requested_next_stage": "",
+    "open_findings": 0,
+    "result_file": "tmp/agent-workflows/2026-05-17-1730-ft-008-clear-readonly/stage-results/execute-lifecycle-protocol.md",
+    "target_artifact": "memory-bank/features/FT-008-clear-run/protocol.md"
+  },
+  "stop_reason": "lifecycle_protocol_executed"
+}
