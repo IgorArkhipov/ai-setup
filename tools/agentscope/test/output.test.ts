@@ -132,6 +132,29 @@ Warnings:
     expect(parsed).toEqual(result);
   });
 
+  it("renders empty human output without warning sections", () => {
+    expect(renderListHuman({ items: [], warnings: [] })).toBe("No discovered items.");
+  });
+
+  it("renders provider warnings without a layer label", () => {
+    expect(
+      renderListHuman({
+        items: [],
+        warnings: [
+          {
+            provider: "codex",
+            code: "missing-config",
+            message: "Codex config is missing",
+          },
+        ],
+      }),
+    ).toBe(`No discovered items.
+
+Warnings:
+
+- codex missing-config: Codex config is missing`);
+  });
+
   it("renders human snapshot output from the persisted payload", () => {
     expect(renderSnapshotHuman(snapshotResult)).toBe(`Snapshot saved: snap-1776072000000-abc123
 Latest path: /state/snapshots/project/latest.json
@@ -146,6 +169,27 @@ Providers:
 
 Warnings:
 - cursor global missing-root: Cursor root is missing`);
+  });
+
+  it("renders human snapshot output without warning sections", () => {
+    expect(
+      renderSnapshotHuman({
+        ...snapshotResult,
+        snapshot: {
+          ...snapshotResult.snapshot,
+          warnings: [],
+        },
+      }),
+    ).toBe(`Snapshot saved: snap-1776072000000-abc123
+Latest path: /state/snapshots/project/latest.json
+History path: /state/snapshots/project/history/snap-1776072000000-abc123.json
+Captured at: 2026-04-13T12:00:00.000Z
+Project root: /workspace/project
+Inventory semantics: available=discovered in the current scope, active=currently enabled within that scope.
+Providers:
+  - claude: available=1, active=1, warnings=0
+  - codex: available=0, active=0, warnings=0
+  - cursor: available=0, active=0, warnings=1`);
   });
 
   it("renders JSON snapshot output from the same persisted payload", () => {

@@ -223,6 +223,39 @@ describe("mutation state", () => {
     );
   });
 
+  it("rejects missing blob files referenced by valid manifests", () => {
+    const sandbox = createMutationSandbox();
+    sandboxes.push(sandbox);
+    const target = {
+      type: "path",
+      path: sandbox.pathFor(".fake-toggle/files/original-name.txt"),
+    };
+
+    writeBackupManifest(sandbox, "backup-missing-blob", {
+      version: 1,
+      backupId: "backup-missing-blob",
+      createdAt: "2026-04-08T10:00:00.000Z",
+      affectedTargets: [target],
+      entries: [
+        {
+          entryId: "entry-1",
+          target,
+          existed: true,
+          pathKind: "file",
+          payload: {
+            storage: "blob",
+            blobId: "missing.bin",
+            size: 10,
+          },
+        },
+      ],
+    });
+
+    expect(() =>
+      loadBackup(sandbox.appStateRoot, "backup-missing-blob").readBlob("missing.bin"),
+    ).toThrow("backup blob not found: missing.bin");
+  });
+
   it("loads sqlite-item backup entries with inline payloads", () => {
     const sandbox = createMutationSandbox();
     sandboxes.push(sandbox);
@@ -275,6 +308,69 @@ describe("mutation state", () => {
         },
       ],
     });
+  });
+
+  it("loads selected path directory backup entries without payloads", () => {
+    const sandbox = createMutationSandbox();
+    sandboxes.push(sandbox);
+    const target = {
+      type: "path",
+      path: sandbox.pathFor(".fake-toggle/files"),
+    };
+    const selection = {
+      provider: "fake-toggle",
+      kind: "setting",
+      layer: "project",
+      id: "fake-toggle:setting:project:files",
+      displayName: "Fake files",
+      enabled: false,
+      mutability: "mutable",
+      sourcePath: sandbox.projectRoot,
+      statePath: sandbox.appStateRoot,
+    };
+
+    writeBackupManifest(sandbox, "backup-selected-directory", {
+      version: 1,
+      backupId: "backup-selected-directory",
+      createdAt: "2026-04-08T10:00:00.000Z",
+      selection,
+      targetEnabled: false,
+      affectedTargets: [target],
+      entries: [
+        {
+          entryId: "entry-directory",
+          target,
+          existed: true,
+          pathKind: "directory",
+          payload: null,
+        },
+      ],
+    });
+
+    expect(loadBackup(sandbox.appStateRoot, "backup-selected-directory").manifest).toEqual({
+      version: 1,
+      backupId: "backup-selected-directory",
+      createdAt: "2026-04-08T10:00:00.000Z",
+      selection,
+      targetEnabled: false,
+      affectedTargets: [target],
+      entries: [
+        {
+          entryId: "entry-directory",
+          target,
+          existed: true,
+          pathKind: "directory",
+          payload: null,
+        },
+      ],
+    });
+  });
+
+  it("returns no backup manifests when state has not been initialized", () => {
+    const sandbox = createMutationSandbox();
+    sandboxes.push(sandbox);
+
+    expect(listBackupManifests(sandbox.appStateRoot)).toEqual([]);
   });
 
   it("lists backup manifests with deterministic newest-first ordering", () => {

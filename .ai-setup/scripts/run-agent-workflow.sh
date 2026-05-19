@@ -973,8 +973,7 @@ should_run_claude_review() {
 			;;
 		esac
 		;;
-	every-step)
-		;;
+	every-step) ;;
 	*)
 		die "unknown Claude review policy: $policy"
 		;;

@@ -8,6 +8,75 @@ const packageRoot = path.resolve(import.meta.dirname, "..");
 const runtimeRoot = path.resolve(import.meta.dirname, "fixtures", "runtime");
 
 describe("cli", () => {
+  it("returns zero for help output", () => {
+    const stdout = vi.fn<(message: string) => void>();
+    const stderr = vi.fn<(message: string) => void>();
+
+    expect(
+      runCli(["--help"], {
+        packageRoot,
+        stdout,
+        stderr,
+      }),
+    ).toBe(0);
+    expect(stderr).not.toHaveBeenCalled();
+  });
+
+  it("returns zero for version output", () => {
+    const stdout = vi.fn<(message: string) => void>();
+    const stderr = vi.fn<(message: string) => void>();
+
+    expect(
+      runCli(["--version"], {
+        packageRoot,
+        stdout,
+        stderr,
+      }),
+    ).toBe(0);
+    expect(stderr).not.toHaveBeenCalled();
+  });
+
+  it("routes providers to the registered command handler", () => {
+    const stdout = vi.fn<(message: string) => void>();
+    const stderr = vi.fn<(message: string) => void>();
+
+    const exitCode = runCli(["providers"], {
+      packageRoot,
+      stdout,
+      stderr,
+    });
+
+    expect(exitCode).toBe(0);
+    expect(stderr).not.toHaveBeenCalled();
+    expect(stdout).toHaveBeenCalledWith(expect.stringContaining("Claude Code (claude)"));
+  });
+
+  it("routes doctor to the registered command handler", () => {
+    const stdout = vi.fn<(message: string) => void>();
+    const stderr = vi.fn<(message: string) => void>();
+
+    const exitCode = runCli(
+      [
+        "doctor",
+        "--project-root",
+        path.join(runtimeRoot, "project"),
+        "--app-state-root",
+        path.join(runtimeRoot, "app-state"),
+        "--cursor-root",
+        path.join(runtimeRoot, "cursor", "User"),
+      ],
+      {
+        packageRoot,
+        stdout,
+        stderr,
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).not.toHaveBeenCalled();
+    expect(stdout).toHaveBeenCalledWith(expect.stringContaining("OK"));
+  });
+
   it("prints a concise error for invalid options", () => {
     const stdout = vi.fn<(message: string) => void>();
     const stderr = vi.fn<(message: string) => void>();
