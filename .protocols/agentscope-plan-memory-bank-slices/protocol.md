@@ -16,7 +16,7 @@ derived_from:
 status: active
 audience: humans_and_agents
 protocol_version: "0.1"
-current_phase: verification_and_commit_readiness
+current_phase: ft_007_ft_008_acceptance_reconciliation
 current_gate: H1
 ---
 
@@ -52,8 +52,8 @@ Repository adaptation:
 - Operation slug: `agentscope-plan-memory-bank-slices`
 - Created: 2026-06-18
 - Last updated: 2026-06-18
-- Status: active
-- Current phase: verification_and_commit_readiness
+- Status: escalation
+- Current phase: ft_007_ft_008_acceptance_reconciliation
 - Current gate: H1
 
 ## Goal
@@ -150,15 +150,16 @@ Out of scope:
 
 ## State
 
-- Status: active
-- Current phase: verification_and_commit_readiness
+- Status: escalation
+- Current phase: ft_007_ft_008_acceptance_reconciliation
 - Current gate: H1
-- Current actor: Protocol operator
-- Next action: Stage scoped dashboard/TUI routing docs and create the local commit for this slice.
+- Current actor: routing/document worker
+- Next action: Ask the human owner to accept or reject FT-007 and FT-008 for Done-gate closure, and either provide or authorize current CI evidence or explicitly approve the manual gaps before any feature registry or package status is changed.
 - Open loops:
-  - The protocol review, docs review, review fixes, and final focused re-review have completed with no open findings.
+  - The protocol review, docs review, review fixes, and final focused re-review completed with no open findings for the prior dashboard/TUI routing slice.
   - The dashboard/TUI slice was routed to the existing secondary-surfaces PRD, domain command-surface docs, and project summary as an explicit deferral: MCP is the first secondary control surface; dashboard/TUI requires a future separate feature package if revived.
-  - FT-007 and FT-008 status reconciliation remains a later candidate after the dashboard/TUI routing slice is committed.
+  - FT-007 cannot be marked done from current evidence because its package remains `delivery_status: in_progress`, its implementation plan remains `status: active`, local ShellCheck is explicitly unavailable, and no current CI evidence or human acceptance approval is recorded in the governed package.
+  - FT-008 cannot be marked done from current evidence because its package remains `delivery_status: in_progress`, its implementation plan remains `status: active`, its implementation summary says ready for human acceptance, and its lifecycle protocol explicitly gates commit/push/CI follow-up on H2 approval.
   - Current git baseline is understood: the existing homework summary modification belongs outside this operation, and the untracked `.protocols/` file is this operation's expected protocol artifact.
 - Rollback mode: source-only revert/edit before push; local commits may be reverted with non-destructive follow-up commits if already created.
 
@@ -402,6 +403,10 @@ If a governed document changes:
 | 2026-06-18 | fix worker | Addressed dashboard/TUI routing review gaps | Reframed PRD-003 historically around FT-006 snapshots and MCP-first secondary-surface reuse, added PRD-003 to FT-008 `derived_from`, updated `memory-bank/domain/README.md`, and recorded these fixes in this protocol |
 | 2026-06-18 | protocol operator | Ran final full local verification for the dashboard/TUI routing slice | `rtk npm run build` passed; `rtk npm test` passed with 23 files and 174 tests; `rtk npm run lint` passed with the existing Biome schema-version info; `rtk git diff --check` passed |
 | 2026-06-18 | final docs review | Re-reviewed the dashboard/TUI routing slice after fixes | 0 issues; residual risk limited to doc/protocol consistency review scope |
+| 2026-06-18 | routing/document worker | Read required FT-007/FT-008 reconciliation sources and recent git state | `.protocols/agentscope-plan-memory-bank-slices/protocol.md`, `memory-bank/README.md`, `memory-bank/flows/workflows.md`, `memory-bank/flows/feature-flow.md`, `memory-bank/features/README.md`, `memory-bank/features/FT-007/{README.md,feature.md,implementation-plan.md}`, `memory-bank/features/FT-008/{README.md,feature.md,implementation-plan.md,protocol.md}`, `memory-bank/prd/PRD-003-persistent-discovery-snapshots-and-secondary-surfaces.md`, `rtk git status --short`, `rtk git log --oneline -8` |
+| 2026-06-18 | routing/document worker | Evaluated FT-007 against feature-flow Done gates | Not safe to close: feature registry and `feature.md` still say `in_progress`; `implementation-plan.md` still says `status: active`; execution summary says ready for acceptance review, not accepted; local ShellCheck is unavailable; no current CI evidence is recorded |
+| 2026-06-18 | routing/document worker | Evaluated FT-008 against feature-flow Done gates and downstream PRD status | Not safe to close: feature registry and `feature.md` still say `in_progress`; `implementation-plan.md` still says `status: active`; execution summary says ready for human acceptance; FT-008 protocol is `current_phase: done` / `current_gate: H2` but still gates commit/push/CI follow-up on explicit H2 approval; PRD-003 still lists FT-008 as `in_progress` |
+| 2026-06-18 | routing/document worker | Left governed feature docs and indexes unchanged and escalated closure decision | No FT-007/FT-008 status or archive changes were made because Done-gate evidence is insufficient without human acceptance and current CI/manual-gap approval |
 
 ## Decisions
 
@@ -420,15 +425,17 @@ If a governed document changes:
 | 2026-06-18 | Update `PROJECT.md` as part of the dashboard/TUI routing slice | Fix worker | The project summary is a top-level source document for `memory-bank/domain/problem.md` and must not contradict the current CLI plus local stdio MCP surface. |
 | 2026-06-18 | Hold FT-007 and FT-008 status reconciliation until after this local commit | Fix worker | The protocol should keep the current docs-only dashboard/TUI slice in verification and commit readiness rather than starting the next candidate slice prematurely. |
 | 2026-06-18 | Treat PRD-003 as the upstream owner for FT-008 secondary-surface scope | Fix worker | PRD-003 owns the persisted snapshot and secondary-surface initiative, and FT-008 is the MCP-first downstream feature that reuses FT-006's snapshot foundation while dashboard/TUI remains deferred. |
+| 2026-06-18 | Do not mark FT-007 or FT-008 done in this slice | Routing/document worker | Feature-flow Done requires acceptance, complete evidence, local and CI green checks, manual-gap approval, `delivery_status: done`, and archived implementation plans; current governed evidence still records both features as acceptance-pending or H2-gated. |
 
 ## Open Questions
 
-- Whether FT-007 and FT-008 should move from `in_progress` to `done` in the feature registry and package metadata after this dashboard/TUI routing slice is committed and human acceptance is recorded; owner: next routing/document worker; needed by: next slice.
+- `OQ-FT007-ACCEPT` Should the human owner accept FT-007 despite unavailable local ShellCheck, or should a current CI run provide that evidence first? Owner: human owner; needed before any FT-007 `delivery_status: done` or plan archive update.
+- `OQ-FT008-ACCEPT` Should the human owner accept FT-008 and approve H2 follow-up evidence for commit/CI, or keep it open for further review? Owner: human owner; needed before any FT-008 `delivery_status: done`, PRD downstream status update, or plan archive update.
 
 ## Next Action
 
-Actor: routing/document worker
+Actor: human owner
 
-Action: Stage scoped dashboard/TUI routing docs and create the local commit for this slice.
+Action: Decide FT-007 and FT-008 acceptance explicitly. If accepting either feature, provide or authorize current CI evidence and approve any manual-only gaps; then a follow-up routing/document worker may update `feature.md`, `implementation-plan.md`, `memory-bank/features/README.md`, and PRD downstream status as one scoped closure slice.
 
-Stop if: verification fails, the staged diff includes unrelated work, or the next FT-007/FT-008 slice would start before this slice is committed.
+Stop if: acceptance is not explicit, current CI evidence is unavailable, manual-only gaps are not approved, or closure would require push/merge/release/external operations outside the approved scope.
