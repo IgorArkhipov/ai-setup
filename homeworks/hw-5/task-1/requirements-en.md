@@ -1,7 +1,5 @@
 # HW-5 Task 1 Requirements Interpretation
 
-Source: `https://ai-swe-1.thinknetica.com/week/5/homework/`
-
 Fetched on: 2026-05-17
 
 ## Assignment Focus

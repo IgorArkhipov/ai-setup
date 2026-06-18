@@ -2,8 +2,6 @@
 
 ## Assignment Source
 
-- Source URL: `https://ai-swe-1.thinknetica.com/week/5/homework/`
-- Access note: fetched with user-provided Basic Auth after the initial unauthenticated request returned `401 Unauthorized`.
 - Task 2 source summary: copy/adapt the Operational protocol template into Memory Bank, specify `.protocols/` as the default operational protocol location, create and groom an operational protocol for a small repository task, then execute it from a fresh session.
 
 ## Memory Bank Setup Alignment

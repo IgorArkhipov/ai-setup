@@ -1,11 +1,5 @@
 # HW-4 Full Requirements: English Interpretation
 
-Source page:
-
-```text
-https://ai-swe-1.thinknetica.com/week/4/homework/
-```
-
 ## Assignment Theme
 
 Verification, process state, `run-loop`, and `verification-loop`.

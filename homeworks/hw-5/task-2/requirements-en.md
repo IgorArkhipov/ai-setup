@@ -1,7 +1,5 @@
 # HW-5 Task 2 Requirements Interpretation
 
-Source: `https://ai-swe-1.thinknetica.com/week/5/homework/`
-
 Fetched on: 2026-05-17
 
 Access note: fetched with user-provided Basic Auth after the initial unauthenticated request returned `401 Unauthorized`.
