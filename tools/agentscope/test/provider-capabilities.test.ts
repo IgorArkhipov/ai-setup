@@ -1,10 +1,11 @@
-import { cpSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   listProviders,
   loadCapabilityMatrix,
+  validateCapabilityMatrix,
   validateProviderFixtures,
 } from "../src/providers/registry.js";
 
@@ -26,6 +27,57 @@ describe("provider-capabilities", () => {
 
     expect(matrix.version).toBe(1);
     expect(Object.keys(matrix.providers)).toEqual(["claude", "codex", "cursor"]);
+    expect(matrix.providers).toEqual({
+      claude: {
+        skills: "verified",
+        configuredMcps: "verified",
+        tools: "verified",
+        agents: "verified",
+        hooks: "read-only",
+        providerSettings: "read-only",
+        pluginConfigs: "unsupported",
+        pluginManifests: "unsupported",
+        extensions: "unsupported",
+      },
+      codex: {
+        skills: "verified",
+        configuredMcps: "verified",
+        tools: "unsupported",
+        agents: "verified",
+        hooks: "read-only",
+        providerSettings: "read-only",
+        pluginConfigs: "read-only",
+        pluginManifests: "unsupported",
+        extensions: "unsupported",
+      },
+      cursor: {
+        skills: "verified",
+        configuredMcps: "verified",
+        tools: "unsupported",
+        agents: "verified",
+        hooks: "read-only",
+        providerSettings: "read-only",
+        pluginConfigs: "unsupported",
+        pluginManifests: "read-only",
+        extensions: "unsupported",
+      },
+    });
+  });
+
+  it("reports stale capability matrices that omit modern surface fields", () => {
+    const tempRoot = mkdtempSync(path.join(os.tmpdir(), "agentscope-fixtures-"));
+    tempRoots.push(tempRoot);
+    cpSync(fixturesRoot, tempRoot, { recursive: true });
+    const matrixPath = path.join(tempRoot, "capability-matrix.json");
+    const matrix = JSON.parse(readFileSync(matrixPath, "utf8"));
+    delete matrix.providers.claude.agents;
+    writeFileSync(matrixPath, `${JSON.stringify(matrix, null, 2)}\n`, "utf8");
+
+    expect(validateCapabilityMatrix(tempRoot).issues).toContainEqual({
+      providerId: "claude",
+      field: "agents",
+      message: "capability-matrix.json is missing claude.agents",
+    });
   });
 
   it("locks the expected provider fixture files and shapes", () => {

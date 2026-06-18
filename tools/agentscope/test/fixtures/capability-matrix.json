@@ -4,17 +4,35 @@
     "claude": {
       "skills": "verified",
       "configuredMcps": "verified",
-      "tools": "verified"
+      "tools": "verified",
+      "agents": "verified",
+      "hooks": "read-only",
+      "providerSettings": "read-only",
+      "pluginConfigs": "unsupported",
+      "pluginManifests": "unsupported",
+      "extensions": "unsupported"
     },
     "codex": {
       "skills": "verified",
       "configuredMcps": "verified",
-      "tools": "unsupported"
+      "tools": "unsupported",
+      "agents": "verified",
+      "hooks": "read-only",
+      "providerSettings": "read-only",
+      "pluginConfigs": "read-only",
+      "pluginManifests": "unsupported",
+      "extensions": "unsupported"
     },
     "cursor": {
       "skills": "verified",
       "configuredMcps": "verified",
-      "tools": "unsupported"
+      "tools": "unsupported",
+      "agents": "verified",
+      "hooks": "read-only",
+      "providerSettings": "read-only",
+      "pluginConfigs": "unsupported",
+      "pluginManifests": "read-only",
+      "extensions": "unsupported"
     }
   },
   "notes": {

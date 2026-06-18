@@ -6,7 +6,7 @@ import type { DiscoveryWarning } from "../core/models.js";
 import { claudeProvider } from "../providers/claude.js";
 import { codexProvider } from "../providers/codex.js";
 import { cursorProvider } from "../providers/cursor.js";
-import { loadCapabilityMatrix, validateProviderFixtures } from "../providers/registry.js";
+import { validateCapabilityMatrix, validateProviderFixtures } from "../providers/registry.js";
 
 export interface DoctorOptions extends AgentScopeConfigOverrides {
   cwd?: string;
@@ -38,7 +38,18 @@ export function runDoctor(
   fixturesRoot: string,
   options: DoctorOptions = {},
 ): DoctorResult {
-  loadCapabilityMatrix(fixturesRoot);
+  const matrixReport = validateCapabilityMatrix(fixturesRoot);
+
+  if (matrixReport.issues.length > 0) {
+    const lines = ["agentscope doctor: capability matrix validation failed", ""];
+
+    for (const issue of matrixReport.issues) {
+      lines.push(`- ${issue.message}`);
+    }
+
+    return { exitCode: 1, output: lines.join("\n") };
+  }
+
   const report = validateProviderFixtures(fixturesRoot);
 
   if (report.issues.length > 0) {

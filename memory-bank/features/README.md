@@ -41,3 +41,4 @@ The `memory-bank/features/` directory stores instantiated feature packages in th
 | `FT-008` | Local MCP Control Plane | `active` | `done` | [`FT-008/feature.md`](FT-008/feature.md) | [`FT-008/implementation-plan.md`](FT-008/implementation-plan.md) | `none` | 2026-06-18 |
 | `FT-009` | Modern Provider Surface Inventory | `active` | `done` | [`FT-009/feature.md`](FT-009/feature.md) | [`FT-009/implementation-plan.md`](FT-009/implementation-plan.md) | `none` | 2026-06-18 |
 | `FT-010` | Verified Modern Surface Toggles | `active` | `done` | [`FT-010/feature.md`](FT-010/feature.md) | [`FT-010/implementation-plan.md`](FT-010/implementation-plan.md) | `none` | 2026-06-18 |
+| `FT-011` | Provider Drift And Compatibility Reporting | `active` | `done` | [`FT-011/feature.md`](FT-011/feature.md) | [`FT-011/implementation-plan.md`](FT-011/implementation-plan.md) | `none` | 2026-06-18 |

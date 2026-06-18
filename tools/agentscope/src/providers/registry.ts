@@ -3,18 +3,47 @@ import path from "node:path";
 
 export type ProviderId = "claude" | "codex" | "cursor";
 export type CapabilityStatus = "verified" | "read-only" | "unsupported" | "needs-verification";
+export const capabilityFields = [
+  "skills",
+  "configuredMcps",
+  "tools",
+  "agents",
+  "hooks",
+  "providerSettings",
+  "pluginConfigs",
+  "pluginManifests",
+  "extensions",
+] as const;
+export type CapabilityField = (typeof capabilityFields)[number];
+export type ProviderCapabilities = Record<CapabilityField, CapabilityStatus>;
+
+export const capabilityFieldLabels: Record<CapabilityField, string> = {
+  skills: "skills",
+  configuredMcps: "configured MCPs",
+  tools: "tools",
+  agents: "agents",
+  hooks: "hooks",
+  providerSettings: "provider settings",
+  pluginConfigs: "plugin configs",
+  pluginManifests: "plugin manifests",
+  extensions: "extensions",
+};
 
 export interface CapabilityMatrix {
   version: 1;
-  providers: Record<
-    ProviderId,
-    {
-      skills: CapabilityStatus;
-      configuredMcps: CapabilityStatus;
-      tools: CapabilityStatus;
-    }
-  >;
+  providers: Record<ProviderId, ProviderCapabilities>;
   notes: Record<ProviderId, string>;
+}
+
+export interface CapabilityMatrixIssue {
+  providerId?: ProviderId;
+  field?: CapabilityField;
+  message: string;
+}
+
+export interface CapabilityMatrixValidationReport {
+  issues: CapabilityMatrixIssue[];
+  matrix?: CapabilityMatrix;
 }
 
 export interface ProviderFixtureSpec {
@@ -332,57 +361,123 @@ export function listProviders(): ProviderDescriptor[] {
 }
 
 export function loadCapabilityMatrix(fixturesRoot: string): CapabilityMatrix {
+  const report = validateCapabilityMatrix(fixturesRoot);
+
+  if (report.matrix === undefined) {
+    throw new Error(report.issues.map((issue) => issue.message).join("; "));
+  }
+
+  return report.matrix;
+}
+
+export function validateCapabilityMatrix(fixturesRoot: string): CapabilityMatrixValidationReport {
   const matrixPath = path.join(fixturesRoot, "capability-matrix.json");
-  const raw = readFileSync(matrixPath, "utf8");
-  const parsed = parseJsonObject(raw, "capability-matrix.json");
+  const issues: CapabilityMatrixIssue[] = [];
+  let raw: string;
+
+  try {
+    raw = readFileSync(matrixPath, "utf8");
+  } catch {
+    return {
+      issues: [
+        {
+          message: "capability-matrix.json is missing",
+        },
+      ],
+    };
+  }
+
+  let parsed: Record<string, unknown>;
+
+  try {
+    parsed = parseJsonObject(raw, "capability-matrix.json");
+  } catch (error) {
+    return {
+      issues: [
+        {
+          message: error instanceof Error ? error.message : String(error),
+        },
+      ],
+    };
+  }
 
   if (parsed.version !== 1) {
-    throw new Error("capability-matrix.json must use version 1");
+    issues.push({ message: "capability-matrix.json must use version 1" });
   }
 
   if (!isRecord(parsed.providers)) {
-    throw new Error("capability-matrix.json must define providers");
+    issues.push({ message: "capability-matrix.json must define providers" });
   }
 
   if (!isRecord(parsed.notes)) {
-    throw new Error("capability-matrix.json must define notes");
+    issues.push({ message: "capability-matrix.json must define notes" });
   }
 
   const providers = {} as CapabilityMatrix["providers"];
   const notes = {} as CapabilityMatrix["notes"];
+  const providerRecords = isRecord(parsed.providers) ? parsed.providers : {};
+  const noteRecords = isRecord(parsed.notes) ? parsed.notes : {};
 
   for (const provider of providerRegistry) {
-    const providerCaps = parsed.providers[provider.id];
-    const providerNote = parsed.notes[provider.id];
+    const providerCaps = providerRecords[provider.id];
+    const providerNote = noteRecords[provider.id];
 
     if (!isRecord(providerCaps)) {
-      throw new Error(`capability-matrix.json is missing ${provider.id}`);
+      issues.push({
+        providerId: provider.id,
+        message: `capability-matrix.json is missing ${provider.id}`,
+      });
+    } else {
+      const capabilities: Partial<ProviderCapabilities> = {};
+
+      for (const field of capabilityFields) {
+        const status = providerCaps[field];
+
+        if (status === undefined) {
+          issues.push({
+            providerId: provider.id,
+            field,
+            message: `capability-matrix.json is missing ${provider.id}.${field}`,
+          });
+          continue;
+        }
+
+        if (!isCapabilityStatus(status)) {
+          issues.push({
+            providerId: provider.id,
+            field,
+            message: `capability-matrix.json has an invalid ${provider.id}.${field} value`,
+          });
+          continue;
+        }
+
+        capabilities[field] = status;
+      }
+
+      providers[provider.id] = capabilities as ProviderCapabilities;
     }
 
     if (typeof providerNote !== "string" || providerNote.length === 0) {
-      throw new Error(`capability-matrix.json is missing note for ${provider.id}`);
+      issues.push({
+        providerId: provider.id,
+        message: `capability-matrix.json is missing note for ${provider.id}`,
+      });
+    } else {
+      notes[provider.id] = providerNote;
     }
+  }
 
-    for (const field of ["skills", "configuredMcps", "tools"] as const) {
-      const status = providerCaps[field];
-
-      if (!isCapabilityStatus(status)) {
-        throw new Error(`capability-matrix.json has an invalid ${provider.id}.${field} value`);
-      }
-    }
-
-    providers[provider.id] = {
-      skills: providerCaps.skills as CapabilityStatus,
-      configuredMcps: providerCaps.configuredMcps as CapabilityStatus,
-      tools: providerCaps.tools as CapabilityStatus,
-    };
-    notes[provider.id] = providerNote;
+  if (issues.length > 0) {
+    return { issues };
   }
 
   return {
-    version: 1,
-    providers,
-    notes,
+    issues: [],
+    matrix: {
+      version: 1,
+      providers,
+      notes,
+    },
   };
 }
 

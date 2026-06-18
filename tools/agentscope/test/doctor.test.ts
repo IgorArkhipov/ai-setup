@@ -1,4 +1,4 @@
-import { cpSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -28,6 +28,21 @@ afterEach(() => {
     }
   }
 });
+
+function copyFixturesWithCapabilityMatrixMutation(
+  mutate: (matrix: { providers: Record<string, Record<string, unknown>> }) => void,
+): string {
+  const tempRoot = mkdtempSync(path.join(os.tmpdir(), "agentscope-fixtures-"));
+  tempDirs.push(tempRoot);
+  cpSync(fixturesRoot, tempRoot, { recursive: true });
+  const matrixPath = path.join(tempRoot, "capability-matrix.json");
+  const matrix = JSON.parse(readFileSync(matrixPath, "utf8")) as {
+    providers: Record<string, Record<string, unknown>>;
+  };
+  mutate(matrix);
+  writeFileSync(matrixPath, `${JSON.stringify(matrix, null, 2)}\n`, "utf8");
+  return tempRoot;
+}
 
 describe("doctor and providers commands", () => {
   it("returns OK when fixtures and local inputs are valid", () => {
@@ -67,6 +82,18 @@ describe("doctor and providers commands", () => {
     expect(result.output).toContain("cursor/global/mcp.json");
   });
 
+  it("returns deterministic output when the capability matrix omits a modern field", () => {
+    const tempRoot = copyFixturesWithCapabilityMatrixMutation((matrix) => {
+      delete matrix.providers.claude.agents;
+    });
+
+    const result = runDoctor(packageRoot, tempRoot, runtimeOptions());
+
+    expect(result.exitCode).toBe(1);
+    expect(result.output).toContain("agentscope doctor: capability matrix validation failed");
+    expect(result.output).toContain("claude.agents");
+  });
+
   it("reports provider-scoped issues for broken local inputs", () => {
     const result = runDoctor(packageRoot, fixturesRoot, {
       ...runtimeOptions(),
@@ -88,12 +115,30 @@ describe("doctor and providers commands", () => {
     expect(output.indexOf("Codex (codex)")).toBeLessThan(output.indexOf("Cursor (cursor)"));
     expect(claudeBlock).toContain("skills:          verified");
     expect(claudeBlock).toContain("configured MCPs: verified");
-    expect(claudeBlock).toContain("tools/extensions: verified");
+    expect(claudeBlock).toContain("tools:           verified");
+    expect(claudeBlock).toContain("agents:          verified");
+    expect(claudeBlock).toContain("hooks:           read-only");
+    expect(claudeBlock).toContain("provider settings: read-only");
+    expect(claudeBlock).toContain("plugin configs:  unsupported");
+    expect(claudeBlock).toContain("plugin manifests: unsupported");
+    expect(claudeBlock).toContain("extensions:      unsupported");
     expect(codexBlock).toContain("skills:          verified");
     expect(codexBlock).toContain("configured MCPs: verified");
-    expect(codexBlock).toContain("tools/extensions: unsupported");
+    expect(codexBlock).toContain("tools:           unsupported");
+    expect(codexBlock).toContain("agents:          verified");
+    expect(codexBlock).toContain("hooks:           read-only");
+    expect(codexBlock).toContain("provider settings: read-only");
+    expect(codexBlock).toContain("plugin configs:  read-only");
+    expect(codexBlock).toContain("plugin manifests: unsupported");
+    expect(codexBlock).toContain("extensions:      unsupported");
     expect(cursorBlock).toContain("skills:          verified");
     expect(cursorBlock).toContain("configured MCPs: verified");
-    expect(cursorBlock).toContain("tools/extensions: unsupported");
+    expect(cursorBlock).toContain("tools:           unsupported");
+    expect(cursorBlock).toContain("agents:          verified");
+    expect(cursorBlock).toContain("hooks:           read-only");
+    expect(cursorBlock).toContain("provider settings: read-only");
+    expect(cursorBlock).toContain("plugin configs:  unsupported");
+    expect(cursorBlock).toContain("plugin manifests: read-only");
+    expect(cursorBlock).toContain("extensions:      unsupported");
   });
 });

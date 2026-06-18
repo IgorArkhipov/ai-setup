@@ -1,4 +1,16 @@
-import { listProviders, loadCapabilityMatrix } from "../providers/registry.js";
+import {
+  capabilityFieldLabels,
+  capabilityFields,
+  listProviders,
+  loadCapabilityMatrix,
+} from "../providers/registry.js";
+
+function renderCapabilityLine(label: string, status: string): string {
+  const fieldLabel = `${label}:`;
+  const paddedLabel = fieldLabel.length >= 17 ? `${fieldLabel} ` : fieldLabel.padEnd(17);
+
+  return `  ${paddedLabel}${status}`;
+}
 
 export function renderProviders(fixturesRoot: string): string {
   const matrix = loadCapabilityMatrix(fixturesRoot);
@@ -8,9 +20,9 @@ export function renderProviders(fixturesRoot: string): string {
     const capabilities = matrix.providers[provider.id];
 
     lines.push(`${provider.name} (${provider.id})`);
-    lines.push(`  skills:          ${capabilities.skills}`);
-    lines.push(`  configured MCPs: ${capabilities.configuredMcps}`);
-    lines.push(`  tools/extensions: ${capabilities.tools}`);
+    for (const field of capabilityFields) {
+      lines.push(renderCapabilityLine(capabilityFieldLabels[field], capabilities[field]));
+    }
     lines.push(`  note:            ${matrix.notes[provider.id]}`);
     lines.push("");
   }

@@ -7,11 +7,13 @@ This directory is an isolated TypeScript sub-project.
 
 ## Provider Capability Matrix
 
-| Provider | Skills | Configured MCPs | Modern config surfaces | Tools / Extensions | Reality check |
-| --- | --- | --- | --- | --- | --- |
-| Claude Code | read-write | read-write | agent files read-write; hooks/settings read-only | read-write | Verified end-to-end against fixture sandboxes for project skills, project `.mcp.json` approvals, settings-file tools, and agent file vault/restore. Hooks and settings files are discovered as read-only inventory. |
-| Codex | read-write | read-write | agent files read-write; hooks/config read-only | read-only plugin config declarations | Verified end-to-end against fixture sandboxes for global and project skills, global `config.toml` `mcp_servers` sections, and agent file vault/restore. Hooks, config files, and plugin declarations are discovered as read-only inventory. |
-| Cursor | read-write | read-write | agent files read-write; hooks/permissions/sandbox/CLI config read-only | read-only plugin manifests; unsupported extensions | Verified end-to-end against fixture sandboxes for global `skills-cursor` skills, global `mcp.json` servers with optional workspace disabled-server reconciliation, and agent file vault/restore. Hooks, permissions/sandbox/CLI config, and local plugin manifests are discovered as read-only inventory. Extensions remain visible but unsupported. |
+`agentscope providers` renders the committed capability matrix for each provider, including skills, configured MCPs, tools, agent files, hooks, provider settings, plugin configs, plugin manifests, and extensions. The matrix distinguishes verified writable support from read-only discovery and unsupported surfaces.
+
+| Provider | Skills | Configured MCPs | Modern config surfaces | Tools | Extensions | Reality check |
+| --- | --- | --- | --- | --- | --- | --- |
+| Claude Code | read-write | read-write | agent files read-write; hooks/settings read-only | read-write | unsupported | Verified end-to-end against fixture sandboxes for project skills, project `.mcp.json` approvals, settings-file tools, and agent file vault/restore. Hooks and settings files are discovered as read-only inventory. |
+| Codex | read-write | read-write | agent files read-write; hooks/config read-only; plugin config declarations read-only | unsupported | unsupported | Verified end-to-end against fixture sandboxes for global and project skills, global `config.toml` `mcp_servers` sections, and agent file vault/restore. Hooks, config files, and plugin declarations are discovered as read-only inventory. |
+| Cursor | read-write | read-write | agent files read-write; hooks/permissions/sandbox/CLI config read-only; plugin manifests read-only | unsupported | unsupported | Verified end-to-end against fixture sandboxes for global `skills-cursor` skills, global `mcp.json` servers with optional workspace disabled-server reconciliation, and agent file vault/restore. Hooks, permissions/sandbox/CLI config, and local plugin manifests are discovered as read-only inventory. Extensions remain visible but unsupported. |
 
 ## Fixtures
 
@@ -27,7 +29,7 @@ Sanitized examples live under `test/fixtures/` and are intentionally narrow. The
 - `node dist/cli.js restore <backup-id> [--json] --project-root <path> --app-state-root <path> --cursor-root <path>`
 - `node dist/cli.js mcp --project-root <path> --app-state-root <path> --cursor-root <path>`
 
-`doctor` treats committed fixture drift as fatal. Provider-local read and parse problems are reported separately so discovery can stay visible in `list`.
+`doctor` treats committed capability-matrix drift and fixture drift as fatal. CLI output reports matrix validation failures under `capability matrix validation failed`; MCP doctor output returns `capabilityMatrixIssues` for agent clients. Provider-local read and parse problems are reported separately so discovery can stay visible in `list`.
 
 `snapshot` captures the current normalized discovery result into a project-scoped `latest.json` plus bounded history under `appStateRoot/snapshots/`. It persists provider warnings alongside the discovered items and returns a non-zero exit code when warnings are present, but it does not mutate any provider-managed files. If existing snapshot history for a project is malformed, AgentScope fails fast before writing a new snapshot; remove the malformed history file manually before retrying.
 

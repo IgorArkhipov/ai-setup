@@ -1,3 +1,5 @@
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
@@ -12,6 +14,7 @@ const packageRoot = path.resolve(import.meta.dirname, "..");
 const fixturesRoot = path.join(packageRoot, "test", "fixtures");
 const runtimeRoot = path.join(fixturesRoot, "runtime");
 const sandboxes: MutationSandbox[] = [];
+const tempDirs: string[] = [];
 
 const modernSurfaceProvider: ProviderModule = {
   id: "claude",
@@ -40,7 +43,29 @@ afterEach(() => {
   while (sandboxes.length > 0) {
     sandboxes.pop()?.cleanup();
   }
+
+  while (tempDirs.length > 0) {
+    const target = tempDirs.pop();
+    if (target !== undefined) {
+      rmSync(target, { recursive: true, force: true });
+    }
+  }
 });
+
+function copyFixturesWithCapabilityMatrixMutation(
+  mutate: (matrix: { providers: Record<string, Record<string, unknown>> }) => void,
+): string {
+  const tempRoot = mkdtempSync(path.join(os.tmpdir(), "agentscope-fixtures-"));
+  tempDirs.push(tempRoot);
+  cpSync(fixturesRoot, tempRoot, { recursive: true });
+  const matrixPath = path.join(tempRoot, "capability-matrix.json");
+  const matrix = JSON.parse(readFileSync(matrixPath, "utf8")) as {
+    providers: Record<string, Record<string, unknown>>;
+  };
+  mutate(matrix);
+  writeFileSync(matrixPath, `${JSON.stringify(matrix, null, 2)}\n`, "utf8");
+  return tempRoot;
+}
 
 async function connectMcp(options: Partial<AgentScopeMcpOptions> = {}) {
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
@@ -140,6 +165,33 @@ describe("agentscope MCP server", () => {
         status: "ok",
         itemsDiscovered: expect.any(Number),
         warnings: [],
+      });
+    } finally {
+      await session.close();
+    }
+  });
+
+  it("returns structured capability matrix issues from MCP doctor output", async () => {
+    const staleFixturesRoot = copyFixturesWithCapabilityMatrixMutation((matrix) => {
+      delete matrix.providers.claude.agents;
+    });
+    const session = await connectMcp({ fixturesRoot: staleFixturesRoot });
+
+    try {
+      const doctor = await callStructured<{
+        status: string;
+        capabilityMatrixIssues: Array<{ providerId: string; field: string; message: string }>;
+      }>(session.client, "agentscope_run_doctor");
+
+      expect(doctor).toMatchObject({
+        status: "failed",
+        capabilityMatrixIssues: [
+          {
+            providerId: "claude",
+            field: "agents",
+            message: "capability-matrix.json is missing claude.agents",
+          },
+        ],
       });
     } finally {
       await session.close();

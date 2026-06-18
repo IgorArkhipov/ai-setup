@@ -72,3 +72,4 @@ The downstream system boundary is the local machine. AgentScope reads provider-o
 - [`../features/FT-008/feature.md`](../features/FT-008/feature.md) - local MCP control plane over the existing AgentScope discovery, mutation, backup, restore, and doctor contracts.
 - [`../features/FT-009/feature.md`](../features/FT-009/feature.md) - read-only discovery for modern provider surfaces across Claude Code, Codex, and Cursor.
 - [`../features/FT-010/feature.md`](../features/FT-010/feature.md) - verified AgentScope-managed file-vault toggles for provider agent files.
+- [`../features/FT-011/feature.md`](../features/FT-011/feature.md) - capability-matrix drift reporting for modern provider support boundaries.

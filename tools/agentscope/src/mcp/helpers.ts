@@ -25,7 +25,7 @@ import { listBackupManifests } from "../core/mutation-state.js";
 import { claudeProvider } from "../providers/claude.js";
 import { codexProvider } from "../providers/codex.js";
 import { cursorProvider } from "../providers/cursor.js";
-import { loadCapabilityMatrix, validateProviderFixtures } from "../providers/registry.js";
+import { validateCapabilityMatrix, validateProviderFixtures } from "../providers/registry.js";
 import type {
   AgentScopeSelector,
   BulkApplyInput,
@@ -468,7 +468,18 @@ export function listItems(
 }
 
 export function runDoctorStructured(options: AgentScopeMcpRuntimeOptions): Record<string, unknown> {
-  loadCapabilityMatrix(options.fixturesRoot);
+  const matrixReport = validateCapabilityMatrix(options.fixturesRoot);
+  if (matrixReport.issues.length > 0) {
+    return {
+      status: "failed",
+      packageRoot: options.packageRoot,
+      fixturesRoot: options.fixturesRoot,
+      capabilityMatrixIssues: matrixReport.issues,
+      fixtureIssues: [],
+      warnings: [],
+    };
+  }
+
   const report = validateProviderFixtures(options.fixturesRoot);
   if (report.issues.length > 0) {
     return {
