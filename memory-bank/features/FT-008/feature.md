@@ -10,7 +10,7 @@ derived_from:
   - ../../flows/feature-flow.md
   - ../../features/FT-007/feature.md
 status: active
-delivery_status: in_progress
+delivery_status: done
 audience: humans_and_agents
 must_not_define:
   - implementation_sequence
@@ -192,3 +192,7 @@ None.
 | `EVID-02` | Vitest MCP mutation/restore output | test runner | terminal output from `test/mcp-server.test.ts` | `CHK-02` |
 | `EVID-03` | Vitest MCP bulk fingerprint output | test runner | terminal output from `test/mcp-server.test.ts` | `CHK-03` |
 | `EVID-04` | Build/test/lint output | local verifier | terminal output | `CHK-04` |
+
+### Closure Evidence
+
+Accepted by the human owner on 2026-06-18. `CHK-01` through `CHK-04` are covered by the archived execution evidence in `implementation-plan.md`: MCP tool registration and read-only calls passed, single mutation and restore passed, bulk fingerprint and blocked-state coverage passed, and build/test/lint plus documentation verification passed locally. `AG-01` client-snippet/manual documentation review and the external-CI/manual gap were approved by the human owner for closure from current local evidence. External CI was not run because the relevant commits were local-only and push/CI triggering was not approved.

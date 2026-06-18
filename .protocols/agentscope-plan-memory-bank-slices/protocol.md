@@ -16,8 +16,8 @@ derived_from:
 status: active
 audience: humans_and_agents
 protocol_version: "0.1"
-current_phase: ft_007_ft_008_acceptance_reconciliation
-current_gate: H1
+current_phase: done
+current_gate: H2
 ---
 
 # Operational Protocol: `Agentscope Plan Memory-Bank Slices`
@@ -35,7 +35,7 @@ English interpretation:
 
 - The current goal is not to re-run a broad lifecycle protocol from nothing. The operation is scoped: audit the current AgentScope plan, docs, and code, identify missing or still-open feature slices, route each slice through the active memory-bank document owners, implement each slice, verify it, and create one local commit per feature slice.
 - The initial backlog source is `tmp/Agentscope Implementation Plan.md`; it now states Tasks 1 through 23 are complete and Phase 3 reflects the shipped local MCP control plane.
-- The active feature registry still lists FT-007 and FT-008 as `in_progress`, while their implementation plans say the work is implemented locally and ready for acceptance. FT-008's existing protocol is `current_phase: done` and `current_gate: H2`, with push/CI follow-up gated by explicit approval.
+- At execution start, the active feature registry still listed FT-007 and FT-008 as `in_progress`, while their implementation plans said the work was implemented locally and ready for acceptance. Closure is now recorded in the evidence and final state sections below.
 - The user's current instruction approves main-branch work and task-scoped local commits after verification, with one commit per feature slice. Push, merge, release, destructive actions, and real provider configuration mutations remain gated.
 
 Repository adaptation:
@@ -52,9 +52,9 @@ Repository adaptation:
 - Operation slug: `agentscope-plan-memory-bank-slices`
 - Created: 2026-06-18
 - Last updated: 2026-06-18
-- Status: escalation
-- Current phase: ft_007_ft_008_acceptance_reconciliation
-- Current gate: H1
+- Status: done
+- Current phase: done
+- Current gate: H2
 
 ## Goal
 
@@ -97,12 +97,12 @@ Out of scope:
 - `memory-bank/flows/agent-process-operations.md` defines operational protocols and default durable location `.protocols/<operation-slug>/protocol.md`; evidence: required read during protocol drafting.
 - `memory-bank/flows/templates/protocol/operational-protocol.md` requires `Status: draft`, `Current phase: ready_to_execute`, `Current gate: H0`, explicit gates, hard stops, verification, rollback, evidence, decisions, open questions, and one next action; evidence: required read during protocol drafting.
 - `tmp/Agentscope Implementation Plan.md` states Tasks 1 through 23 are complete and Phase 3 reflects the shipped local MCP control plane; evidence: required read during protocol drafting.
-- `memory-bank/features/README.md` still lists FT-007 and FT-008 with delivery status `in_progress`; evidence: required read during protocol drafting.
-- `memory-bank/features/FT-007/implementation-plan.md` says FT-007 is implemented locally and ready for acceptance review; evidence: required read during protocol drafting.
-- `memory-bank/features/FT-008/implementation-plan.md` says FT-008 is implemented locally and ready for human acceptance; evidence: required read during protocol drafting.
-- `memory-bank/features/FT-008/protocol.md` has `current_phase: done` and `current_gate: H2`, and says commit/push/CI follow-up requires explicit H2 approval; evidence: required read during protocol drafting.
+- At draft time, `memory-bank/features/README.md` listed FT-007 and FT-008 with delivery status `in_progress`; evidence: required read during protocol drafting.
+- At draft time, `memory-bank/features/FT-007/implementation-plan.md` said FT-007 was implemented locally and ready for acceptance review; evidence: required read during protocol drafting.
+- At draft time, `memory-bank/features/FT-008/implementation-plan.md` said FT-008 was implemented locally and ready for human acceptance; evidence: required read during protocol drafting.
+- At draft time, `memory-bank/features/FT-008/protocol.md` had `current_phase: done` and `current_gate: H2`, and said commit/push/CI follow-up required explicit H2 approval; evidence: required read during protocol drafting.
 - A discovery subagent identified dashboard/TUI as the first missing or superseded slice from `tmp/Agentscope Implementation Plan.md`: the temp plan names `agentscope dashboard`, Ink, React, and `src/ui/*`, while current `tools/agentscope` has no dashboard command, no Ink/React dependencies, no `src/ui`, and `memory-bank/domain/frontend.md` says there is no dashboard code today.
-- FT-007 and FT-008 acceptance-status reconciliation remains a separate candidate after the dashboard/TUI routing decision because their implementation summaries say ready for acceptance while the feature registry still says `in_progress`.
+- FT-007 and FT-008 acceptance-status reconciliation was tracked as a separate candidate after the dashboard/TUI routing decision because their implementation summaries said ready for acceptance while the feature registry still said `in_progress`.
 - Current pre-draft git status showed `homeworks/hw-5/task-2/execution-summary.md` as the existing dirty file; evidence: `rtk git status --short`.
 - `.protocols/agentscope-plan-memory-bank-slices/` is the target durable protocol location. No active `.protocols` index was identified during this draft, so no index update is required for creating this file.
 
@@ -150,17 +150,17 @@ Out of scope:
 
 ## State
 
-- Status: escalation
-- Current phase: ft_007_ft_008_acceptance_reconciliation
-- Current gate: H1
-- Current actor: protocol operator
-- Next action: Ask the human owner to accept or reject FT-007 and FT-008 for Done-gate closure, and either provide or authorize current CI evidence or explicitly approve the manual gaps before any feature registry or package status is changed.
+- Status: done
+- Current phase: done
+- Current gate: H2
+- Current actor: none
+- Next action: no further local protocol execution; push, PR, merge, release, publication, external CI follow-up, and the proposed provider-changelog initiative require separate explicit scope or approval.
 - Open loops:
   - The protocol review, docs review, review fixes, and final focused re-review completed with no open findings for the prior dashboard/TUI routing slice.
   - The dashboard/TUI slice was routed to the existing secondary-surfaces PRD, domain command-surface docs, and project summary as an explicit deferral: MCP is the first secondary control surface; dashboard/TUI requires a future separate feature package if revived.
-  - FT-007 cannot be marked done from current evidence because its package remains `delivery_status: in_progress`, its implementation plan remains `status: active`, and no current external CI evidence or human acceptance approval is recorded in the governed package. Local ShellCheck and workflow checks now pass.
-  - FT-008 cannot be marked done from current evidence because its package remains `delivery_status: in_progress`, its implementation plan remains `status: active`, its implementation summary says ready for human acceptance, and its lifecycle protocol explicitly gates commit/push/CI follow-up on H2 approval.
-  - Current git baseline is understood: the existing homework summary modification belongs outside this operation, and the operation has three local commits ahead of `origin/main`.
+  - FT-007 was accepted by the human owner on 2026-06-18 and closed from current local evidence with the external-CI/manual gap approved for the unpushed local commits.
+  - FT-008 was accepted by the human owner on 2026-06-18 and closed from current local evidence with the external-CI/manual gap approved for the unpushed local commits.
+  - Current git baseline is understood: the existing homework summary modification belongs outside this operation, and the operation has local commits ahead of `origin/main`.
 - Rollback mode: source-only revert/edit before push; local commits may be reverted with non-destructive follow-up commits if already created.
 
 ## Human Gates
@@ -413,6 +413,9 @@ If a governed document changes:
 | 2026-06-18 | commit operator | Created the local operation commits permitted by H2 local-commit conditions | `3ef8cc6 docs: route dashboard surface through mcp`; `0fb67ef docs: record feature closure gate`; `af0a749 docs: record local closure evidence` |
 | 2026-06-18 | protocol operator | Rechecked current branch state after the local commits | `rtk git status --short --branch` showed `main...origin/main [ahead 3]` and only unrelated `M homeworks/hw-5/task-2/execution-summary.md` |
 | 2026-06-18 | review subagent | Fresh gate review found no legitimate non-gated local work that would materially advance closure | Subagent `019ed967-24ae-7122-ab9f-6188c7d79f1f` confirmed FT-007/FT-008 closure still requires explicit human acceptance and current CI evidence, manual-gap approval, or H3 approval to push/trigger CI |
+| 2026-06-18 | human owner | Approved all pending FT-007 and FT-008 milestones and instructed the protocol operator to continue | Chat approval: "Approval granted for all milestones, continue"; interpreted as acceptance of FT-007/FT-008 on local evidence plus approval of the documented external-CI/manual gap, not as push approval |
+| 2026-06-18 | document worker | Closed FT-007 and FT-008 governed status records | Updated FT-007 and FT-008 `feature.md` delivery status to `done`, archived their `implementation-plan.md` files, updated `memory-bank/features/README.md`, updated PRD-003 downstream status, and recorded FT-008 H2 approval conditions |
+| 2026-06-18 | protocol operator | Ran fresh local closure verification | `rtk git diff --check`, `.ai-setup/scripts/test-agent-workflow.sh`, `.ai-setup/scripts/test-ci.sh`, `shellcheck init.sh .ai-setup/scripts/*.sh`, `shfmt -d init.sh .ai-setup/scripts/*.sh`, `make -C .ai-setup check-task-session`, `make -C .ai-setup check-agent-workflow`, `npm run build`, `npm test`, `npm run lint`, and `npx vitest run test/mcp-server.test.ts` all exited 0; `npm test` reported 23 files and 174 tests; MCP-specific test reported 1 file and 5 tests; lint reported only the existing Biome schema-version info |
 
 ## Decisions
 
@@ -432,16 +435,16 @@ If a governed document changes:
 | 2026-06-18 | Hold FT-007 and FT-008 status reconciliation until after this local commit | Fix worker | The protocol should keep the current docs-only dashboard/TUI slice in verification and commit readiness rather than starting the next candidate slice prematurely. |
 | 2026-06-18 | Treat PRD-003 as the upstream owner for FT-008 secondary-surface scope | Fix worker | PRD-003 owns the persisted snapshot and secondary-surface initiative, and FT-008 is the MCP-first downstream feature that reuses FT-006's snapshot foundation while dashboard/TUI remains deferred. |
 | 2026-06-18 | Do not mark FT-007 or FT-008 done without explicit acceptance or current external CI evidence | Routing/document worker / protocol operator | Feature-flow Done requires acceptance, complete evidence, local and CI green checks, manual-gap approval, `delivery_status: done`, and archived implementation plans. Current local evidence is now green, but the local head has no external CI run because push is not approved. |
+| 2026-06-18 | Close FT-007 and FT-008 from local evidence after human milestone approval | Human owner / protocol operator | The human owner approved all pending milestones. The closure is limited to local governed status/archive updates and a local commit; push, PR, merge, release, publication, and external CI follow-up remain out of scope. |
 
 ## Open Questions
 
-- `OQ-FT007-ACCEPT` Should the human owner accept FT-007 based on current green local checks, or should a current external CI run provide that evidence first? Owner: human owner; needed before any FT-007 `delivery_status: done` or plan archive update.
-- `OQ-FT008-ACCEPT` Should the human owner accept FT-008 based on current green local checks and approve H2 follow-up evidence for external CI, or keep it open for further review? Owner: human owner; needed before any FT-008 `delivery_status: done`, PRD downstream status update, or plan archive update.
+- None for this operation.
 
 ## Next Action
 
-Actor: human owner
+Actor: none
 
-Action: Decide FT-007 and FT-008 acceptance explicitly. If accepting either feature on local evidence, approve the external-CI gap or authorize push/CI evidence; then a follow-up routing/document worker may update `feature.md`, `implementation-plan.md`, `memory-bank/features/README.md`, and PRD downstream status as one scoped closure slice.
+Action: No further local protocol execution. A future operation may start the provider-changelog initiative for Cursor, Codex, and Claude settings, MCP, hooks, plugins, and agent files after explicit scope selection.
 
-Stop if: acceptance is not explicit, current CI evidence is unavailable, manual-only gaps are not approved, or closure would require push/merge/release/external operations outside the approved scope.
+Stop if: further work would require push, PR, merge, release, publication, external CI triggering, or provider-changelog implementation without separate explicit approval and governed routing.

@@ -131,9 +131,9 @@ Unchecked hypotheses:
 - Current phase: done
 - Current gate: H2
 - Current actor: none
-- Next action: no further protocol execution; commit, push, PR, or CI follow-up requires explicit H2 approval.
+- Next action: no further local protocol execution; push, PR, merge, release, publication, or external CI follow-up requires separate explicit approval.
 - Open loops:
-  - H2 commit/push/CI follow-up is not approved or requested.
+  - None for local acceptance closure.
 - Rollback mode: source-only revert for repository edits; no live provider or external state mutation is allowed.
 
 ## Human Gates
@@ -171,10 +171,10 @@ Required evidence before H2:
 
 Approval record:
 
-- Approver:
-- Date:
-- Scope approved:
-- Conditions:
+- Approver: Igor Arkhipov
+- Date: 2026-06-18
+- Scope approved: Human acceptance of the FT-008 local MCP control plane on current local evidence; local closure commit and status/archive updates; documented external-CI/manual gap for unpushed local commits.
+- Conditions: No push, PR, merge, release, publication, or real provider configuration mutation is approved by this record.
 
 ### H3: Destructive or irreversible action
 

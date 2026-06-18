@@ -5,7 +5,7 @@ doc_function: derived
 purpose: "Execution plan for FT-008. Records discovery context, steps, risks, and test strategy without redefining canonical MCP control-plane facts."
 derived_from:
   - feature.md
-status: active
+status: archived
 audience: humans_and_agents
 must_not_define:
   - ft_008_scope
@@ -151,7 +151,9 @@ FT-008 is ready for acceptance when:
 
 ## Execution Summary
 
-Status: implemented locally and ready for human acceptance. `feature.md` remains `delivery_status: in_progress` and this plan remains `status: active` until the human owner accepts the run and decides whether H2 commit/push follow-up is needed.
+Status: accepted by the human owner on 2026-06-18 and archived as the FT-008 execution record. External CI evidence was not available for the local-only commits; the human owner approved closing from current local evidence and the documented CI/manual gap. Push, PR, merge, release, publication, and real provider mutation remain out of scope without separate approval.
+
+Approval note: the 2026-06-18 human instruction "Approval granted for all milestones, continue" closes `AG-01` manual documentation review and the remaining acceptance gate for this plan, and approves the external-CI/manual gap without approving push, PR, merge, release, publication, or real provider mutation.
 
 | Evidence | Result | Notes |
 | --- | --- | --- |
@@ -160,8 +162,8 @@ Status: implemented locally and ready for human acceptance. `feature.md` remains
 | MCP tool surface | implemented | 9 tools registered: inventory summary, list items, single plan/apply, bulk plan/apply, list backups, restore backup, doctor |
 | `npx vitest run test/mcp-server.test.ts` | passed | 1 file, 5 tests covering tool listing, read-only calls, single apply/restore, bulk fingerprint flow, and blocker cases |
 | `npm run build` | passed | `tsc -p tsconfig.json` |
-| `npm test` | passed | 23 files, 162 tests |
-| `npm run lint` | passed | Biome checked 199 files |
+| `npm test` | passed | 23 files, 174 tests in closure verification |
+| `npm run lint` | passed | Biome checked 117 files in closure verification; only existing schema-version info reported |
 | built CLI stdio smoke | passed | `dist/cli.js mcp` listed 9 tools and included `agentscope_get_inventory_summary` |
 | `.ai-setup/scripts/test-agent-workflow.sh` | passed | Lifecycle workflow runner assets validated |
 | `git diff --check` | passed | No whitespace errors |

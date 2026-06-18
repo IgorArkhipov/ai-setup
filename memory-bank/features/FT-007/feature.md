@@ -9,7 +9,7 @@ derived_from:
   - ../../flows/feature-flow.md
   - ../../engineering/autonomy-boundaries.md
 status: active
-delivery_status: in_progress
+delivery_status: done
 audience: humans_and_agents
 must_not_define:
   - implementation_sequence
@@ -186,3 +186,7 @@ Add a dedicated `.ai-setup` workflow runner that composes declarative workflows 
 | `EVID-02` | Run-state dry-run sample | workflow test script | `tmp/agent-workflows/<run-id>/run.json` in disposable sandbox | `CHK-02` |
 | `EVID-03` | Stage transition sample results | workflow test script | `.ai-setup/test/fixtures/stage-results/` | `CHK-03` |
 | `EVID-04` | Prompt-file safety result | workflow test script | `.ai-setup/scripts/test-agent-workflow.sh` output | `CHK-04` |
+
+### Closure Evidence
+
+Accepted by the human owner on 2026-06-18. `CHK-01` through `CHK-04` are covered by the archived execution evidence in `implementation-plan.md`: `make check-agent-workflow`, `.ai-setup/scripts/test-ci.sh`, `make check-task-session`, ShellCheck, shfmt, and the workflow-runner fixture checks passed locally. External CI was not run because the relevant commits were local-only and push/CI triggering was not approved; the human owner approved the CI/manual gap for closure from current local evidence.

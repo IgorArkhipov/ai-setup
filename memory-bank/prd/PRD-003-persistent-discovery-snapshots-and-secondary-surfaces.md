@@ -92,4 +92,4 @@ This initiative defines the next product layer after the verified writable-provi
 | Feature | Why it exists | Status |
 | --- | --- | --- |
 | `FT-006` | Add the persisted discovery snapshot command, schema, and bounded history contract | `done` |
-| `FT-008` | Add the local MCP control plane as the first secondary surface over existing headless AgentScope contracts | `in_progress` |
+| `FT-008` | Add the local MCP control plane as the first secondary surface over existing headless AgentScope contracts | `done` |

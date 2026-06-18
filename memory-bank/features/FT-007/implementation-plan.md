@@ -5,7 +5,7 @@ doc_function: derived
 purpose: "Execution plan for FT-007. Records discovery context, steps, risks, and test strategy without redefining canonical workflow-runner scope."
 derived_from:
   - feature.md
-status: active
+status: archived
 audience: humans_and_agents
 must_not_define:
   - ft_007_scope
@@ -159,7 +159,9 @@ FT-007 slice 1 is ready for acceptance when:
 
 ## Execution Summary
 
-Status: implemented locally and ready for acceptance review, with local ShellCheck deferred to CI because `shellcheck` is not installed in this environment.
+Status: accepted by the human owner on 2026-06-18 and archived as the FT-007 execution record. External CI evidence was not available for the local-only commits; the human owner approved closing from current local evidence and the documented CI/manual gap.
+
+Approval note: the 2026-06-18 human instruction "Approval granted for all milestones, continue" closes the remaining acceptance gate for this plan and approves the external-CI/manual gap without approving push, PR, merge, release, publication, or real provider mutation.
 
 | Evidence | Result | Notes |
 | --- | --- | --- |
@@ -191,7 +193,7 @@ Status: implemented locally and ready for acceptance review, with local ShellChe
 | `run-agent-workflow.sh transition ... --stage route-document --apply --json` | passed | Parses accepted route results with `Next stage:` and moves the manifest to the selected draft stage |
 | `run-agent-workflow.sh transition ... --stage route-document --apply --json` no-document route | passed | Accepts `Next stage: none` and stops with `stop_reason: no_governed_document` |
 | `run-agent-workflow.sh transition --result-file needs_upstream.md --dry-run --json` | passed | Produced `decision_action: backtrack_upstream` and unresolved workflow target until a stage is supplied |
-| `shellcheck init.sh .ai-setup/scripts/*.sh` | not run | `shellcheck` is not installed on the local PATH or through `mise exec` in this environment |
+| `shellcheck init.sh .ai-setup/scripts/*.sh` | passed | Verified during closure reconciliation after ShellCheck became available locally |
 | `.ai-setup/scripts/test-ci.sh` | passed | Runs bootstrap checks plus `task-session` and `agent workflow` asset checks; agent CLI detection now mirrors PATH-based setup behavior |
 
 Deferred by FT-007 scope: no known FT-007 workflow-runner behavior remains deferred. Future improvements should be driven by real usage findings rather than this initial feature scope.
