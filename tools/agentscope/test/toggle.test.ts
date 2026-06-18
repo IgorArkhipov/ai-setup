@@ -229,7 +229,7 @@ describe("runToggle", () => {
     expect(result.output).toContain("state.vscdb");
   });
 
-  it("blocks real unsupported selections from production providers", () => {
+  it("blocks real read-only modern surfaces from production providers", () => {
     const result = runToggle({
       cwd: runtimeRoot,
       homeDir: path.join(runtimeRoot, "home"),
@@ -239,12 +239,12 @@ describe("runToggle", () => {
       provider: "codex",
       kind: "plugin",
       layer: "global",
-      id: "codex:global:tool:plugin:safe-shell",
+      id: "codex:global:plugin-config:config:safe-shell",
     });
 
     expect(result.exitCode).toBe(1);
     expect(result.output).toContain("status: blocked");
-    expect(result.output).toContain("unsupported:");
+    expect(result.output).toContain("read-only:");
   });
 
   it("blocks real unsupported Cursor extensions from production providers", () => {

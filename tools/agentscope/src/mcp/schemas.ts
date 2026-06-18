@@ -1,8 +1,17 @@
 import * as z from "zod/v4";
 
 export const providerSchema = z.enum(["claude", "codex", "cursor"]);
-export const kindSchema = z.enum(["skill", "mcp", "plugin"]);
-export const categorySchema = z.enum(["skill", "configured-mcp", "tool"]);
+export const kindSchema = z.enum(["skill", "mcp", "plugin", "agent", "hook", "setting"]);
+export const categorySchema = z.enum([
+  "skill",
+  "configured-mcp",
+  "tool",
+  "agent",
+  "hook",
+  "provider-setting",
+  "plugin-config",
+  "plugin-manifest",
+]);
 export const layerSchema = z.enum(["global", "project"]);
 
 export const selectorSchema = z.object({

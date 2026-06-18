@@ -64,9 +64,9 @@ describe("codex provider", () => {
     );
     expect(result.items).toContainEqual(
       expect.objectContaining({
-        id: "codex:global:tool:plugin:safe-shell",
+        id: "codex:global:plugin-config:config:safe-shell",
         enabled: true,
-        mutability: "unsupported",
+        mutability: "read-only",
       }),
     );
   });
@@ -501,7 +501,7 @@ describe("codex provider", () => {
     expect(sandbox.readHomeText(".codex/config.toml")).toBe(expectedReenabledConfig);
   });
 
-  it("blocks Codex plugins as unsupported", () => {
+  it("blocks Codex plugin config declarations as read-only", () => {
     const sandbox = createCodexSandbox();
     sandboxes.push(sandbox);
 
@@ -510,11 +510,11 @@ describe("codex provider", () => {
       provider: "codex",
       kind: "plugin",
       layer: "global",
-      id: "codex:global:tool:plugin:safe-shell",
+      id: "codex:global:plugin-config:config:safe-shell",
     });
 
     expect(blocked.exitCode).toBe(1);
-    expect(blocked.output).toContain("unsupported:");
+    expect(blocked.output).toContain("read-only:");
   });
 
   it("blocks live disabled Codex configured MCPs that were not disabled through the AgentScope vault", () => {

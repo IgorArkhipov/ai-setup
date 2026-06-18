@@ -1,8 +1,16 @@
 import type { ProviderId } from "../providers/registry.js";
 
 export type DiscoveryProvider = ProviderId;
-export type DiscoveryKind = "skill" | "mcp" | "plugin";
-export type DiscoveryCategory = "skill" | "configured-mcp" | "tool";
+export type DiscoveryKind = "skill" | "mcp" | "plugin" | "agent" | "hook" | "setting";
+export type DiscoveryCategory =
+  | "skill"
+  | "configured-mcp"
+  | "tool"
+  | "agent"
+  | "hook"
+  | "provider-setting"
+  | "plugin-config"
+  | "plugin-manifest";
 export type DiscoveryLayer = "global" | "project";
 export type DiscoveryMutability = "read-write" | "read-only" | "unsupported";
 
@@ -51,6 +59,15 @@ export interface DiscoveryInventorySummary {
 }
 
 export const providerOrder: DiscoveryProvider[] = ["claude", "codex", "cursor"];
-export const kindOrder: DiscoveryKind[] = ["skill", "mcp", "plugin"];
+export const kindOrder: DiscoveryKind[] = ["skill", "mcp", "plugin", "agent", "hook", "setting"];
 export const layerOrder: DiscoveryLayer[] = ["global", "project"];
-export const categoryOrder: DiscoveryCategory[] = ["skill", "configured-mcp", "tool"];
+export const categoryOrder: DiscoveryCategory[] = [
+  "skill",
+  "configured-mcp",
+  "tool",
+  "agent",
+  "hook",
+  "provider-setting",
+  "plugin-config",
+  "plugin-manifest",
+];

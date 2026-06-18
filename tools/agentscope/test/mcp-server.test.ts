@@ -2,6 +2,7 @@ import path from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { afterEach, describe, expect, it } from "vitest";
+import type { ProviderModule } from "../src/core/discovery.js";
 import { AGENTSCOPE_MCP_TOOL_NAMES, createAgentScopeMcpServer } from "../src/mcp/server.js";
 import type { AgentScopeMcpOptions } from "../src/mcp/tools.js";
 import { fakeToggleProvider } from "./support/fake-toggle-provider.js";
@@ -11,6 +12,29 @@ const packageRoot = path.resolve(import.meta.dirname, "..");
 const fixturesRoot = path.join(packageRoot, "test", "fixtures");
 const runtimeRoot = path.join(fixturesRoot, "runtime");
 const sandboxes: MutationSandbox[] = [];
+
+const modernSurfaceProvider: ProviderModule = {
+  id: "claude",
+  discover() {
+    return {
+      items: [
+        {
+          provider: "claude",
+          kind: "agent",
+          category: "agent",
+          layer: "global",
+          id: "claude:global:agent:reviewer",
+          displayName: "reviewer",
+          enabled: true,
+          mutability: "read-only",
+          sourcePath: path.join(runtimeRoot, "home", ".claude", "agents", "reviewer.md"),
+          statePath: path.join(runtimeRoot, "home", ".claude", "agents", "reviewer.md"),
+        },
+      ],
+      warnings: [],
+    };
+  },
+};
 
 afterEach(() => {
   while (sandboxes.length > 0) {
@@ -117,6 +141,34 @@ describe("agentscope MCP server", () => {
         itemsDiscovered: expect.any(Number),
         warnings: [],
       });
+    } finally {
+      await session.close();
+    }
+  });
+
+  it("accepts modern surface selectors in structured MCP calls", async () => {
+    const session = await connectMcp({ providers: [modernSurfaceProvider] });
+
+    try {
+      const listed = await callStructured<{
+        status: string;
+        items: Array<{ provider: string; kind: string; category: string; id: string }>;
+      }>(session.client, "agentscope_list_items", {
+        selector: {
+          kinds: ["agent"],
+          categories: ["agent"],
+        },
+      });
+
+      expect(listed).toMatchObject({ status: "ok" });
+      expect(listed.items).toEqual([
+        expect.objectContaining({
+          provider: "claude",
+          kind: "agent",
+          category: "agent",
+          id: "claude:global:agent:reviewer",
+        }),
+      ]);
     } finally {
       await session.close();
     }

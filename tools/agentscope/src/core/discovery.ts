@@ -9,6 +9,7 @@ import {
   type DiscoveryLayer,
   type DiscoveryResult,
   type DiscoveryWarning,
+  kindOrder,
   layerOrder,
   providerOrder,
 } from "./models.js";
@@ -63,20 +64,21 @@ function emptyBucket() {
   };
 }
 
+function emptySummary<T extends string>(
+  keys: readonly T[],
+): Record<T, ReturnType<typeof emptyBucket>> {
+  return Object.fromEntries(keys.map((key) => [key, emptyBucket()])) as Record<
+    T,
+    ReturnType<typeof emptyBucket>
+  >;
+}
+
 function emptyKindSummary(): Record<DiscoveryKind, ReturnType<typeof emptyBucket>> {
-  return {
-    skill: emptyBucket(),
-    mcp: emptyBucket(),
-    plugin: emptyBucket(),
-  };
+  return emptySummary(kindOrder);
 }
 
 function emptyCategorySummary(): Record<DiscoveryCategory, ReturnType<typeof emptyBucket>> {
-  return {
-    skill: emptyBucket(),
-    "configured-mcp": emptyBucket(),
-    tool: emptyBucket(),
-  };
+  return emptySummary(categoryOrder);
 }
 
 function emptyLayerSummary(): Record<DiscoveryLayer, ReturnType<typeof emptyBucket>> {

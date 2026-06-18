@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { type Dirent, existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { ProviderModule } from "../core/discovery.js";
 import type {
@@ -28,6 +28,7 @@ interface ClaudeSettings {
   enabledMcpjsonServers?: Record<string, unknown>;
   disabledMcpjsonServers?: Record<string, unknown>;
   enableAllProjectMcpServers?: boolean;
+  hooks?: Record<string, unknown>;
 }
 
 interface SettingsSource {
@@ -204,6 +205,11 @@ function parseClaudeSettings(
     }
   }
 
+  const hooks = parseUnknownRecord(parsed.hooks, filePath, layer, "hooks", warnings);
+  if (hooks !== undefined) {
+    settings.hooks = hooks;
+  }
+
   return settings;
 }
 
@@ -252,6 +258,156 @@ function buildToolItems(source: SettingsSource): DiscoveryItem[] {
     sourcePath: source.filePath,
     statePath: source.filePath,
   }));
+}
+
+function buildSettingItems(source: SettingsSource): DiscoveryItem[] {
+  if (!source.exists) {
+    return [];
+  }
+
+  return [
+    {
+      provider: "claude",
+      kind: "setting",
+      category: "provider-setting",
+      layer: source.layer,
+      id: `claude:${source.layer}:setting:${source.sourceLabel}`,
+      displayName: source.sourceLabel,
+      enabled: true,
+      mutability: "read-only",
+      sourcePath: source.filePath,
+      statePath: source.filePath,
+    },
+  ];
+}
+
+function buildHookItems(source: SettingsSource): DiscoveryItem[] {
+  if (source.settings?.hooks === undefined) {
+    return [];
+  }
+
+  return Object.keys(source.settings.hooks)
+    .sort()
+    .map((eventName) => ({
+      provider: "claude" as const,
+      kind: "hook" as const,
+      category: "hook" as const,
+      layer: source.layer,
+      id: `claude:${source.layer}:hook:${source.sourceLabel}:${eventName}`,
+      displayName: eventName,
+      enabled: true,
+      mutability: "read-only" as const,
+      sourcePath: source.filePath,
+      statePath: source.filePath,
+    }));
+}
+
+function stripAgentExtension(filePath: string): string {
+  return filePath.replace(/\.(?:md|markdown)$/i, "");
+}
+
+function unquoteMetadataValue(value: string): string {
+  const trimmed = value.trim();
+  const quoted = trimmed.match(/^["'](.+)["']$/);
+  return (quoted?.[1] ?? trimmed).trim();
+}
+
+function parseMarkdownAgentName(raw: string): string | null {
+  if (!raw.startsWith("---")) {
+    return null;
+  }
+
+  const endIndex = raw.indexOf("\n---", 3);
+  if (endIndex === -1) {
+    return null;
+  }
+
+  const frontmatter = raw.slice(3, endIndex);
+  const match = frontmatter.match(/^name:\s*(.+)$/m);
+  const name = match?.[1] === undefined ? "" : unquoteMetadataValue(match[1]);
+
+  return name.length > 0 ? name : null;
+}
+
+function agentNameFromFile(
+  filePath: string,
+  fallbackName: string,
+  layer: DiscoveryLayer,
+  warnings: DiscoveryWarning[],
+): string {
+  try {
+    return parseMarkdownAgentName(readFileSync(filePath, "utf8")) ?? fallbackName;
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    pushWarning(warnings, layer, "file-unreadable", `${filePath} could not be read: ${detail}`);
+    return fallbackName;
+  }
+}
+
+function discoverAgentFileItems(
+  rootPath: string,
+  layer: DiscoveryLayer,
+  warnings: DiscoveryWarning[],
+): DiscoveryItem[] {
+  if (!existsSync(rootPath)) {
+    return [];
+  }
+
+  const items: DiscoveryItem[] = [];
+  const stack = [rootPath];
+
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (current === undefined) {
+      continue;
+    }
+
+    let entries: Dirent[];
+    try {
+      entries = readdirSync(current, { withFileTypes: true });
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      pushWarning(warnings, layer, "file-unreadable", `${current} could not be read: ${detail}`);
+      continue;
+    }
+
+    for (const entry of entries) {
+      const entryPath = path.join(current, entry.name);
+
+      if (entry.isDirectory()) {
+        stack.push(entryPath);
+        continue;
+      }
+
+      if (!entry.isFile() || !/\.(?:md|markdown)$/i.test(entry.name)) {
+        continue;
+      }
+
+      const relativePath = path
+        .relative(rootPath, stripAgentExtension(entryPath))
+        .split(path.sep)
+        .join("/");
+      if (relativePath.length === 0) {
+        continue;
+      }
+      const agentName = agentNameFromFile(entryPath, relativePath, layer, warnings);
+
+      items.push({
+        provider: "claude",
+        kind: "agent",
+        category: "agent",
+        layer,
+        id: `claude:${layer}:agent:${agentName}`,
+        displayName: agentName,
+        enabled: true,
+        mutability: "read-only",
+        sourcePath: entryPath,
+        statePath: entryPath,
+      });
+    }
+  }
+
+  return items.sort((left, right) => left.id.localeCompare(right.id));
 }
 
 function preferredProjectSettingsPath(
@@ -950,6 +1106,10 @@ function planToolToggle(input: TogglePlanInput): TogglePlanDecision {
   );
 }
 
+function planReadOnlySurfaceToggle(input: TogglePlanInput): TogglePlanDecision {
+  return blockedDecision(input, `read-only: ${input.item.id} is discovered but not writable`);
+}
+
 export const claudeProvider: ProviderModule = {
   id: "claude",
   discover(input): DiscoveryResult {
@@ -995,6 +1155,20 @@ export const claudeProvider: ProviderModule = {
       ),
       ...buildToolItems(projectSettings),
       ...buildToolItems(projectLocalSettings),
+      ...discoverAgentFileItems(path.join(input.homeDir, ".claude", "agents"), "global", warnings),
+      ...discoverAgentFileItems(
+        path.join(input.config.projectRoot, ".claude", "agents"),
+        "project",
+        warnings,
+      ),
+      ...buildSettingItems(globalSettings),
+      ...buildSettingItems(globalLocalSettings),
+      ...buildSettingItems(projectSettings),
+      ...buildSettingItems(projectLocalSettings),
+      ...buildHookItems(globalSettings),
+      ...buildHookItems(globalLocalSettings),
+      ...buildHookItems(projectSettings),
+      ...buildHookItems(projectLocalSettings),
     ];
 
     return { items, warnings };
@@ -1007,6 +1181,11 @@ export const claudeProvider: ProviderModule = {
         return planConfiguredMcpToggle(input);
       case "tool":
         return planToolToggle(input);
+      case "agent":
+      case "hook":
+      case "provider-setting":
+      case "plugin-manifest":
+        return planReadOnlySurfaceToggle(input);
       default:
         return blockedDecision(
           input,

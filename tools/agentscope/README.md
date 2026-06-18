@@ -7,11 +7,11 @@ This directory is an isolated TypeScript sub-project.
 
 ## Provider Capability Matrix
 
-| Provider | Skills | Configured MCPs | Tools / Extensions | Reality check |
-| --- | --- | --- | --- | --- |
-| Claude Code | read-write | read-write | read-write | Verified end-to-end against fixture sandboxes for project skills, project `.mcp.json` approvals, and settings-file tools. |
-| Codex | read-write | read-write | unsupported | Verified end-to-end against fixture sandboxes for global and project skills plus global `config.toml` `mcp_servers` sections. Plugins remain visible but unsupported. |
-| Cursor | read-write | read-write | unsupported | Verified end-to-end against fixture sandboxes for global `skills-cursor` skills plus global `mcp.json` servers, including optional workspace disabled-server reconciliation. Extensions remain visible but unsupported. |
+| Provider | Skills | Configured MCPs | Modern config surfaces | Tools / Extensions | Reality check |
+| --- | --- | --- | --- | --- | --- |
+| Claude Code | read-write | read-write | read-only | read-write | Verified end-to-end against fixture sandboxes for project skills, project `.mcp.json` approvals, and settings-file tools. Agent files, settings files, and hooks are discovered as read-only inventory. |
+| Codex | read-write | read-write | read-only | read-only plugin config declarations | Verified end-to-end against fixture sandboxes for global and project skills plus global `config.toml` `mcp_servers` sections. Agent files, hooks, config files, and plugin declarations are discovered as read-only inventory. |
+| Cursor | read-write | read-write | read-only | read-only plugin manifests; unsupported extensions | Verified end-to-end against fixture sandboxes for global `skills-cursor` skills plus global `mcp.json` servers, including optional workspace disabled-server reconciliation. Agent files, hooks, permissions/sandbox/CLI config, and local plugin manifests are discovered as read-only inventory. Extensions remain visible but unsupported. |
 
 ## Fixtures
 
@@ -142,7 +142,9 @@ Successful apply writes create a backup manifest and append an audit event. Rest
 - Minimum supported Node runtime: `>=25.9.0`
 - SQLite-backed mutations use the built-in `node:sqlite` module
 
-Claude, Codex, and Cursor have real dry-run, apply, and restore coverage for their supported writable slices. Codex plugins and Cursor extensions remain visible but explicitly unsupported inventory until provider-specific write planning is implemented safely.
+Claude, Codex, and Cursor have real dry-run, apply, and restore coverage for their supported writable slices. Agent files, hooks, provider settings/config files, documented plugin manifests, and plugin config declarations are visible as read-only inventory; toggle planning blocks them with no writes until provider-specific write planning is implemented safely. Cursor extensions remain visible but explicitly unsupported inventory.
+
+AgentScope never follows provider `envFile` or `.env*` references during discovery. Those paths may appear as opaque provider configuration values, but the files are not read by AgentScope.
 
 For Cursor configured MCPs, AgentScope accepts the observed `mcp.json` trailing-comma JSON shape during discovery and toggle planning, then rewrites the managed document as deterministic JSON on apply. When a matching Cursor workspace database exists for the selected project, AgentScope also reconciles the `cursor/disabledMcpServers` `ItemTable` key so the visible MCP state stays aligned with `mcp.json`.
 

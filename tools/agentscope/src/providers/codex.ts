@@ -54,6 +54,10 @@ type TomlMultilineState = "basic" | "literal" | null;
 
 const encoder = new TextEncoder();
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 function stripComment(line: string): string {
   const hashIndex = line.indexOf("#");
   return hashIndex === -1 ? line : line.slice(0, hashIndex);
@@ -63,7 +67,7 @@ function parseSectionHeader(
   line: string,
   lineNumber: number,
 ): { kind: CodexSectionKind; id: string } {
-  const match = line.match(/^\[(plugins|mcp_servers)\.(.+)\]$/);
+  const match = line.match(/^\[(plugins|mcp_servers)\.((?:"[^"]+"|[^\].]+))\]$/);
   if (match === null) {
     throw new Error(`line ${lineNumber} must use [plugins.<id>] or [mcp_servers.<id>]`);
   }
@@ -84,6 +88,18 @@ function parseSectionHeader(
     kind: kind as CodexSectionKind,
     id,
   };
+}
+
+function isNestedKnownProviderSection(line: string): boolean {
+  return /^\[\[?(plugins|mcp_servers)\./.test(line) && parseSectionHeaderOrNull(line) === null;
+}
+
+function parseSectionHeaderOrNull(line: string): { kind: CodexSectionKind; id: string } | null {
+  try {
+    return parseSectionHeader(line, 0);
+  } catch {
+    return null;
+  }
 }
 
 function parseStringValue(value: string): string | undefined {
@@ -328,7 +344,17 @@ export function parseCodexConfig(raw: string): ParsedCodexConfig {
     }
 
     if (line.startsWith("[plugins") || line.startsWith("[mcp_servers")) {
-      currentSection = parseSectionHeader(line, lineNumber);
+      try {
+        currentSection = parseSectionHeader(line, lineNumber);
+      } catch (error) {
+        if (isNestedKnownProviderSection(line)) {
+          currentSection = null;
+          multilineState = advanceTomlMultilineState(rawLine, multilineState);
+          continue;
+        }
+
+        throw error;
+      }
       const bucket = currentSection.kind === "plugins" ? plugins : mcpServers;
 
       if (!bucket.has(currentSection.id)) {
@@ -551,6 +577,277 @@ function discoverSkillItems(
   const liveIds = new Set(liveItems.map((item) => item.id));
 
   return [...liveItems, ...discoverVaultedSkillItems(appStateRoot, layer, warnings, liveIds)];
+}
+
+function stripModernFileExtension(filePath: string): string {
+  return filePath.replace(/\.(?:toml|md|markdown)$/i, "");
+}
+
+function unquoteMetadataValue(value: string): string {
+  const trimmed = value.trim();
+  const quoted = trimmed.match(/^["'](.+)["']$/);
+  return (quoted?.[1] ?? trimmed).trim();
+}
+
+function parseMarkdownAgentName(raw: string): string | null {
+  if (!raw.startsWith("---")) {
+    return null;
+  }
+
+  const endIndex = raw.indexOf("\n---", 3);
+  if (endIndex === -1) {
+    return null;
+  }
+
+  const frontmatter = raw.slice(3, endIndex);
+  const match = frontmatter.match(/^name:\s*(.+)$/m);
+  const name = match?.[1] === undefined ? "" : unquoteMetadataValue(match[1]);
+
+  return name.length > 0 ? name : null;
+}
+
+function parseTomlAgentName(raw: string): string | null {
+  for (const { rawLine } of collectTomlLines(raw)) {
+    const line = stripComment(rawLine).trim();
+    const separatorIndex = line.indexOf("=");
+    if (separatorIndex === -1) {
+      continue;
+    }
+
+    if (line.slice(0, separatorIndex).trim() !== "name") {
+      continue;
+    }
+
+    const parsed = parseStringValue(line.slice(separatorIndex + 1).trim());
+    return parsed === undefined || parsed.trim().length === 0 ? null : parsed.trim();
+  }
+
+  return null;
+}
+
+function agentNameFromFile(
+  filePath: string,
+  fallbackName: string,
+  layer: DiscoveryLayer,
+  warnings: DiscoveryWarning[],
+): string {
+  try {
+    const raw = readFileSync(filePath, "utf8");
+    const parsedName = /\.toml$/i.test(filePath)
+      ? parseTomlAgentName(raw)
+      : parseMarkdownAgentName(raw);
+
+    return parsedName ?? fallbackName;
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    pushWarning(warnings, layer, "file-unreadable", `${filePath} could not be read: ${detail}`);
+    return fallbackName;
+  }
+}
+
+function discoverAgentFileItems(
+  rootPath: string,
+  layer: DiscoveryLayer,
+  warnings: DiscoveryWarning[],
+): DiscoveryItem[] {
+  if (!existsSync(rootPath)) {
+    return [];
+  }
+
+  const items: DiscoveryItem[] = [];
+  const stack = [rootPath];
+
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (current === undefined) {
+      continue;
+    }
+
+    let entries: Dirent[];
+    try {
+      entries = readdirSync(current, { withFileTypes: true });
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      pushWarning(warnings, layer, "file-unreadable", `${current} could not be read: ${detail}`);
+      continue;
+    }
+
+    for (const entry of entries) {
+      const entryPath = path.join(current, entry.name);
+
+      if (entry.isDirectory()) {
+        stack.push(entryPath);
+        continue;
+      }
+
+      if (!entry.isFile() || !/\.(?:toml|md|markdown)$/i.test(entry.name)) {
+        continue;
+      }
+
+      const relativePath = path
+        .relative(rootPath, stripModernFileExtension(entryPath))
+        .split(path.sep)
+        .join("/");
+      if (relativePath.length === 0) {
+        continue;
+      }
+      const agentName = agentNameFromFile(entryPath, relativePath, layer, warnings);
+
+      items.push({
+        provider: "codex",
+        kind: "agent",
+        category: "agent",
+        layer,
+        id: `codex:${layer}:agent:${agentName}`,
+        displayName: agentName,
+        enabled: true,
+        mutability: "read-only",
+        sourcePath: entryPath,
+        statePath: entryPath,
+      });
+    }
+  }
+
+  return items.sort((left, right) => left.id.localeCompare(right.id));
+}
+
+function settingItem(
+  layer: DiscoveryLayer,
+  idSuffix: string,
+  displayName: string,
+  filePath: string,
+): DiscoveryItem {
+  return {
+    provider: "codex",
+    kind: "setting",
+    category: "provider-setting",
+    layer,
+    id: `codex:${layer}:setting:${idSuffix}`,
+    displayName,
+    enabled: true,
+    mutability: "read-only",
+    sourcePath: filePath,
+    statePath: filePath,
+  };
+}
+
+function discoverSettingFileItem(
+  filePath: string,
+  layer: DiscoveryLayer,
+  idSuffix: string,
+  displayName: string,
+): DiscoveryItem[] {
+  return existsSync(filePath) ? [settingItem(layer, idSuffix, displayName, filePath)] : [];
+}
+
+function parseJsonObjectFile(
+  filePath: string,
+  layer: DiscoveryLayer,
+  warnings: DiscoveryWarning[],
+): Record<string, unknown> | null {
+  let raw: string | null;
+  try {
+    raw = readOptionalFile(filePath);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    pushWarning(warnings, layer, "file-unreadable", `${filePath} could not be read: ${detail}`);
+    return null;
+  }
+  if (raw === null) {
+    return null;
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    pushWarning(warnings, layer, "json-parse-error", `${filePath} is not valid JSON: ${detail}`);
+    return null;
+  }
+
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    pushWarning(warnings, layer, "invalid-shape", `${filePath} must be a JSON object`);
+    return null;
+  }
+
+  return parsed as Record<string, unknown>;
+}
+
+function discoverHookItems(
+  hooksPath: string,
+  layer: DiscoveryLayer,
+  warnings: DiscoveryWarning[],
+): DiscoveryItem[] {
+  const parsed = parseJsonObjectFile(hooksPath, layer, warnings);
+  if (parsed === null) {
+    return [];
+  }
+
+  const hookRoot = isRecord(parsed.hooks) ? parsed.hooks : parsed;
+
+  return Object.keys(hookRoot)
+    .filter((eventName) => eventName !== "version" && eventName !== "hooks")
+    .sort()
+    .map((eventName) => ({
+      provider: "codex" as const,
+      kind: "hook" as const,
+      category: "hook" as const,
+      layer,
+      id: `codex:${layer}:hook:hooks-json:${eventName}`,
+      displayName: eventName,
+      enabled: true,
+      mutability: "read-only" as const,
+      sourcePath: hooksPath,
+      statePath: hooksPath,
+    }));
+}
+
+function parseHookEventFromTomlHeader(line: string): string | null {
+  const match = line.match(/^\[\[?hooks\.((?:"[^"]+"|[^\].]+))(?:\.hooks)?\]?\]$/);
+  const rawName = match?.[1];
+  if (rawName === undefined) {
+    return null;
+  }
+
+  return unquoteMetadataValue(rawName);
+}
+
+function discoverInlineHookItems(
+  configPath: string,
+  configRaw: string,
+  layer: DiscoveryLayer,
+): DiscoveryItem[] {
+  const eventNames = new Set<string>();
+  let multilineState: TomlMultilineState = null;
+
+  for (const { rawLine } of collectTomlLines(configRaw)) {
+    if (multilineState !== null) {
+      multilineState = advanceTomlMultilineState(rawLine, multilineState);
+      continue;
+    }
+
+    const line = stripComment(rawLine).trim();
+    const eventName = parseHookEventFromTomlHeader(line);
+    if (eventName !== null && eventName.length > 0) {
+      eventNames.add(eventName);
+    }
+
+    multilineState = advanceTomlMultilineState(rawLine, multilineState);
+  }
+
+  return [...eventNames].sort().map((eventName) => ({
+    provider: "codex" as const,
+    kind: "hook" as const,
+    category: "hook" as const,
+    layer,
+    id: `codex:${layer}:hook:config-toml:${eventName}`,
+    displayName: eventName,
+    enabled: true,
+    mutability: "read-only" as const,
+    sourcePath: configPath,
+    statePath: configPath,
+  }));
 }
 
 function codexConfiguredMcpId(itemId: string): string | null {
@@ -994,6 +1291,10 @@ function planConfiguredMcpToggle(input: TogglePlanInput): TogglePlanDecision {
   );
 }
 
+function planReadOnlySurfaceToggle(input: TogglePlanInput): TogglePlanDecision {
+  return blockedDecision(input, `read-only: ${input.item.id} is discovered but not writable`);
+}
+
 export const codexProvider: ProviderModule = {
   id: "codex",
   discover(input): DiscoveryResult {
@@ -1016,6 +1317,16 @@ export const codexProvider: ProviderModule = {
         warnings,
       ),
     );
+    items.push(
+      ...discoverAgentFileItems(path.join(input.homeDir, ".codex", "agents"), "global", warnings),
+    );
+    items.push(
+      ...discoverAgentFileItems(
+        path.join(input.config.projectRoot, ".codex", "agents"),
+        "project",
+        warnings,
+      ),
+    );
 
     const configPath = path.join(input.homeDir, ".codex", "config.toml");
     const configRaw = readOptionalFile(configPath);
@@ -1025,6 +1336,8 @@ export const codexProvider: ProviderModule = {
       let parsed: ParsedCodexConfig;
       try {
         parsed = parseCodexConfig(configRaw);
+        items.push(settingItem("global", "config-toml", "config.toml", configPath));
+        items.push(...discoverInlineHookItems(configPath, configRaw, "global"));
       } catch (error) {
         const detail = error instanceof Error ? error.message : String(error);
         pushWarning(
@@ -1062,17 +1375,49 @@ export const codexProvider: ProviderModule = {
         ...parsed.plugins.map((plugin) => ({
           provider: "codex" as const,
           kind: "plugin" as const,
-          category: "tool" as const,
+          category: "plugin-config" as const,
           layer: "global" as const,
-          id: `codex:global:tool:plugin:${plugin.id}`,
+          id: `codex:global:plugin-config:config:${plugin.id}`,
           displayName: plugin.displayName ?? plugin.id,
           enabled: plugin.enabled ?? true,
-          mutability: "unsupported" as const,
+          mutability: "read-only" as const,
           sourcePath: configPath,
           statePath: configPath,
         })),
       );
     }
+
+    const globalHooksPath = path.join(input.homeDir, ".codex", "hooks.json");
+    items.push(
+      ...discoverSettingFileItem(globalHooksPath, "global", "hooks-json", "hooks.json"),
+      ...discoverHookItems(globalHooksPath, "global", warnings),
+    );
+
+    const projectConfigPath = path.join(input.config.projectRoot, ".codex", "config.toml");
+    let projectConfigRaw: string | null = null;
+    try {
+      projectConfigRaw = readOptionalFile(projectConfigPath);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      pushWarning(
+        warnings,
+        "project",
+        "file-unreadable",
+        `${projectConfigPath} could not be read: ${detail}`,
+      );
+    }
+    items.push(
+      ...discoverSettingFileItem(projectConfigPath, "project", "config-toml", ".codex/config.toml"),
+    );
+    if (projectConfigRaw !== null) {
+      items.push(...discoverInlineHookItems(projectConfigPath, projectConfigRaw, "project"));
+    }
+
+    const projectHooksPath = path.join(input.config.projectRoot, ".codex", "hooks.json");
+    items.push(
+      ...discoverSettingFileItem(projectHooksPath, "project", "hooks-json", ".codex/hooks.json"),
+      ...discoverHookItems(projectHooksPath, "project", warnings),
+    );
 
     items.push(
       ...discoverVaultedConfiguredMcpItems(
@@ -1085,6 +1430,10 @@ export const codexProvider: ProviderModule = {
     return { items, warnings };
   },
   planToggle(input: TogglePlanInput): TogglePlanDecision {
+    if (input.item.mutability === "read-only") {
+      return planReadOnlySurfaceToggle(input);
+    }
+
     if (input.item.kind === "plugin") {
       return blockedDecision(
         input,

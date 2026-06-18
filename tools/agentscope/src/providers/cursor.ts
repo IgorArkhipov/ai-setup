@@ -3,7 +3,12 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { pathToFileURL } from "node:url";
 import type { ProviderModule } from "../core/discovery.js";
-import type { DiscoveryItem, DiscoveryResult, DiscoveryWarning } from "../core/models.js";
+import type {
+  DiscoveryItem,
+  DiscoveryLayer,
+  DiscoveryResult,
+  DiscoveryWarning,
+} from "../core/models.js";
 import { captureSourceFingerprints, dedupeMutationTargets } from "../core/mutation-io.js";
 import {
   type MutationOperation,
@@ -48,10 +53,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function pushWarning(warnings: DiscoveryWarning[], code: string, message: string): void {
+function pushWarning(
+  warnings: DiscoveryWarning[],
+  code: string,
+  message: string,
+  layer: DiscoveryLayer = "global",
+): void {
   warnings.push({
     provider: "cursor",
-    layer: "global",
+    layer,
     code,
     message,
   });
@@ -277,6 +287,253 @@ function discoverSkillItems(
   const liveIds = new Set(liveItems.map((item) => item.id));
 
   return [...liveItems, ...discoverVaultedSkillItems(appStateRoot, warnings, liveIds)];
+}
+
+function stripModernFileExtension(filePath: string): string {
+  return filePath.replace(/\.(?:md|markdown)$/i, "");
+}
+
+function unquoteMetadataValue(value: string): string {
+  const trimmed = value.trim();
+  const quoted = trimmed.match(/^["'](.+)["']$/);
+  return (quoted?.[1] ?? trimmed).trim();
+}
+
+function parseMarkdownAgentName(raw: string): string | null {
+  if (!raw.startsWith("---")) {
+    return null;
+  }
+
+  const endIndex = raw.indexOf("\n---", 3);
+  if (endIndex === -1) {
+    return null;
+  }
+
+  const frontmatter = raw.slice(3, endIndex);
+  const match = frontmatter.match(/^name:\s*(.+)$/m);
+  const name = match?.[1] === undefined ? "" : unquoteMetadataValue(match[1]);
+
+  return name.length > 0 ? name : null;
+}
+
+function agentNameFromFile(
+  filePath: string,
+  fallbackName: string,
+  layer: DiscoveryLayer,
+  warnings: DiscoveryWarning[],
+): string {
+  try {
+    return parseMarkdownAgentName(readFileSync(filePath, "utf8")) ?? fallbackName;
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    pushWarning(warnings, "file-unreadable", `${filePath} could not be read: ${detail}`, layer);
+    return fallbackName;
+  }
+}
+
+function discoverAgentFileItems(
+  rootPath: string,
+  layer: DiscoveryLayer,
+  warnings: DiscoveryWarning[],
+): DiscoveryItem[] {
+  if (!existsSync(rootPath)) {
+    return [];
+  }
+
+  const items: DiscoveryItem[] = [];
+  const stack = [rootPath];
+
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (current === undefined) {
+      continue;
+    }
+
+    let entries: Dirent[];
+    try {
+      entries = readdirSync(current, { withFileTypes: true });
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      pushWarning(warnings, "file-unreadable", `${current} could not be read: ${detail}`, layer);
+      continue;
+    }
+
+    for (const entry of entries) {
+      const entryPath = path.join(current, entry.name);
+
+      if (entry.isDirectory()) {
+        stack.push(entryPath);
+        continue;
+      }
+
+      if (!entry.isFile() || !/\.(?:md|markdown)$/i.test(entry.name)) {
+        continue;
+      }
+
+      const relativePath = path
+        .relative(rootPath, stripModernFileExtension(entryPath))
+        .split(path.sep)
+        .join("/");
+      if (relativePath.length === 0) {
+        continue;
+      }
+      const agentName = agentNameFromFile(entryPath, relativePath, layer, warnings);
+
+      items.push({
+        provider: "cursor",
+        kind: "agent",
+        category: "agent",
+        layer,
+        id: `cursor:${layer}:agent:${agentName}`,
+        displayName: agentName,
+        enabled: true,
+        mutability: "read-only",
+        sourcePath: entryPath,
+        statePath: entryPath,
+      });
+    }
+  }
+
+  return items.sort((left, right) => left.id.localeCompare(right.id));
+}
+
+function settingItem(
+  layer: DiscoveryLayer,
+  idSuffix: string,
+  displayName: string,
+  filePath: string,
+): DiscoveryItem {
+  return {
+    provider: "cursor",
+    kind: "setting",
+    category: "provider-setting",
+    layer,
+    id: `cursor:${layer}:setting:${idSuffix}`,
+    displayName,
+    enabled: true,
+    mutability: "read-only",
+    sourcePath: filePath,
+    statePath: filePath,
+  };
+}
+
+function discoverSettingFileItem(
+  filePath: string,
+  layer: DiscoveryLayer,
+  idSuffix: string,
+  displayName: string,
+): DiscoveryItem[] {
+  return existsSync(filePath) ? [settingItem(layer, idSuffix, displayName, filePath)] : [];
+}
+
+function parseCursorObjectFile(
+  filePath: string,
+  layer: DiscoveryLayer,
+  warnings: DiscoveryWarning[],
+): Record<string, unknown> | null {
+  let raw: string | null;
+  try {
+    raw = readOptionalFile(filePath);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    pushWarning(warnings, "file-unreadable", `${filePath} could not be read: ${detail}`, layer);
+    return null;
+  }
+  if (raw === null) {
+    return null;
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = parseCursorJson(raw);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    pushWarning(warnings, "json-parse-error", `${filePath} is not valid JSON: ${detail}`, layer);
+    return null;
+  }
+
+  if (!isRecord(parsed)) {
+    pushWarning(warnings, "invalid-shape", `${filePath} must be a JSON object`, layer);
+    return null;
+  }
+
+  return parsed;
+}
+
+function discoverHookItems(
+  hooksPath: string,
+  layer: DiscoveryLayer,
+  warnings: DiscoveryWarning[],
+): DiscoveryItem[] {
+  const parsed = parseCursorObjectFile(hooksPath, layer, warnings);
+  if (parsed === null) {
+    return [];
+  }
+
+  if (!isRecord(parsed.hooks)) {
+    return [];
+  }
+
+  return Object.keys(parsed.hooks)
+    .sort()
+    .map((eventName) => ({
+      provider: "cursor" as const,
+      kind: "hook" as const,
+      category: "hook" as const,
+      layer,
+      id: `cursor:${layer}:hook:hooks-json:${eventName}`,
+      displayName: eventName,
+      enabled: true,
+      mutability: "read-only" as const,
+      sourcePath: hooksPath,
+      statePath: hooksPath,
+    }));
+}
+
+function discoverLocalPluginManifests(
+  localPluginsRoot: string,
+  warnings: DiscoveryWarning[],
+): DiscoveryItem[] {
+  if (!existsSync(localPluginsRoot)) {
+    return [];
+  }
+
+  let entries: Dirent[];
+  try {
+    entries = readdirSync(localPluginsRoot, { withFileTypes: true });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    pushWarning(warnings, "file-unreadable", `${localPluginsRoot} could not be read: ${detail}`);
+    return [];
+  }
+
+  return entries
+    .filter((entry) => entry.isDirectory())
+    .flatMap((entry) => {
+      const manifestPath = path.join(localPluginsRoot, entry.name, ".cursor-plugin", "plugin.json");
+      if (!existsSync(manifestPath)) {
+        return [];
+      }
+
+      const parsed = parseCursorObjectFile(manifestPath, "global", warnings);
+      const displayName = typeof parsed?.name === "string" ? parsed.name : entry.name;
+
+      return [
+        {
+          provider: "cursor" as const,
+          kind: "plugin" as const,
+          category: "plugin-manifest" as const,
+          layer: "global" as const,
+          id: `cursor:global:plugin-manifest:local:${entry.name}`,
+          displayName,
+          enabled: true,
+          mutability: "read-only" as const,
+          sourcePath: manifestPath,
+          statePath: manifestPath,
+        },
+      ];
+    })
+    .sort((left, right) => left.id.localeCompare(right.id));
 }
 
 function findCursorWorkspaceDbPath(cursorRoot: string, projectRoot: string): string | null {
@@ -1131,6 +1388,10 @@ function planConfiguredMcpToggle(input: TogglePlanInput): TogglePlanDecision {
   return plannedDecision(input, operations, dedupeMutationTargets(affectedTargets));
 }
 
+function planReadOnlySurfaceToggle(input: TogglePlanInput): TogglePlanDecision {
+  return blockedDecision(input, `read-only: ${input.item.id} is discovered but not writable`);
+}
+
 export const cursorProvider: ProviderModule = {
   id: "cursor",
   discover(input): DiscoveryResult {
@@ -1154,10 +1415,78 @@ export const cursorProvider: ProviderModule = {
       ),
     );
     items.push(...discoverExtensions(input.config.cursorRoot, warnings));
+    items.push(
+      ...discoverAgentFileItems(path.join(input.homeDir, ".cursor", "agents"), "global", warnings),
+    );
+    items.push(
+      ...discoverAgentFileItems(
+        path.join(input.config.projectRoot, ".cursor", "agents"),
+        "project",
+        warnings,
+      ),
+    );
+
+    const globalHooksPath = path.join(input.homeDir, ".cursor", "hooks.json");
+    items.push(
+      ...discoverSettingFileItem(globalHooksPath, "global", "hooks-json", "hooks.json"),
+      ...discoverHookItems(globalHooksPath, "global", warnings),
+      ...discoverSettingFileItem(
+        path.join(input.homeDir, ".cursor", "permissions.json"),
+        "global",
+        "permissions-json",
+        "permissions.json",
+      ),
+      ...discoverSettingFileItem(
+        path.join(input.homeDir, ".cursor", "sandbox.json"),
+        "global",
+        "sandbox-json",
+        "sandbox.json",
+      ),
+      ...discoverSettingFileItem(
+        path.join(input.homeDir, ".cursor", "cli-config.json"),
+        "global",
+        "cli-config-json",
+        "cli-config.json",
+      ),
+    );
+
+    const projectHooksPath = path.join(input.config.projectRoot, ".cursor", "hooks.json");
+    items.push(
+      ...discoverSettingFileItem(projectHooksPath, "project", "hooks-json", ".cursor/hooks.json"),
+      ...discoverHookItems(projectHooksPath, "project", warnings),
+      ...discoverSettingFileItem(
+        path.join(input.config.projectRoot, ".cursor", "permissions.json"),
+        "project",
+        "permissions-json",
+        ".cursor/permissions.json",
+      ),
+      ...discoverSettingFileItem(
+        path.join(input.config.projectRoot, ".cursor", "sandbox.json"),
+        "project",
+        "sandbox-json",
+        ".cursor/sandbox.json",
+      ),
+      ...discoverSettingFileItem(
+        path.join(input.config.projectRoot, ".cursor", "cli.json"),
+        "project",
+        "cli-json",
+        ".cursor/cli.json",
+      ),
+    );
+    items.push(
+      ...discoverLocalPluginManifests(
+        path.join(input.homeDir, ".cursor", "plugins", "local"),
+        warnings,
+      ),
+    );
 
     return { items, warnings };
   },
   planToggle(input: TogglePlanInput): TogglePlanDecision {
+    if (input.item.mutability === "read-only") {
+      return planReadOnlySurfaceToggle(input);
+    }
+
     if (input.item.kind === "plugin") {
       return blockedDecision(
         input,

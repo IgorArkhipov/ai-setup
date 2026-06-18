@@ -39,3 +39,4 @@ The `memory-bank/features/` directory stores instantiated feature packages in th
 | `FT-006` | Persistent Discovery Snapshot Command | `active` | `done` | [`FT-006/feature.md`](FT-006/feature.md) | [`FT-006/implementation-plan.md`](FT-006/implementation-plan.md) | `none` | 2026-04-13 |
 | `FT-007` | Agentic Development Workflow Runner | `active` | `done` | [`FT-007/feature.md`](FT-007/feature.md) | [`FT-007/implementation-plan.md`](FT-007/implementation-plan.md) | `none` | 2026-06-18 |
 | `FT-008` | Local MCP Control Plane | `active` | `done` | [`FT-008/feature.md`](FT-008/feature.md) | [`FT-008/implementation-plan.md`](FT-008/implementation-plan.md) | `none` | 2026-06-18 |
+| `FT-009` | Modern Provider Surface Inventory | `active` | `done` | [`FT-009/feature.md`](FT-009/feature.md) | [`FT-009/implementation-plan.md`](FT-009/implementation-plan.md) | `none` | 2026-06-18 |

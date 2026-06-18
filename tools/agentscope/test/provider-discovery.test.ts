@@ -5,6 +5,8 @@ import { DatabaseSync } from "node:sqlite";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import type { AgentScopeConfig } from "../src/core/config.js";
+import { buildDiscoveryInventorySummary } from "../src/core/discovery.js";
+import type { DiscoveryItem } from "../src/core/models.js";
 import { serializeVaultEntry, vaultDescriptor } from "../src/core/mutation-vault.js";
 import { claudeProvider } from "../src/providers/claude.js";
 import { codexProvider } from "../src/providers/codex.js";
@@ -99,6 +101,76 @@ afterEach(() => {
 });
 
 describe("provider discovery", () => {
+  it("summarizes modern surface taxonomy buckets", () => {
+    const modernItems: DiscoveryItem[] = [
+      {
+        provider: "claude",
+        kind: "agent",
+        category: "agent",
+        layer: "global",
+        id: "claude:global:agent:reviewer",
+        displayName: "reviewer",
+        enabled: true,
+        mutability: "read-only",
+        sourcePath: "/tmp/reviewer.md",
+        statePath: "/tmp/reviewer.md",
+      },
+      {
+        provider: "codex",
+        kind: "hook",
+        category: "hook",
+        layer: "global",
+        id: "codex:global:hook:hooks-json:PostToolUse",
+        displayName: "PostToolUse",
+        enabled: true,
+        mutability: "read-only",
+        sourcePath: "/tmp/hooks.json",
+        statePath: "/tmp/hooks.json",
+      },
+      {
+        provider: "cursor",
+        kind: "setting",
+        category: "provider-setting",
+        layer: "project",
+        id: "cursor:project:setting:permissions-json",
+        displayName: ".cursor/permissions.json",
+        enabled: true,
+        mutability: "read-only",
+        sourcePath: "/tmp/permissions.json",
+        statePath: "/tmp/permissions.json",
+      },
+      {
+        provider: "cursor",
+        kind: "plugin",
+        category: "plugin-manifest",
+        layer: "global",
+        id: "cursor:global:plugin-manifest:local:demo",
+        displayName: "demo",
+        enabled: true,
+        mutability: "read-only",
+        sourcePath: "/tmp/plugin.json",
+        statePath: "/tmp/plugin.json",
+      },
+    ];
+
+    const summary = buildDiscoveryInventorySummary(modernItems, []);
+
+    expect(
+      summary.providers.find((provider) => provider.provider === "claude")?.kinds.agent,
+    ).toEqual({ available: 1, active: 1 });
+    expect(summary.providers.find((provider) => provider.provider === "codex")?.kinds.hook).toEqual(
+      { available: 1, active: 1 },
+    );
+    expect(
+      summary.providers.find((provider) => provider.provider === "cursor")?.kinds.setting,
+    ).toEqual({ available: 1, active: 1 });
+    expect(
+      summary.providers.find((provider) => provider.provider === "cursor")?.categories[
+        "plugin-manifest"
+      ],
+    ).toEqual({ available: 1, active: 1 });
+  });
+
   it("discovers Claude settings, skills, configured MCPs, and tools", () => {
     const sandbox = createSandbox();
 
@@ -155,6 +227,10 @@ describe("provider discovery", () => {
       "claude:project:configured-mcp:all-project-mcp-servers",
       "claude:project:tool:settings:github",
       "claude:project:tool:settings-local:local-shell",
+      "claude:global:setting:settings",
+      "claude:global:setting:settings-local",
+      "claude:project:setting:settings",
+      "claude:project:setting:settings-local",
     ]);
     expect(result.items).toContainEqual(
       expect.objectContaining({
@@ -182,6 +258,102 @@ describe("provider discovery", () => {
     );
   });
 
+  it("discovers Claude agents, hooks, and settings as read-only modern surfaces", () => {
+    const sandbox = createSandbox();
+
+    mkdirSync(path.join(sandbox.homeDir, ".claude", "agents"), { recursive: true });
+    writeFileSync(
+      path.join(sandbox.homeDir, ".claude", "agents", "reviewer-agent.md"),
+      ["---", "name: reviewer", "description: Reviews changes", "---", "", "Review code."].join(
+        "\n",
+      ),
+      { encoding: "utf8", flag: "w" },
+    );
+    mkdirSync(path.join(sandbox.projectRoot, ".claude", "agents"), { recursive: true });
+    writeFileSync(
+      path.join(sandbox.projectRoot, ".claude", "agents", "planner.md"),
+      ["---", "name: planner", "description: Plans work", "---", "", "Plan work."].join("\n"),
+      { encoding: "utf8", flag: "w" },
+    );
+    mkdirSync(path.join(sandbox.homeDir, ".claude"), { recursive: true });
+    writeFileSync(
+      path.join(sandbox.homeDir, ".claude", "settings.json"),
+      JSON.stringify(
+        {
+          hooks: {
+            PreToolUse: [
+              {
+                matcher: "*",
+                hooks: [{ type: "command", command: "echo ok" }],
+              },
+            ],
+          },
+        },
+        null,
+        2,
+      ),
+      { encoding: "utf8", flag: "w" },
+    );
+
+    const result = claudeProvider.discover({
+      config: sandbox.config,
+      homeDir: sandbox.homeDir,
+    });
+
+    expect(result.warnings).toEqual([]);
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "claude:global:agent:reviewer",
+        kind: "agent",
+        category: "agent",
+        layer: "global",
+        mutability: "read-only",
+        displayName: "reviewer",
+        sourcePath: path.join(sandbox.homeDir, ".claude", "agents", "reviewer-agent.md"),
+      }),
+    );
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "claude:project:agent:planner",
+        kind: "agent",
+        category: "agent",
+        layer: "project",
+        mutability: "read-only",
+      }),
+    );
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "claude:global:setting:settings",
+        kind: "setting",
+        category: "provider-setting",
+        mutability: "read-only",
+      }),
+    );
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "claude:global:hook:settings:PreToolUse",
+        kind: "hook",
+        category: "hook",
+        mutability: "read-only",
+      }),
+    );
+
+    const agentItem = result.items.find((item) => item.id === "claude:global:agent:reviewer");
+    expect(agentItem).toBeDefined();
+    expect(
+      claudeProvider.planToggle?.({
+        config: sandbox.config,
+        homeDir: sandbox.homeDir,
+        item: agentItem as DiscoveryItem,
+        targetEnabled: false,
+      }),
+    ).toMatchObject({
+      status: "blocked",
+      reason: expect.stringContaining("read-only"),
+      operations: [],
+    });
+  });
+
   it("turns malformed Claude files into warnings", () => {
     const sandbox = createSandbox();
 
@@ -199,14 +371,17 @@ describe("provider discovery", () => {
       homeDir: sandbox.homeDir,
     });
 
-    expect(result.items).toEqual([]);
+    expect(result.items.map((item) => item.id)).toEqual([
+      "claude:global:setting:settings",
+      "claude:project:setting:settings-local",
+    ]);
     expect(result.warnings.map((warning) => warning.code)).toEqual([
       "json-parse-error",
       "file-unreadable",
     ]);
   });
 
-  it("discovers Codex skills, configured MCPs, and plugins", () => {
+  it("discovers Codex skills, configured MCPs, and plugin config declarations", () => {
     const sandbox = createSandbox();
 
     copyFixture("codex/global/config.toml", path.join(sandbox.homeDir, ".codex", "config.toml"));
@@ -222,9 +397,146 @@ describe("provider discovery", () => {
     expect(result.items.map((item) => `${item.id}:${item.mutability}`)).toEqual([
       "codex:global:skill:example-skill:read-write",
       "codex:project:skill:example-project-skill:read-write",
+      "codex:global:setting:config-toml:read-only",
       "codex:global:configured-mcp:config:github:read-write",
-      "codex:global:tool:plugin:safe-shell:unsupported",
+      "codex:global:plugin-config:config:safe-shell:read-only",
     ]);
+  });
+
+  it("discovers Codex agents, hooks, and settings as read-only modern surfaces", () => {
+    const sandbox = createSandbox();
+
+    mkdirSync(path.join(sandbox.homeDir, ".codex", "agents"), { recursive: true });
+    writeFileSync(
+      path.join(sandbox.homeDir, ".codex", "agents", "reviewer-agent.toml"),
+      ['name = "reviewer"', 'description = "Reviews changes"'].join("\n"),
+      { encoding: "utf8", flag: "w" },
+    );
+    mkdirSync(path.join(sandbox.projectRoot, ".codex", "agents"), { recursive: true });
+    writeFileSync(
+      path.join(sandbox.projectRoot, ".codex", "agents", "planner.md"),
+      ["---", "name: planner", "description: Plans work", "---", "", "Plan work."].join("\n"),
+      { encoding: "utf8", flag: "w" },
+    );
+    mkdirSync(path.join(sandbox.homeDir, ".codex"), { recursive: true });
+    writeFileSync(
+      path.join(sandbox.homeDir, ".codex", "config.toml"),
+      [
+        "[plugins.safe-shell]",
+        'display_name = "Safe Shell"',
+        "",
+        "[plugins.safe-shell.mcp_servers.github]",
+        'command = "npx"',
+        "",
+        "[mcp_servers.github]",
+        "",
+        "[mcp_servers.github.tools.list_issues]",
+        'approval_mode = "approve"',
+        "",
+        "[[hooks.PreToolUse]]",
+        'matcher = "Bash"',
+      ].join("\n"),
+      { encoding: "utf8", flag: "w" },
+    );
+    writeFileSync(
+      path.join(sandbox.homeDir, ".codex", "hooks.json"),
+      JSON.stringify(
+        {
+          hooks: {
+            PostToolUse: [{ command: "echo ok" }],
+          },
+        },
+        null,
+        2,
+      ),
+      { encoding: "utf8", flag: "w" },
+    );
+
+    const result = codexProvider.discover({
+      config: sandbox.config,
+      homeDir: sandbox.homeDir,
+    });
+
+    expect(result.warnings).toEqual([]);
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "codex:global:agent:reviewer",
+        kind: "agent",
+        category: "agent",
+        layer: "global",
+        displayName: "reviewer",
+        mutability: "read-only",
+      }),
+    );
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "codex:project:agent:planner",
+        kind: "agent",
+        category: "agent",
+        layer: "project",
+        mutability: "read-only",
+      }),
+    );
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "codex:global:setting:config-toml",
+        kind: "setting",
+        category: "provider-setting",
+        mutability: "read-only",
+      }),
+    );
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "codex:global:setting:hooks-json",
+        kind: "setting",
+        category: "provider-setting",
+        mutability: "read-only",
+      }),
+    );
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "codex:global:hook:hooks-json:PostToolUse",
+        kind: "hook",
+        category: "hook",
+        mutability: "read-only",
+      }),
+    );
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "codex:global:hook:config-toml:PreToolUse",
+        kind: "hook",
+        category: "hook",
+        mutability: "read-only",
+      }),
+    );
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "codex:global:plugin-config:config:safe-shell",
+        kind: "plugin",
+        category: "plugin-config",
+        mutability: "read-only",
+      }),
+    );
+    expect(result.items.map((item) => item.id)).not.toContain(
+      "codex:global:plugin-config:config:safe-shell.mcp_servers.github",
+    );
+
+    const hookItem = result.items.find(
+      (item) => item.id === "codex:global:hook:hooks-json:PostToolUse",
+    );
+    expect(hookItem).toBeDefined();
+    expect(
+      codexProvider.planToggle?.({
+        config: sandbox.config,
+        homeDir: sandbox.homeDir,
+        item: hookItem as DiscoveryItem,
+        targetEnabled: false,
+      }),
+    ).toMatchObject({
+      status: "blocked",
+      reason: expect.stringContaining("read-only"),
+      operations: [],
+    });
   });
 
   it("discovers disabled Codex skills and configured MCPs from vault state", () => {
@@ -362,8 +674,9 @@ describe("provider discovery", () => {
     });
 
     expect(result.items.map((item) => item.id)).toEqual([
+      "codex:global:setting:config-toml",
       "codex:global:configured-mcp:config:github",
-      "codex:global:tool:plugin:safe-shell",
+      "codex:global:plugin-config:config:safe-shell",
     ]);
     expect(result.warnings).toEqual([
       {
@@ -373,6 +686,35 @@ describe("provider discovery", () => {
         message: expect.stringContaining(path.join(sandbox.homeDir, ".codex", "skills")),
       },
     ]);
+  });
+
+  it("keeps Codex discovery scoped when a modern hooks file is unreadable", () => {
+    const sandbox = createSandbox();
+
+    mkdirSync(path.join(sandbox.homeDir, ".codex"), { recursive: true });
+    writeFileSync(
+      path.join(sandbox.homeDir, ".codex", "config.toml"),
+      ["[mcp_servers.github]", 'command = "npx"'].join("\n"),
+      { encoding: "utf8", flag: "w" },
+    );
+    mkdirSync(path.join(sandbox.homeDir, ".codex", "hooks.json"));
+
+    const result = codexProvider.discover({
+      config: sandbox.config,
+      homeDir: sandbox.homeDir,
+    });
+
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "codex:global:configured-mcp:config:github",
+      }),
+    );
+    expect(result.warnings).toContainEqual({
+      provider: "codex",
+      layer: "global",
+      code: "file-unreadable",
+      message: expect.stringContaining("hooks.json"),
+    });
   });
 
   it("warns when Codex live and vaulted entries conflict", () => {
@@ -589,6 +931,186 @@ describe("provider discovery", () => {
       "cursor:global:configured-mcp:mcp-json:filesystem",
       "cursor:global:tool:extension:cursor.example-extension",
     ]);
+  });
+
+  it("discovers Cursor agents, hooks, settings, and local plugin manifests as read-only modern surfaces", () => {
+    const sandbox = createSandbox();
+
+    mkdirSync(path.join(sandbox.homeDir, ".cursor", "agents"), { recursive: true });
+    writeFileSync(
+      path.join(sandbox.homeDir, ".cursor", "agents", "reviewer-agent.md"),
+      ["---", "name: reviewer", "description: Reviews changes", "---", "", "Review code."].join(
+        "\n",
+      ),
+      { encoding: "utf8", flag: "w" },
+    );
+    mkdirSync(path.join(sandbox.projectRoot, ".cursor", "agents"), { recursive: true });
+    writeFileSync(
+      path.join(sandbox.projectRoot, ".cursor", "agents", "planner.md"),
+      ["---", "name: planner", "description: Plans work", "---", "", "Plan work."].join("\n"),
+      { encoding: "utf8", flag: "w" },
+    );
+    mkdirSync(path.join(sandbox.homeDir, ".cursor"), { recursive: true });
+    writeFileSync(
+      path.join(sandbox.homeDir, ".cursor", "hooks.json"),
+      JSON.stringify(
+        {
+          version: 1,
+          hooks: {
+            beforeShellExecution: [{ command: "echo ok" }],
+          },
+        },
+        null,
+        2,
+      ),
+      { encoding: "utf8", flag: "w" },
+    );
+    writeFileSync(
+      path.join(sandbox.projectRoot, ".cursor", "permissions.json"),
+      JSON.stringify({ mcpAllowlist: ["filesystem"] }, null, 2),
+      { encoding: "utf8", flag: "w" },
+    );
+    writeFileSync(
+      path.join(sandbox.projectRoot, ".cursor", "sandbox.json"),
+      JSON.stringify({ type: "workspace-write" }, null, 2),
+      { encoding: "utf8", flag: "w" },
+    );
+    writeFileSync(
+      path.join(sandbox.projectRoot, ".cursor", "cli.json"),
+      JSON.stringify({ permissions: { allow: ["Read"] } }, null, 2),
+      { encoding: "utf8", flag: "w" },
+    );
+    mkdirSync(path.join(sandbox.homeDir, ".cursor", "plugins", "local", "demo", ".cursor-plugin"), {
+      recursive: true,
+    });
+    writeFileSync(
+      path.join(
+        sandbox.homeDir,
+        ".cursor",
+        "plugins",
+        "local",
+        "demo",
+        ".cursor-plugin",
+        "plugin.json",
+      ),
+      JSON.stringify({ name: "demo", version: "0.0.1" }, null, 2),
+      { encoding: "utf8", flag: "w" },
+    );
+
+    const result = cursorProvider.discover({
+      config: sandbox.config,
+      homeDir: sandbox.homeDir,
+    });
+
+    expect(result.warnings).toEqual([]);
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "cursor:global:agent:reviewer",
+        kind: "agent",
+        category: "agent",
+        layer: "global",
+        displayName: "reviewer",
+        mutability: "read-only",
+      }),
+    );
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "cursor:project:agent:planner",
+        kind: "agent",
+        category: "agent",
+        layer: "project",
+        mutability: "read-only",
+      }),
+    );
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "cursor:global:setting:hooks-json",
+        kind: "setting",
+        category: "provider-setting",
+        mutability: "read-only",
+      }),
+    );
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "cursor:global:hook:hooks-json:beforeShellExecution",
+        kind: "hook",
+        category: "hook",
+        mutability: "read-only",
+      }),
+    );
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "cursor:project:setting:permissions-json",
+        kind: "setting",
+        category: "provider-setting",
+        mutability: "read-only",
+      }),
+    );
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "cursor:project:setting:sandbox-json",
+        kind: "setting",
+        category: "provider-setting",
+        mutability: "read-only",
+      }),
+    );
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "cursor:project:setting:cli-json",
+        kind: "setting",
+        category: "provider-setting",
+        mutability: "read-only",
+      }),
+    );
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "cursor:global:plugin-manifest:local:demo",
+        kind: "plugin",
+        category: "plugin-manifest",
+        mutability: "read-only",
+      }),
+    );
+
+    const settingItem = result.items.find(
+      (item) => item.id === "cursor:project:setting:permissions-json",
+    );
+    expect(settingItem).toBeDefined();
+    expect(
+      cursorProvider.planToggle?.({
+        config: sandbox.config,
+        homeDir: sandbox.homeDir,
+        item: settingItem as DiscoveryItem,
+        targetEnabled: false,
+      }),
+    ).toMatchObject({
+      status: "blocked",
+      reason: expect.stringContaining("read-only"),
+      operations: [],
+    });
+  });
+
+  it("keeps Cursor discovery scoped when a modern hooks file is unreadable", () => {
+    const sandbox = createSandbox();
+
+    copyFixture("cursor/global/mcp.json", path.join(sandbox.homeDir, ".cursor", "mcp.json"));
+    mkdirSync(path.join(sandbox.homeDir, ".cursor", "hooks.json"));
+
+    const result = cursorProvider.discover({
+      config: sandbox.config,
+      homeDir: sandbox.homeDir,
+    });
+
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "cursor:global:configured-mcp:mcp-json:filesystem",
+      }),
+    );
+    expect(result.warnings).toContainEqual({
+      provider: "cursor",
+      layer: "global",
+      code: "file-unreadable",
+      message: expect.stringContaining("hooks.json"),
+    });
   });
 
   it("discovers disabled Cursor skills and configured MCPs from vault state", () => {
