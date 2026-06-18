@@ -153,14 +153,14 @@ Out of scope:
 - Status: escalation
 - Current phase: ft_007_ft_008_acceptance_reconciliation
 - Current gate: H1
-- Current actor: routing/document worker
+- Current actor: protocol operator
 - Next action: Ask the human owner to accept or reject FT-007 and FT-008 for Done-gate closure, and either provide or authorize current CI evidence or explicitly approve the manual gaps before any feature registry or package status is changed.
 - Open loops:
   - The protocol review, docs review, review fixes, and final focused re-review completed with no open findings for the prior dashboard/TUI routing slice.
   - The dashboard/TUI slice was routed to the existing secondary-surfaces PRD, domain command-surface docs, and project summary as an explicit deferral: MCP is the first secondary control surface; dashboard/TUI requires a future separate feature package if revived.
   - FT-007 cannot be marked done from current evidence because its package remains `delivery_status: in_progress`, its implementation plan remains `status: active`, and no current external CI evidence or human acceptance approval is recorded in the governed package. Local ShellCheck and workflow checks now pass.
   - FT-008 cannot be marked done from current evidence because its package remains `delivery_status: in_progress`, its implementation plan remains `status: active`, its implementation summary says ready for human acceptance, and its lifecycle protocol explicitly gates commit/push/CI follow-up on H2 approval.
-  - Current git baseline is understood: the existing homework summary modification belongs outside this operation, and the untracked `.protocols/` file is this operation's expected protocol artifact.
+  - Current git baseline is understood: the existing homework summary modification belongs outside this operation, and the operation has three local commits ahead of `origin/main`.
 - Rollback mode: source-only revert/edit before push; local commits may be reverted with non-destructive follow-up commits if already created.
 
 ## Human Gates
@@ -409,7 +409,10 @@ If a governed document changes:
 | 2026-06-18 | routing/document worker | Left governed feature docs and indexes unchanged and escalated closure decision | No FT-007/FT-008 status or archive changes were made because Done-gate evidence is insufficient without human acceptance and current CI/manual-gap approval |
 | 2026-06-18 | protocol operator | Gathered current local closure evidence after escalation | `rtk .ai-setup/scripts/test-agent-workflow.sh` passed; `rtk .ai-setup/scripts/test-ci.sh` passed; `rtk npm run build`, `rtk npm test`, and `rtk npm run lint` passed under `tools/agentscope`; lint reported only the existing Biome schema-version info |
 | 2026-06-18 | protocol operator | Confirmed shell script local checks now pass | `rtk shellcheck init.sh .ai-setup/scripts/*.sh`, `rtk shfmt -d init.sh .ai-setup/scripts/*.sh`, `rtk make -C .ai-setup check-task-session`, and `rtk make -C .ai-setup check-agent-workflow` all exited 0 |
-| 2026-06-18 | protocol operator | Checked external CI availability without push or external mutation | Branch `main` is ahead of `origin/main` by 2 commits; `rtk gh run list --commit 0fb67ef --limit 5` returned no runs for the local head; recent remote `gh run list --limit 5` entries are failing CI runs |
+| 2026-06-18 | protocol operator | Checked external CI availability without push or external mutation | Branch `main` was ahead of `origin/main` by 2 commits at the time of the check; `rtk gh run list --commit 0fb67ef --limit 5` returned no runs for that local head; recent remote `gh run list --limit 5` entries were failing CI runs |
+| 2026-06-18 | commit operator | Created the local operation commits permitted by H2 local-commit conditions | `3ef8cc6 docs: route dashboard surface through mcp`; `0fb67ef docs: record feature closure gate`; `af0a749 docs: record local closure evidence` |
+| 2026-06-18 | protocol operator | Rechecked current branch state after the local commits | `rtk git status --short --branch` showed `main...origin/main [ahead 3]` and only unrelated `M homeworks/hw-5/task-2/execution-summary.md` |
+| 2026-06-18 | review subagent | Fresh gate review found no legitimate non-gated local work that would materially advance closure | Subagent `019ed967-24ae-7122-ab9f-6188c7d79f1f` confirmed FT-007/FT-008 closure still requires explicit human acceptance and current CI evidence, manual-gap approval, or H3 approval to push/trigger CI |
 
 ## Decisions
 
