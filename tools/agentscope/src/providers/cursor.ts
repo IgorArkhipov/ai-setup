@@ -1,4 +1,4 @@
-import { type Dirent, existsSync, readdirSync, readFileSync } from "node:fs";
+import { type Dirent, existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { pathToFileURL } from "node:url";
@@ -333,68 +333,146 @@ function agentNameFromFile(
 
 function discoverAgentFileItems(
   rootPath: string,
+  appStateRoot: string,
   layer: DiscoveryLayer,
   warnings: DiscoveryWarning[],
 ): DiscoveryItem[] {
-  if (!existsSync(rootPath)) {
-    return [];
-  }
-
   const items: DiscoveryItem[] = [];
+  const liveIds = new Set<string>();
   const stack = [rootPath];
 
-  while (stack.length > 0) {
-    const current = stack.pop();
-    if (current === undefined) {
-      continue;
+  if (existsSync(rootPath)) {
+    while (stack.length > 0) {
+      const current = stack.pop();
+      if (current === undefined) {
+        continue;
+      }
+
+      let entries: Dirent[];
+      try {
+        entries = readdirSync(current, { withFileTypes: true });
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        pushWarning(warnings, "file-unreadable", `${current} could not be read: ${detail}`, layer);
+        continue;
+      }
+
+      for (const entry of entries) {
+        const entryPath = path.join(current, entry.name);
+
+        if (entry.isDirectory()) {
+          stack.push(entryPath);
+          continue;
+        }
+
+        if (!entry.isFile() || !/\.(?:md|markdown)$/i.test(entry.name)) {
+          continue;
+        }
+
+        const relativePath = path
+          .relative(rootPath, stripModernFileExtension(entryPath))
+          .split(path.sep)
+          .join("/");
+        if (relativePath.length === 0) {
+          continue;
+        }
+        const agentName = agentNameFromFile(entryPath, relativePath, layer, warnings);
+        const itemId = `cursor:${layer}:agent:${agentName}`;
+        liveIds.add(itemId);
+
+        items.push({
+          provider: "cursor",
+          kind: "agent",
+          category: "agent",
+          layer,
+          id: itemId,
+          displayName: agentName,
+          enabled: true,
+          mutability: "read-write",
+          sourcePath: entryPath,
+          statePath: entryPath,
+        });
+      }
     }
+  }
 
-    let entries: Dirent[];
-    try {
-      entries = readdirSync(current, { withFileTypes: true });
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
-      pushWarning(warnings, "file-unreadable", `${current} could not be read: ${detail}`, layer);
-      continue;
-    }
+  try {
+    const vaultedEntries = loadVaultEntries({
+      appStateRoot,
+      provider: "cursor",
+      layer,
+      kind: "agent",
+    });
 
-    for (const entry of entries) {
-      const entryPath = path.join(current, entry.name);
-
-      if (entry.isDirectory()) {
-        stack.push(entryPath);
+    for (const entry of vaultedEntries) {
+      if (liveIds.has(entry.itemId)) {
+        pushWarning(
+          warnings,
+          "conflicting-state",
+          `conflicting Cursor agent state for ${entry.itemId}: live and vaulted copies both exist`,
+          layer,
+        );
         continue;
       }
 
-      if (!entry.isFile() || !/\.(?:md|markdown)$/i.test(entry.name)) {
+      if (entry.payloadKind !== "path") {
+        pushWarning(
+          warnings,
+          "invalid-shape",
+          `${entry.entryPath} must use payloadKind path for Cursor agents`,
+          layer,
+        );
         continue;
       }
 
-      const relativePath = path
-        .relative(rootPath, stripModernFileExtension(entryPath))
-        .split(path.sep)
-        .join("/");
-      if (relativePath.length === 0) {
+      const payloadError = agentPayloadFileError(entry.vaultedPath);
+      if (payloadError !== null) {
+        pushWarning(
+          warnings,
+          payloadError.includes("does not exist") ? "missing-vault-payload" : "invalid-shape",
+          `${payloadError} for ${entry.itemId}`,
+          layer,
+        );
         continue;
       }
-      const agentName = agentNameFromFile(entryPath, relativePath, layer, warnings);
 
       items.push({
         provider: "cursor",
         kind: "agent",
         category: "agent",
         layer,
-        id: `cursor:${layer}:agent:${agentName}`,
-        displayName: agentName,
-        enabled: true,
-        mutability: "read-only",
-        sourcePath: entryPath,
-        statePath: entryPath,
+        id: entry.itemId,
+        displayName: entry.displayName,
+        enabled: false,
+        mutability: "read-write",
+        sourcePath: entry.originalPath,
+        statePath: entry.entryPath,
       });
     }
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    pushWarning(
+      warnings,
+      "file-unreadable",
+      `Cursor agent vault entries could not be loaded: ${detail}`,
+      layer,
+    );
   }
 
   return items.sort((left, right) => left.id.localeCompare(right.id));
+}
+
+function agentPayloadFileError(filePath: string): string | null {
+  if (!existsSync(filePath)) {
+    return `${filePath} does not exist`;
+  }
+
+  try {
+    return statSync(filePath).isFile() ? null : `${filePath} must be a file`;
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return `${filePath} could not be inspected: ${detail}`;
+  }
 }
 
 function settingItem(
@@ -1040,6 +1118,132 @@ function loadVaultedEntry(itemId: string, kind: "skill" | "configured-mcp", appS
   );
 }
 
+function loadVaultedAgentEntry(itemId: string, layer: DiscoveryLayer, appStateRoot: string) {
+  return (
+    loadVaultEntries({
+      appStateRoot,
+      provider: "cursor",
+      layer,
+      kind: "agent",
+    }).find((entry) => entry.itemId === itemId) ?? null
+  );
+}
+
+function planAgentToggle(input: TogglePlanInput): TogglePlanDecision {
+  if (input.item.enabled === input.targetEnabled) {
+    return plannedDecision(input, [], []);
+  }
+
+  if (input.item.enabled) {
+    const descriptor = vaultDescriptor({
+      appStateRoot: input.config.appStateRoot,
+      provider: "cursor",
+      layer: input.item.layer,
+      kind: "agent",
+      itemId: input.item.id,
+    });
+
+    if (existsSync(descriptor.entryPath) || existsSync(descriptor.vaultedPath)) {
+      return blockedDecision(input, `vault-conflict: ${descriptor.rootPath} already exists`);
+    }
+
+    const entry: VaultEntry = {
+      version: 1,
+      provider: "cursor",
+      kind: "agent",
+      layer: input.item.layer,
+      itemId: input.item.id,
+      displayName: input.item.displayName,
+      originalPath: input.item.statePath,
+      vaultedPath: descriptor.vaultedPath,
+      payloadKind: "path",
+    };
+
+    const affectedTargets = dedupeMutationTargets([
+      { type: "path", path: input.item.statePath },
+      { type: "path", path: descriptor.vaultedPath },
+      { type: "path", path: descriptor.entryPath },
+    ]);
+
+    return plannedDecision(
+      input,
+      [
+        {
+          type: "renamePath",
+          fromPath: input.item.statePath,
+          toPath: descriptor.vaultedPath,
+        },
+        {
+          type: "createFile",
+          path: descriptor.entryPath,
+          content: serializeVaultEntry(entry),
+        },
+      ],
+      affectedTargets,
+    );
+  }
+
+  if (!existsSync(input.item.statePath)) {
+    return blockedDecision(input, `missing-vault-manifest: ${input.item.statePath} does not exist`);
+  }
+
+  const entry = loadVaultedAgentEntry(input.item.id, input.item.layer, input.config.appStateRoot);
+  if (entry === null) {
+    return blockedDecision(
+      input,
+      `missing-vault-manifest: ${input.item.statePath} could not be loaded`,
+    );
+  }
+
+  if (entry.payloadKind !== "path") {
+    return blockedDecision(
+      input,
+      `invalid-vault-manifest: ${entry.entryPath} must use payloadKind path`,
+    );
+  }
+
+  const payloadError = agentPayloadFileError(entry.vaultedPath);
+  if (payloadError !== null) {
+    return blockedDecision(
+      input,
+      payloadError.includes("does not exist")
+        ? `missing-vault-payload: ${payloadError}`
+        : `invalid-vault-payload: ${payloadError}`,
+    );
+  }
+
+  if (existsSync(entry.originalPath)) {
+    return blockedDecision(input, `live-path-conflict: ${entry.originalPath} already exists`);
+  }
+
+  const affectedTargets = dedupeMutationTargets([
+    { type: "path", path: entry.originalPath },
+    { type: "path", path: entry.vaultedPath },
+    { type: "path", path: entry.entryPath },
+    { type: "path", path: path.dirname(entry.entryPath) },
+  ]);
+
+  return plannedDecision(
+    input,
+    [
+      {
+        type: "renamePath",
+        fromPath: entry.vaultedPath,
+        toPath: entry.originalPath,
+      },
+      {
+        type: "deletePath",
+        path: entry.entryPath,
+      },
+      {
+        type: "deletePath",
+        path: path.dirname(entry.entryPath),
+      },
+    ],
+    affectedTargets,
+  );
+}
+
 function planSkillToggle(input: TogglePlanInput): TogglePlanDecision {
   if (input.item.layer !== "global") {
     return blockedDecision(input, `unsupported: ${input.item.id} is not writable`);
@@ -1416,11 +1620,17 @@ export const cursorProvider: ProviderModule = {
     );
     items.push(...discoverExtensions(input.config.cursorRoot, warnings));
     items.push(
-      ...discoverAgentFileItems(path.join(input.homeDir, ".cursor", "agents"), "global", warnings),
+      ...discoverAgentFileItems(
+        path.join(input.homeDir, ".cursor", "agents"),
+        input.config.appStateRoot,
+        "global",
+        warnings,
+      ),
     );
     items.push(
       ...discoverAgentFileItems(
         path.join(input.config.projectRoot, ".cursor", "agents"),
+        input.config.appStateRoot,
         "project",
         warnings,
       ),
@@ -1496,6 +1706,10 @@ export const cursorProvider: ProviderModule = {
 
     if (input.item.kind === "skill") {
       return planSkillToggle(input);
+    }
+
+    if (input.item.kind === "agent") {
+      return planAgentToggle(input);
     }
 
     if (input.item.kind === "mcp") {

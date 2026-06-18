@@ -1,8 +1,9 @@
-import { writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { runToggle } from "../src/commands/toggle.js";
 import type { ProviderModule } from "../src/core/discovery.js";
+import { type VaultProvider, vaultDescriptor } from "../src/core/mutation-vault.js";
 import { createCursorSandbox } from "./support/cursor-sandbox.js";
 import { fakeToggleIds, fakeToggleProvider } from "./support/fake-toggle-provider.js";
 import { createMutationSandbox } from "./support/mutation-sandbox.js";
@@ -33,6 +34,11 @@ function fakeOptions(sandbox: ReturnType<typeof createMutationSandbox>, id = fak
     id,
     providers: [fakeToggleProvider],
   };
+}
+
+function writeTextFile(filePath: string, content: string): void {
+  mkdirSync(path.dirname(filePath), { recursive: true });
+  writeFileSync(filePath, content, "utf8");
 }
 
 describe("runToggle", () => {
@@ -245,6 +251,99 @@ describe("runToggle", () => {
     expect(result.exitCode).toBe(1);
     expect(result.output).toContain("status: blocked");
     expect(result.output).toContain("read-only:");
+  });
+
+  it.each([
+    {
+      provider: "claude" as const,
+      layer: "project" as const,
+      id: "claude:project:agent:reviewer",
+      fileRelativePath: ".claude/agents/reviewer-agent.md",
+      content: ["---", "name: reviewer", "description: Reviews changes", "---", "", "Review."].join(
+        "\n",
+      ),
+    },
+    {
+      provider: "codex" as const,
+      layer: "global" as const,
+      id: "codex:global:agent:reviewer",
+      fileRelativePath: ".codex/agents/reviewer-agent.toml",
+      content: ['name = "reviewer"', 'description = "Reviews changes"'].join("\n"),
+    },
+    {
+      provider: "cursor" as const,
+      layer: "global" as const,
+      id: "cursor:global:agent:reviewer",
+      fileRelativePath: ".cursor/agents/reviewer-agent.md",
+      content: ["---", "name: reviewer", "description: Reviews changes", "---", "", "Review."].join(
+        "\n",
+      ),
+    },
+  ])("applies and restores real $provider agent file toggles", (scenario) => {
+    const sandbox = createMutationSandbox();
+    sandboxes.push(sandbox);
+
+    const originalPath =
+      scenario.layer === "project"
+        ? path.join(sandbox.projectRoot, scenario.fileRelativePath)
+        : path.join(sandbox.homeDir, scenario.fileRelativePath);
+    writeTextFile(originalPath, scenario.content);
+
+    const descriptor = vaultDescriptor({
+      appStateRoot: sandbox.appStateRoot,
+      provider: scenario.provider satisfies VaultProvider,
+      layer: scenario.layer,
+      kind: "agent",
+      itemId: scenario.id,
+    });
+
+    const disable = runToggle({
+      cwd: sandbox.projectRoot,
+      homeDir: sandbox.homeDir,
+      projectRoot: sandbox.projectRoot,
+      appStateRoot: sandbox.appStateRoot,
+      cursorRoot: sandbox.cursorRoot,
+      provider: scenario.provider,
+      kind: "agent",
+      layer: scenario.layer,
+      id: scenario.id,
+      apply: true,
+      now: () => new Date("2026-06-18T10:00:00.000Z"),
+      generateBackupId: () => `${scenario.provider}-agent-disable`,
+    });
+
+    expect(disable.exitCode).toBe(0);
+    expect(disable.output).toContain("status: applied");
+    expect(existsSync(originalPath)).toBe(false);
+    expect(readFileSync(descriptor.vaultedPath, "utf8")).toBe(scenario.content);
+    expect(JSON.parse(readFileSync(descriptor.entryPath, "utf8"))).toMatchObject({
+      kind: "agent",
+      itemId: scenario.id,
+      displayName: "reviewer",
+      originalPath,
+      vaultedPath: descriptor.vaultedPath,
+      payloadKind: "path",
+    });
+
+    const restore = runToggle({
+      cwd: sandbox.projectRoot,
+      homeDir: sandbox.homeDir,
+      projectRoot: sandbox.projectRoot,
+      appStateRoot: sandbox.appStateRoot,
+      cursorRoot: sandbox.cursorRoot,
+      provider: scenario.provider,
+      kind: "agent",
+      layer: scenario.layer,
+      id: scenario.id,
+      apply: true,
+      now: () => new Date("2026-06-18T10:01:00.000Z"),
+      generateBackupId: () => `${scenario.provider}-agent-restore`,
+    });
+
+    expect(restore.exitCode).toBe(0);
+    expect(restore.output).toContain("status: applied");
+    expect(readFileSync(originalPath, "utf8")).toBe(scenario.content);
+    expect(existsSync(descriptor.rootPath)).toBe(false);
   });
 
   it("blocks real unsupported Cursor extensions from production providers", () => {

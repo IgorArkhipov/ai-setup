@@ -307,7 +307,7 @@ describe("provider discovery", () => {
         kind: "agent",
         category: "agent",
         layer: "global",
-        mutability: "read-only",
+        mutability: "read-write",
         displayName: "reviewer",
         sourcePath: path.join(sandbox.homeDir, ".claude", "agents", "reviewer-agent.md"),
       }),
@@ -318,9 +318,26 @@ describe("provider discovery", () => {
         kind: "agent",
         category: "agent",
         layer: "project",
-        mutability: "read-only",
+        mutability: "read-write",
       }),
     );
+    const agentItem = result.items.find((item) => item.id === "claude:global:agent:reviewer");
+    expect(agentItem).toBeDefined();
+    expect(
+      claudeProvider.planToggle?.({
+        config: sandbox.config,
+        homeDir: sandbox.homeDir,
+        item: agentItem as DiscoveryItem,
+        targetEnabled: true,
+      }),
+    ).toMatchObject({
+      status: "planned",
+      plan: {
+        targetEnabled: true,
+        operations: [],
+        affectedTargets: [],
+      },
+    });
     expect(result.items).toContainEqual(
       expect.objectContaining({
         id: "claude:global:setting:settings",
@@ -338,19 +355,131 @@ describe("provider discovery", () => {
       }),
     );
 
-    const agentItem = result.items.find((item) => item.id === "claude:global:agent:reviewer");
-    expect(agentItem).toBeDefined();
+    const hookItem = result.items.find(
+      (item) => item.id === "claude:global:hook:settings:PreToolUse",
+    );
+    expect(hookItem).toBeDefined();
     expect(
       claudeProvider.planToggle?.({
         config: sandbox.config,
         homeDir: sandbox.homeDir,
-        item: agentItem as DiscoveryItem,
+        item: hookItem as DiscoveryItem,
         targetEnabled: false,
       }),
     ).toMatchObject({
       status: "blocked",
       reason: expect.stringContaining("read-only"),
       operations: [],
+    });
+  });
+
+  it("discovers disabled Claude agent files from vault state", () => {
+    const sandbox = createSandbox();
+    const descriptor = vaultDescriptor({
+      appStateRoot: sandbox.config.appStateRoot,
+      provider: "claude",
+      layer: "global",
+      kind: "agent",
+      itemId: "claude:global:agent:reviewer",
+    });
+    const originalPath = path.join(sandbox.homeDir, ".claude", "agents", "reviewer-agent.md");
+
+    mkdirSync(descriptor.rootPath, { recursive: true });
+    writeFileSync(
+      descriptor.vaultedPath,
+      ["---", "name: reviewer", "description: Reviews changes", "---", "", "Review code."].join(
+        "\n",
+      ),
+      "utf8",
+    );
+    writeFileSync(
+      descriptor.entryPath,
+      serializeVaultEntry({
+        version: 1,
+        provider: "claude",
+        kind: "agent",
+        layer: "global",
+        itemId: "claude:global:agent:reviewer",
+        displayName: "reviewer",
+        originalPath,
+        vaultedPath: descriptor.vaultedPath,
+        payloadKind: "path",
+      }),
+    );
+
+    const result = claudeProvider.discover({
+      config: sandbox.config,
+      homeDir: sandbox.homeDir,
+    });
+
+    expect(result.warnings).toEqual([]);
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "claude:global:agent:reviewer",
+        kind: "agent",
+        category: "agent",
+        enabled: false,
+        mutability: "read-write",
+        sourcePath: originalPath,
+        statePath: descriptor.entryPath,
+      }),
+    );
+    const disabledAgent = result.items.find((item) => item.id === "claude:global:agent:reviewer");
+    expect(disabledAgent).toBeDefined();
+    expect(
+      claudeProvider.planToggle?.({
+        config: sandbox.config,
+        homeDir: sandbox.homeDir,
+        item: disabledAgent as DiscoveryItem,
+        targetEnabled: false,
+      }),
+    ).toMatchObject({
+      status: "planned",
+      plan: {
+        targetEnabled: false,
+        operations: [],
+        affectedTargets: [],
+      },
+    });
+  });
+
+  it("rejects vaulted Claude agent payload directories", () => {
+    const sandbox = createSandbox();
+    const descriptor = vaultDescriptor({
+      appStateRoot: sandbox.config.appStateRoot,
+      provider: "claude",
+      layer: "global",
+      kind: "agent",
+      itemId: "claude:global:agent:reviewer",
+    });
+
+    mkdirSync(descriptor.vaultedPath, { recursive: true });
+    writeFileSync(
+      descriptor.entryPath,
+      serializeVaultEntry({
+        version: 1,
+        provider: "claude",
+        kind: "agent",
+        layer: "global",
+        itemId: "claude:global:agent:reviewer",
+        displayName: "reviewer",
+        originalPath: path.join(sandbox.homeDir, ".claude", "agents", "reviewer-agent.md"),
+        vaultedPath: descriptor.vaultedPath,
+        payloadKind: "path",
+      }),
+    );
+
+    const result = claudeProvider.discover({
+      config: sandbox.config,
+      homeDir: sandbox.homeDir,
+    });
+
+    expect(result.items.map((item) => item.id)).not.toContain("claude:global:agent:reviewer");
+    expect(result.warnings).toContainEqual({
+      provider: "claude",
+      layer: "global",
+      code: "invalid-shape",
+      message: expect.stringContaining("must be a file"),
     });
   });
 
@@ -465,16 +594,33 @@ describe("provider discovery", () => {
         category: "agent",
         layer: "global",
         displayName: "reviewer",
-        mutability: "read-only",
+        mutability: "read-write",
       }),
     );
+    const agentItem = result.items.find((item) => item.id === "codex:global:agent:reviewer");
+    expect(agentItem).toBeDefined();
+    expect(
+      codexProvider.planToggle?.({
+        config: sandbox.config,
+        homeDir: sandbox.homeDir,
+        item: agentItem as DiscoveryItem,
+        targetEnabled: true,
+      }),
+    ).toMatchObject({
+      status: "planned",
+      plan: {
+        targetEnabled: true,
+        operations: [],
+        affectedTargets: [],
+      },
+    });
     expect(result.items).toContainEqual(
       expect.objectContaining({
         id: "codex:project:agent:planner",
         kind: "agent",
         category: "agent",
         layer: "project",
-        mutability: "read-only",
+        mutability: "read-write",
       }),
     );
     expect(result.items).toContainEqual(
@@ -530,6 +676,23 @@ describe("provider discovery", () => {
         config: sandbox.config,
         homeDir: sandbox.homeDir,
         item: hookItem as DiscoveryItem,
+        targetEnabled: false,
+      }),
+    ).toMatchObject({
+      status: "blocked",
+      reason: expect.stringContaining("read-only"),
+      operations: [],
+    });
+
+    const pluginConfigItem = result.items.find(
+      (item) => item.id === "codex:global:plugin-config:config:safe-shell",
+    );
+    expect(pluginConfigItem).toBeDefined();
+    expect(
+      codexProvider.planToggle?.({
+        config: sandbox.config,
+        homeDir: sandbox.homeDir,
+        item: pluginConfigItem as DiscoveryItem,
         targetEnabled: false,
       }),
     ).toMatchObject({
@@ -619,6 +782,74 @@ describe("provider discovery", () => {
         statePath: mcpDescriptor.entryPath,
       }),
     );
+  });
+
+  it("discovers disabled Codex agent files from vault state", () => {
+    const sandbox = createSandbox();
+    const descriptor = vaultDescriptor({
+      appStateRoot: sandbox.config.appStateRoot,
+      provider: "codex",
+      layer: "global",
+      kind: "agent",
+      itemId: "codex:global:agent:reviewer",
+    });
+    const originalPath = path.join(sandbox.homeDir, ".codex", "agents", "reviewer-agent.toml");
+
+    mkdirSync(descriptor.rootPath, { recursive: true });
+    writeFileSync(
+      descriptor.vaultedPath,
+      ['name = "reviewer"', 'description = "Reviews changes"'].join("\n"),
+      "utf8",
+    );
+    writeFileSync(
+      descriptor.entryPath,
+      serializeVaultEntry({
+        version: 1,
+        provider: "codex",
+        kind: "agent",
+        layer: "global",
+        itemId: "codex:global:agent:reviewer",
+        displayName: "reviewer",
+        originalPath,
+        vaultedPath: descriptor.vaultedPath,
+        payloadKind: "path",
+      }),
+    );
+
+    const result = codexProvider.discover({
+      config: sandbox.config,
+      homeDir: sandbox.homeDir,
+    });
+
+    expect(result.warnings).toEqual([]);
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "codex:global:agent:reviewer",
+        kind: "agent",
+        category: "agent",
+        enabled: false,
+        mutability: "read-write",
+        sourcePath: originalPath,
+        statePath: descriptor.entryPath,
+      }),
+    );
+    const disabledAgent = result.items.find((item) => item.id === "codex:global:agent:reviewer");
+    expect(disabledAgent).toBeDefined();
+    expect(
+      codexProvider.planToggle?.({
+        config: sandbox.config,
+        homeDir: sandbox.homeDir,
+        item: disabledAgent as DiscoveryItem,
+        targetEnabled: false,
+      }),
+    ).toMatchObject({
+      status: "planned",
+      plan: {
+        targetEnabled: false,
+        operations: [],
+        affectedTargets: [],
+      },
+    });
   });
 
   it("turns malformed Codex config into warnings", () => {
@@ -1010,16 +1241,33 @@ describe("provider discovery", () => {
         category: "agent",
         layer: "global",
         displayName: "reviewer",
-        mutability: "read-only",
+        mutability: "read-write",
       }),
     );
+    const agentItem = result.items.find((item) => item.id === "cursor:global:agent:reviewer");
+    expect(agentItem).toBeDefined();
+    expect(
+      cursorProvider.planToggle?.({
+        config: sandbox.config,
+        homeDir: sandbox.homeDir,
+        item: agentItem as DiscoveryItem,
+        targetEnabled: true,
+      }),
+    ).toMatchObject({
+      status: "planned",
+      plan: {
+        targetEnabled: true,
+        operations: [],
+        affectedTargets: [],
+      },
+    });
     expect(result.items).toContainEqual(
       expect.objectContaining({
         id: "cursor:project:agent:planner",
         kind: "agent",
         category: "agent",
         layer: "project",
-        mutability: "read-only",
+        mutability: "read-write",
       }),
     );
     expect(result.items).toContainEqual(
@@ -1080,6 +1328,57 @@ describe("provider discovery", () => {
         config: sandbox.config,
         homeDir: sandbox.homeDir,
         item: settingItem as DiscoveryItem,
+        targetEnabled: false,
+      }),
+    ).toMatchObject({
+      status: "blocked",
+      reason: expect.stringContaining("read-only"),
+      operations: [],
+    });
+
+    const hookItem = result.items.find(
+      (item) => item.id === "cursor:global:hook:hooks-json:beforeShellExecution",
+    );
+    expect(hookItem).toBeDefined();
+    expect(
+      cursorProvider.planToggle?.({
+        config: sandbox.config,
+        homeDir: sandbox.homeDir,
+        item: hookItem as DiscoveryItem,
+        targetEnabled: false,
+      }),
+    ).toMatchObject({
+      status: "blocked",
+      reason: expect.stringContaining("read-only"),
+      operations: [],
+    });
+
+    const sandboxItem = result.items.find(
+      (item) => item.id === "cursor:project:setting:sandbox-json",
+    );
+    expect(sandboxItem).toBeDefined();
+    expect(
+      cursorProvider.planToggle?.({
+        config: sandbox.config,
+        homeDir: sandbox.homeDir,
+        item: sandboxItem as DiscoveryItem,
+        targetEnabled: false,
+      }),
+    ).toMatchObject({
+      status: "blocked",
+      reason: expect.stringContaining("read-only"),
+      operations: [],
+    });
+
+    const pluginManifestItem = result.items.find(
+      (item) => item.id === "cursor:global:plugin-manifest:local:demo",
+    );
+    expect(pluginManifestItem).toBeDefined();
+    expect(
+      cursorProvider.planToggle?.({
+        config: sandbox.config,
+        homeDir: sandbox.homeDir,
+        item: pluginManifestItem as DiscoveryItem,
         targetEnabled: false,
       }),
     ).toMatchObject({
@@ -1201,6 +1500,76 @@ describe("provider discovery", () => {
         statePath: mcpDescriptor.entryPath,
       }),
     );
+  });
+
+  it("discovers disabled Cursor agent files from vault state", () => {
+    const sandbox = createSandbox();
+    const descriptor = vaultDescriptor({
+      appStateRoot: sandbox.config.appStateRoot,
+      provider: "cursor",
+      layer: "global",
+      kind: "agent",
+      itemId: "cursor:global:agent:reviewer",
+    });
+    const originalPath = path.join(sandbox.homeDir, ".cursor", "agents", "reviewer-agent.md");
+
+    mkdirSync(descriptor.rootPath, { recursive: true });
+    writeFileSync(
+      descriptor.vaultedPath,
+      ["---", "name: reviewer", "description: Reviews changes", "---", "", "Review code."].join(
+        "\n",
+      ),
+      "utf8",
+    );
+    writeFileSync(
+      descriptor.entryPath,
+      serializeVaultEntry({
+        version: 1,
+        provider: "cursor",
+        kind: "agent",
+        layer: "global",
+        itemId: "cursor:global:agent:reviewer",
+        displayName: "reviewer",
+        originalPath,
+        vaultedPath: descriptor.vaultedPath,
+        payloadKind: "path",
+      }),
+    );
+
+    const result = cursorProvider.discover({
+      config: sandbox.config,
+      homeDir: sandbox.homeDir,
+    });
+
+    expect(result.warnings).toEqual([]);
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "cursor:global:agent:reviewer",
+        kind: "agent",
+        category: "agent",
+        enabled: false,
+        mutability: "read-write",
+        sourcePath: originalPath,
+        statePath: descriptor.entryPath,
+      }),
+    );
+    const disabledAgent = result.items.find((item) => item.id === "cursor:global:agent:reviewer");
+    expect(disabledAgent).toBeDefined();
+    expect(
+      cursorProvider.planToggle?.({
+        config: sandbox.config,
+        homeDir: sandbox.homeDir,
+        item: disabledAgent as DiscoveryItem,
+        targetEnabled: false,
+      }),
+    ).toMatchObject({
+      status: "planned",
+      plan: {
+        targetEnabled: false,
+        operations: [],
+        affectedTargets: [],
+      },
+    });
   });
 
   it("warns when live and vaulted Cursor skill state conflict", () => {

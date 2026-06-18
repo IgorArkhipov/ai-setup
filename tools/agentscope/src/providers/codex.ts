@@ -1,4 +1,4 @@
-import { type Dirent, existsSync, readdirSync, readFileSync } from "node:fs";
+import { type Dirent, existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import type { ProviderModule } from "../core/discovery.js";
 import type {
@@ -647,68 +647,146 @@ function agentNameFromFile(
 
 function discoverAgentFileItems(
   rootPath: string,
+  appStateRoot: string,
   layer: DiscoveryLayer,
   warnings: DiscoveryWarning[],
 ): DiscoveryItem[] {
-  if (!existsSync(rootPath)) {
-    return [];
-  }
-
   const items: DiscoveryItem[] = [];
+  const liveIds = new Set<string>();
   const stack = [rootPath];
 
-  while (stack.length > 0) {
-    const current = stack.pop();
-    if (current === undefined) {
-      continue;
+  if (existsSync(rootPath)) {
+    while (stack.length > 0) {
+      const current = stack.pop();
+      if (current === undefined) {
+        continue;
+      }
+
+      let entries: Dirent[];
+      try {
+        entries = readdirSync(current, { withFileTypes: true });
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        pushWarning(warnings, layer, "file-unreadable", `${current} could not be read: ${detail}`);
+        continue;
+      }
+
+      for (const entry of entries) {
+        const entryPath = path.join(current, entry.name);
+
+        if (entry.isDirectory()) {
+          stack.push(entryPath);
+          continue;
+        }
+
+        if (!entry.isFile() || !/\.(?:toml|md|markdown)$/i.test(entry.name)) {
+          continue;
+        }
+
+        const relativePath = path
+          .relative(rootPath, stripModernFileExtension(entryPath))
+          .split(path.sep)
+          .join("/");
+        if (relativePath.length === 0) {
+          continue;
+        }
+        const agentName = agentNameFromFile(entryPath, relativePath, layer, warnings);
+        const itemId = `codex:${layer}:agent:${agentName}`;
+        liveIds.add(itemId);
+
+        items.push({
+          provider: "codex",
+          kind: "agent",
+          category: "agent",
+          layer,
+          id: itemId,
+          displayName: agentName,
+          enabled: true,
+          mutability: "read-write",
+          sourcePath: entryPath,
+          statePath: entryPath,
+        });
+      }
     }
+  }
 
-    let entries: Dirent[];
-    try {
-      entries = readdirSync(current, { withFileTypes: true });
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
-      pushWarning(warnings, layer, "file-unreadable", `${current} could not be read: ${detail}`);
-      continue;
-    }
+  try {
+    const vaultedEntries = loadVaultEntries({
+      appStateRoot,
+      provider: "codex",
+      layer,
+      kind: "agent",
+    });
 
-    for (const entry of entries) {
-      const entryPath = path.join(current, entry.name);
-
-      if (entry.isDirectory()) {
-        stack.push(entryPath);
+    for (const entry of vaultedEntries) {
+      if (liveIds.has(entry.itemId)) {
+        pushWarning(
+          warnings,
+          layer,
+          "conflicting-state",
+          `conflicting Codex agent state for ${entry.itemId}: live and vaulted copies both exist`,
+        );
         continue;
       }
 
-      if (!entry.isFile() || !/\.(?:toml|md|markdown)$/i.test(entry.name)) {
+      if (entry.payloadKind !== "path") {
+        pushWarning(
+          warnings,
+          layer,
+          "invalid-shape",
+          `${entry.entryPath} must use payloadKind path for Codex agents`,
+        );
         continue;
       }
 
-      const relativePath = path
-        .relative(rootPath, stripModernFileExtension(entryPath))
-        .split(path.sep)
-        .join("/");
-      if (relativePath.length === 0) {
+      const payloadError = agentPayloadFileError(entry.vaultedPath);
+      if (payloadError !== null) {
+        pushWarning(
+          warnings,
+          layer,
+          payloadError.includes("does not exist") ? "missing-vault-payload" : "invalid-shape",
+          `${payloadError} for ${entry.itemId}`,
+        );
         continue;
       }
-      const agentName = agentNameFromFile(entryPath, relativePath, layer, warnings);
 
       items.push({
         provider: "codex",
         kind: "agent",
         category: "agent",
         layer,
-        id: `codex:${layer}:agent:${agentName}`,
-        displayName: agentName,
-        enabled: true,
-        mutability: "read-only",
-        sourcePath: entryPath,
-        statePath: entryPath,
+        id: entry.itemId,
+        displayName: entry.displayName,
+        enabled: false,
+        mutability: "read-write",
+        sourcePath: entry.originalPath,
+        statePath: entry.entryPath,
       });
     }
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    pushWarning(
+      warnings,
+      layer,
+      "file-unreadable",
+      `Codex agent vault entries could not be loaded: ${detail}`,
+    );
   }
 
   return items.sort((left, right) => left.id.localeCompare(right.id));
+}
+
+function agentPayloadFileError(filePath: string): string | null {
+  if (!existsSync(filePath)) {
+    return `${filePath} does not exist`;
+  }
+
+  try {
+    return statSync(filePath).isFile() ? null : `${filePath} must be a file`;
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return `${filePath} could not be inspected: ${detail}`;
+  }
 }
 
 function settingItem(
@@ -987,7 +1065,7 @@ function plannedDecision(
 function loadVaultedEntry(
   appStateRoot: string,
   layer: DiscoveryLayer,
-  kind: "skill" | "configured-mcp",
+  kind: "skill" | "configured-mcp" | "agent",
   itemId: string,
 ) {
   return (
@@ -997,6 +1075,126 @@ function loadVaultedEntry(
       layer,
       kind,
     }).find((entry) => entry.itemId === itemId) ?? null
+  );
+}
+
+function planAgentToggle(input: TogglePlanInput): TogglePlanDecision {
+  if (input.item.enabled === input.targetEnabled) {
+    return plannedDecision(input, [], []);
+  }
+
+  if (input.item.enabled) {
+    const descriptor = vaultDescriptor({
+      appStateRoot: input.config.appStateRoot,
+      provider: "codex",
+      layer: input.item.layer,
+      kind: "agent",
+      itemId: input.item.id,
+    });
+
+    if (existsSync(descriptor.entryPath) || existsSync(descriptor.vaultedPath)) {
+      return blockedDecision(input, `vault-conflict: ${descriptor.rootPath} already exists`);
+    }
+
+    const entry: VaultEntry = {
+      version: 1,
+      provider: "codex",
+      kind: "agent",
+      layer: input.item.layer,
+      itemId: input.item.id,
+      displayName: input.item.displayName,
+      originalPath: input.item.statePath,
+      vaultedPath: descriptor.vaultedPath,
+      payloadKind: "path",
+    };
+
+    const affectedTargets = dedupeMutationTargets([
+      { type: "path", path: input.item.statePath },
+      { type: "path", path: descriptor.vaultedPath },
+      { type: "path", path: descriptor.entryPath },
+    ]);
+
+    return plannedDecision(
+      input,
+      [
+        {
+          type: "renamePath",
+          fromPath: input.item.statePath,
+          toPath: descriptor.vaultedPath,
+        },
+        {
+          type: "createFile",
+          path: descriptor.entryPath,
+          content: serializeVaultEntry(entry),
+        },
+      ],
+      affectedTargets,
+    );
+  }
+
+  if (!existsSync(input.item.statePath)) {
+    return blockedDecision(input, `missing-vault-manifest: ${input.item.statePath} does not exist`);
+  }
+
+  const entry = loadVaultedEntry(
+    input.config.appStateRoot,
+    input.item.layer,
+    "agent",
+    input.item.id,
+  );
+  if (entry === null) {
+    return blockedDecision(
+      input,
+      `missing-vault-manifest: ${input.item.statePath} could not be loaded`,
+    );
+  }
+
+  if (entry.payloadKind !== "path") {
+    return blockedDecision(
+      input,
+      `invalid-vault-manifest: ${entry.entryPath} must use payloadKind path`,
+    );
+  }
+
+  const payloadError = agentPayloadFileError(entry.vaultedPath);
+  if (payloadError !== null) {
+    return blockedDecision(
+      input,
+      payloadError.includes("does not exist")
+        ? `missing-vault-payload: ${payloadError}`
+        : `invalid-vault-payload: ${payloadError}`,
+    );
+  }
+
+  if (existsSync(entry.originalPath)) {
+    return blockedDecision(input, `live-path-conflict: ${entry.originalPath} already exists`);
+  }
+
+  const affectedTargets = dedupeMutationTargets([
+    { type: "path", path: entry.originalPath },
+    { type: "path", path: entry.vaultedPath },
+    { type: "path", path: entry.entryPath },
+    { type: "path", path: path.dirname(entry.entryPath) },
+  ]);
+
+  return plannedDecision(
+    input,
+    [
+      {
+        type: "renamePath",
+        fromPath: entry.vaultedPath,
+        toPath: entry.originalPath,
+      },
+      {
+        type: "deletePath",
+        path: entry.entryPath,
+      },
+      {
+        type: "deletePath",
+        path: path.dirname(entry.entryPath),
+      },
+    ],
+    affectedTargets,
   );
 }
 
@@ -1318,11 +1516,17 @@ export const codexProvider: ProviderModule = {
       ),
     );
     items.push(
-      ...discoverAgentFileItems(path.join(input.homeDir, ".codex", "agents"), "global", warnings),
+      ...discoverAgentFileItems(
+        path.join(input.homeDir, ".codex", "agents"),
+        input.config.appStateRoot,
+        "global",
+        warnings,
+      ),
     );
     items.push(
       ...discoverAgentFileItems(
         path.join(input.config.projectRoot, ".codex", "agents"),
+        input.config.appStateRoot,
         "project",
         warnings,
       ),
@@ -1443,6 +1647,10 @@ export const codexProvider: ProviderModule = {
 
     if (input.item.kind === "skill") {
       return planSkillToggle(input);
+    }
+
+    if (input.item.kind === "agent") {
+      return planAgentToggle(input);
     }
 
     if (input.item.kind === "mcp") {

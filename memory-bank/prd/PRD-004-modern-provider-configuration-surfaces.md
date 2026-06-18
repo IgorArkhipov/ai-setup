@@ -90,6 +90,6 @@ This initiative narrows that product gap without weakening AgentScope's safety m
 
 | Feature | Why it exists | Status |
 | --- | --- | --- |
-| `FT-009` | Add first-class read-only discovery for modern provider surfaces and update the normalized taxonomy | `active` |
-| `FT-010` | Add verified safe toggles for modern surfaces where provider docs and tests prove reversible mutability | `planned` |
+| `FT-009` | Add first-class read-only discovery for modern provider surfaces and update the normalized taxonomy | `done` |
+| `FT-010` | Add verified safe toggles for modern surfaces where provider docs and tests prove reversible mutability | `done` |
 | `FT-011` | Add provider drift and compatibility reporting for docs, local examples, and capability-matrix gaps | `planned` |

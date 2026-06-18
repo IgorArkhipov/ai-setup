@@ -3,7 +3,7 @@ import path from "node:path";
 import type { DiscoveryLayer } from "./models.js";
 
 export type VaultProvider = "claude" | "codex" | "cursor";
-export type VaultEntryKind = "skill" | "configured-mcp";
+export type VaultEntryKind = "skill" | "configured-mcp" | "agent";
 export type VaultPayloadKind = "path" | "json-payload" | "text-payload";
 
 export interface VaultEntry {
@@ -15,7 +15,7 @@ export interface VaultEntry {
   displayName: string;
   originalPath: string;
   // Path where the disabled payload lives inside the vault.
-  // `path` payloads use a directory here; text/json payloads use a file path.
+  // `path` payloads can be a file or directory; text/json payloads use a file path.
   vaultedPath: string;
   payloadKind: VaultPayloadKind;
 }
@@ -34,7 +34,7 @@ export interface VaultDescriptor {
   // Canonical file path for text/json payloads stored inside the vault.
   payloadPath: string;
   // Canonical path location for the vaulted payload.
-  // This is a directory for `path` payloads and a file path for text/json payloads.
+  // This can be a file or directory for `path` payloads and a file path for text/json payloads.
   vaultedPath: string;
 }
 
@@ -96,8 +96,8 @@ function validateEntry(raw: string, entryPath: string): VaultEntry {
     throw new Error(`${entryPath} provider must be claude, codex, or cursor`);
   }
 
-  if (kind !== "skill" && kind !== "configured-mcp") {
-    throw new Error(`${entryPath} kind must be skill or configured-mcp`);
+  if (kind !== "skill" && kind !== "configured-mcp" && kind !== "agent") {
+    throw new Error(`${entryPath} kind must be skill, configured-mcp, or agent`);
   }
 
   if (layer !== "global" && layer !== "project") {

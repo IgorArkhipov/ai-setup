@@ -9,9 +9,9 @@ This directory is an isolated TypeScript sub-project.
 
 | Provider | Skills | Configured MCPs | Modern config surfaces | Tools / Extensions | Reality check |
 | --- | --- | --- | --- | --- | --- |
-| Claude Code | read-write | read-write | read-only | read-write | Verified end-to-end against fixture sandboxes for project skills, project `.mcp.json` approvals, and settings-file tools. Agent files, settings files, and hooks are discovered as read-only inventory. |
-| Codex | read-write | read-write | read-only | read-only plugin config declarations | Verified end-to-end against fixture sandboxes for global and project skills plus global `config.toml` `mcp_servers` sections. Agent files, hooks, config files, and plugin declarations are discovered as read-only inventory. |
-| Cursor | read-write | read-write | read-only | read-only plugin manifests; unsupported extensions | Verified end-to-end against fixture sandboxes for global `skills-cursor` skills plus global `mcp.json` servers, including optional workspace disabled-server reconciliation. Agent files, hooks, permissions/sandbox/CLI config, and local plugin manifests are discovered as read-only inventory. Extensions remain visible but unsupported. |
+| Claude Code | read-write | read-write | agent files read-write; hooks/settings read-only | read-write | Verified end-to-end against fixture sandboxes for project skills, project `.mcp.json` approvals, settings-file tools, and agent file vault/restore. Hooks and settings files are discovered as read-only inventory. |
+| Codex | read-write | read-write | agent files read-write; hooks/config read-only | read-only plugin config declarations | Verified end-to-end against fixture sandboxes for global and project skills, global `config.toml` `mcp_servers` sections, and agent file vault/restore. Hooks, config files, and plugin declarations are discovered as read-only inventory. |
+| Cursor | read-write | read-write | agent files read-write; hooks/permissions/sandbox/CLI config read-only | read-only plugin manifests; unsupported extensions | Verified end-to-end against fixture sandboxes for global `skills-cursor` skills, global `mcp.json` servers with optional workspace disabled-server reconciliation, and agent file vault/restore. Hooks, permissions/sandbox/CLI config, and local plugin manifests are discovered as read-only inventory. Extensions remain visible but unsupported. |
 
 ## Fixtures
 
@@ -142,7 +142,7 @@ Successful apply writes create a backup manifest and append an audit event. Rest
 - Minimum supported Node runtime: `>=25.9.0`
 - SQLite-backed mutations use the built-in `node:sqlite` module
 
-Claude, Codex, and Cursor have real dry-run, apply, and restore coverage for their supported writable slices. Agent files, hooks, provider settings/config files, documented plugin manifests, and plugin config declarations are visible as read-only inventory; toggle planning blocks them with no writes until provider-specific write planning is implemented safely. Cursor extensions remain visible but explicitly unsupported inventory.
+Claude, Codex, and Cursor have real dry-run, apply, and restore coverage for their supported writable slices. Agent files are writable through AgentScope-managed file-vault toggles: disabling moves the agent file into the AgentScope vault, and re-enabling restores it to its original provider path. Hooks, provider settings/config files, documented plugin manifests, and plugin config declarations remain visible as read-only inventory; toggle planning blocks them with no writes until provider-specific write planning is implemented safely. Cursor extensions remain visible but explicitly unsupported inventory.
 
 AgentScope never follows provider `envFile` or `.env*` references during discovery. Those paths may appear as opaque provider configuration values, but the files are not read by AgentScope.
 
