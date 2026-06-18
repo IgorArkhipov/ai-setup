@@ -121,6 +121,15 @@ describe("provider-capabilities", () => {
     );
   });
 
+  it("reports capability matrix documents that are not JSON objects", () => {
+    const tempRoot = copyFixtures();
+    writeFileSync(path.join(tempRoot, "capability-matrix.json"), "[]", "utf8");
+
+    expect(() => loadCapabilityMatrix(tempRoot)).toThrow(
+      "capability-matrix.json must be a JSON object",
+    );
+  });
+
   it("reports missing capability matrix documents", () => {
     const tempRoot = copyFixtures();
     rmSync(path.join(tempRoot, "capability-matrix.json"));
@@ -305,6 +314,21 @@ describe("provider-capabilities", () => {
     );
   });
 
+  it("rejects Claude project MCP fixtures without an object registry", () => {
+    const tempRoot = copyFixtures();
+    writeFileSync(
+      path.join(tempRoot, "claude", "project", ".mcp.json"),
+      JSON.stringify({ mcpServers: [] }, null, 2),
+      "utf8",
+    );
+
+    expect(validateProviderFixtures(tempRoot).issues).toContainEqual({
+      providerId: "claude",
+      relativePath: "claude/project/.mcp.json",
+      message: "mcpServers must be an object",
+    });
+  });
+
   it("rejects malformed Codex config plugin and MCP section headers", () => {
     const tempRoot = copyFixtures();
     writeFileSync(
@@ -327,6 +351,87 @@ describe("provider-capabilities", () => {
         },
       ]),
     );
+  });
+
+  it("rejects empty and headingless skill fixture markdown", () => {
+    const tempRoot = copyFixtures();
+    writeFileSync(
+      path.join(tempRoot, "codex", "global", "skills", ".system", "example-skill", "SKILL.md"),
+      "   \n",
+      "utf8",
+    );
+    writeFileSync(
+      path.join(
+        tempRoot,
+        "codex",
+        "project",
+        ".codex",
+        "skills",
+        "example-project-skill",
+        "SKILL.md",
+      ),
+      "Body without a title\n",
+      "utf8",
+    );
+
+    expect(validateProviderFixtures(tempRoot).issues).toEqual(
+      expect.arrayContaining([
+        {
+          providerId: "codex",
+          relativePath: "codex/global/skills/.system/example-skill/SKILL.md",
+          message: "SKILL.md must not be empty",
+        },
+        {
+          providerId: "codex",
+          relativePath: "codex/project/.codex/skills/example-project-skill/SKILL.md",
+          message: "SKILL.md must include a top-level markdown heading",
+        },
+      ]),
+    );
+  });
+
+  it("reports missing provider fixture files", () => {
+    const tempRoot = copyFixtures();
+    rmSync(
+      path.join(tempRoot, "cursor", "global", "skills-cursor", "example-cursor-skill", "SKILL.md"),
+    );
+
+    expect(validateProviderFixtures(tempRoot).issues).toContainEqual({
+      providerId: "cursor",
+      relativePath: "cursor/global/skills-cursor/example-cursor-skill/SKILL.md",
+      message: "fixture file is missing",
+    });
+  });
+
+  it("accepts Cursor MCP fixtures with trailing commas", () => {
+    const tempRoot = copyFixtures();
+    writeFileSync(
+      path.join(tempRoot, "cursor", "global", "mcp.json"),
+      '{ "mcpServers": { "example": { "command": "node", }, }, }',
+      "utf8",
+    );
+
+    expect(validateProviderFixtures(tempRoot).issues).not.toContainEqual(
+      expect.objectContaining({
+        providerId: "cursor",
+        relativePath: "cursor/global/mcp.json",
+      }),
+    );
+  });
+
+  it("rejects Cursor MCP fixtures without an object registry", () => {
+    const tempRoot = copyFixtures();
+    writeFileSync(
+      path.join(tempRoot, "cursor", "global", "mcp.json"),
+      JSON.stringify({ mcpServers: [] }, null, 2),
+      "utf8",
+    );
+
+    expect(validateProviderFixtures(tempRoot).issues).toContainEqual({
+      providerId: "cursor",
+      relativePath: "cursor/global/mcp.json",
+      message: "mcpServers must be an object",
+    });
   });
 
   it("rejects malformed Cursor extension fixtures", () => {
@@ -356,6 +461,21 @@ describe("provider-capabilities", () => {
         },
       ]),
     );
+  });
+
+  it("rejects Cursor extension fixtures that are not arrays", () => {
+    const tempRoot = copyFixtures();
+    writeFileSync(
+      path.join(tempRoot, "cursor", "root", "profiles", "default", "extensions.json"),
+      "{}",
+      "utf8",
+    );
+
+    expect(validateProviderFixtures(tempRoot).issues).toContainEqual({
+      providerId: "cursor",
+      relativePath: "cursor/root/profiles/default/extensions.json",
+      message: "extensions.json must be an array",
+    });
   });
 
   it("reports Cursor extension fixtures that are not valid JSON", () => {
