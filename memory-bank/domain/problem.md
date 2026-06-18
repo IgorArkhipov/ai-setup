@@ -31,7 +31,7 @@ AgentScope is a standalone TypeScript tool in [`tools/agentscope/`](../../tools/
 
 The product exists because local agent configuration is fragmented across provider-specific JSON, TOML, directory layouts, and profile metadata. Without a common layer, users have to remember several file locations, interpret incompatible config shapes, and edit provider state manually. That increases the chance of hidden drift, unsafe edits, and provider-specific mistakes.
 
-AgentScope stays intentionally narrow. It is a local discovery and safe-mutation tool, not a cloud control plane or a package installer. In the current implementation, it exposes a CLI with `providers`, `doctor`, `snapshot`, `list`, `toggle`, and `restore`, plus a guarded mutation engine that can apply and roll back verified changes. Claude, Codex, and Cursor are verified writable providers for their supported slices, while unsupported provider-managed categories stay explicit instead of being guessed through.
+AgentScope stays intentionally narrow. It is a local discovery and safe-mutation tool, not a cloud control plane or a package installer. In the current implementation, it exposes a CLI with `providers`, `doctor`, `snapshot`, `list`, `toggle`, `restore`, and `mcp`, plus a guarded mutation engine that can apply and roll back verified changes. Claude, Codex, and Cursor are verified writable providers for their supported slices, while unsupported provider-managed categories stay explicit instead of being guessed through.
 
 The downstream system boundary is the local machine. AgentScope reads provider-owned files from explicit provider roots and writes only through its guarded mutation path. It also owns its own application state under the AgentScope app-state root for locks, backups, audit history, snapshot history, and vault metadata. Plugin installation, remote orchestration, and undocumented provider roots are outside the current product boundary.
 
@@ -57,7 +57,7 @@ The downstream system boundary is the local machine. AgentScope reads provider-o
 - `PCON-03` Real writes must go through the shared guarded mutation engine with advisory locking, source fingerprint checks, persistent backups, audit logging, and rollback or restore behavior.
 - `PCON-04` The current writable surface is intentionally narrow: Claude project skills, Claude configured MCP approvals, Claude tools, Codex global and project skills, Codex global configured MCPs, Cursor global skills, and Cursor global configured MCPs with optional workspace disabled-server reconciliation. Codex plugins and Cursor extensions remain unsupported in the current implementation.
 - `PCON-05` AgentScope manages configuration through JSON and TOML files plus provider-owned directories. `.env` files are not part of the product contract for this repository and must not become an implicit configuration source.
-- `PCON-06` The current package is CLI-first, including persisted discovery snapshots captured through `snapshot`. A dashboard or stdio MCP surface may exist as future product intent, but it is not implemented in `tools/agentscope` today and must not become an undocumented second control path.
+- `PCON-06` The current package is CLI-first, including persisted discovery snapshots captured through `snapshot`, and now exposes a local stdio MCP control plane as a thin adapter over the same headless core. A dashboard or TUI remains future product intent only and must not become an undocumented second control path.
 
 ## Source Documents
 
@@ -69,3 +69,4 @@ The downstream system boundary is the local machine. AgentScope reads provider-o
 - [`../features/FT-004/feature.md`](../features/FT-004/feature.md) - verified Codex writable provider slice for skills and configured MCPs.
 - [`../features/FT-005/feature.md`](../features/FT-005/feature.md) - verified Cursor writable provider slice for global skills and configured MCPs.
 - [`../features/FT-006/feature.md`](../features/FT-006/feature.md) - persisted discovery snapshot command, schema validation, and project-scoped snapshot history.
+- [`../features/FT-008/feature.md`](../features/FT-008/feature.md) - local MCP control plane over the existing AgentScope discovery, mutation, backup, restore, and doctor contracts.

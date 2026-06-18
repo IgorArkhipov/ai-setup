@@ -15,15 +15,16 @@ canonical_for:
 
 # Command Surface
 
-`tools/agentscope` does not currently ship a separate web, mobile, or desktop frontend. The only implemented presentation layer today is the command-line interface plus its human-readable and JSON renderers.
+`tools/agentscope` does not currently ship a separate web, mobile, desktop, dashboard, or TUI frontend. The implemented presentation layers today are the command-line interface, its human-readable and JSON renderers, and the local stdio MCP server.
 
 ## UI Surfaces
 
 - CLI entrypoint in [`../../tools/agentscope/src/cli.ts`](../../tools/agentscope/src/cli.ts) using `cac`
 - Human-readable renderers in [`../../tools/agentscope/src/core/output.ts`](../../tools/agentscope/src/core/output.ts) and [`../../tools/agentscope/src/core/mutation-output.ts`](../../tools/agentscope/src/core/mutation-output.ts)
 - Machine-readable JSON output from the same command flows for `snapshot`, `list`, `toggle`, and `restore`
+- Local stdio MCP server in [`../../tools/agentscope/src/mcp/server.ts`](../../tools/agentscope/src/mcp/server.ts) exposed through `agentscope mcp`
 
-There is no separate dashboard code in `tools/agentscope` today. If a dashboard or MCP-facing surface is added later, it should be treated as another thin presentation layer over the same discovery and mutation core, not as a second implementation path.
+There is no separate dashboard code in `tools/agentscope` today. The local MCP server is the first secondary surface and remains a thin adapter over the same discovery, mutation, backup, restore, and doctor core. If a dashboard or TUI is added later, it should follow the same rule instead of becoming a second implementation path.
 
 ## Component And Presentation Rules
 
@@ -43,6 +44,7 @@ The current interaction model is subcommand-oriented:
 - `list` returns normalized discovery inventory
 - `toggle` plans by default and applies only with `--apply`
 - `restore` restores one saved backup by id
+- `mcp` exposes local stdio MCP tools for inventory, listing, planning, applying, backup listing, restore, and doctor workflows
 
 Interaction rules:
 

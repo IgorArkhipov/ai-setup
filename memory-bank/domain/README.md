@@ -13,4 +13,4 @@ audience: humans_and_agents
 
 - [Project Problem Statement](problem.md) - the canonical product context for AgentScope: who it serves, which workflows it supports, which outcomes matter, and which project-wide constraints shape every feature.
 - [Architecture Patterns](architecture.md) - the canonical architectural boundaries for the CLI, shared core, provider adapters, guarded mutation engine, and local provider integrations.
-- [Command Surface](frontend.md) - the minimal UI contract for the current package. AgentScope is CLI-first today, so this document records the terminal and JSON output rules instead of web or mobile guidance.
+- [Command Surface](frontend.md) - the minimal UI contract for the current package. AgentScope is CLI-first today and also exposes a local stdio MCP adapter, so this document records CLI, JSON, and local MCP presentation-layer rules instead of web or mobile guidance.

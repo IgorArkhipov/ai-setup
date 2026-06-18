@@ -5,6 +5,7 @@ doc_function: canonical
 purpose: "Canonical feature document for exposing AgentScope discovery, toggle planning, apply, restore, and doctor capabilities through a local stdio MCP server."
 derived_from:
   - ../../domain/problem.md
+  - ../../prd/PRD-003-persistent-discovery-snapshots-and-secondary-surfaces.md
   - ../../flows/workflows.md
   - ../../flows/feature-flow.md
   - ../../features/FT-007/feature.md
