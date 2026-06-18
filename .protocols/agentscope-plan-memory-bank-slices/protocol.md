@@ -158,7 +158,7 @@ Out of scope:
 - Open loops:
   - The protocol review, docs review, review fixes, and final focused re-review completed with no open findings for the prior dashboard/TUI routing slice.
   - The dashboard/TUI slice was routed to the existing secondary-surfaces PRD, domain command-surface docs, and project summary as an explicit deferral: MCP is the first secondary control surface; dashboard/TUI requires a future separate feature package if revived.
-  - FT-007 cannot be marked done from current evidence because its package remains `delivery_status: in_progress`, its implementation plan remains `status: active`, local ShellCheck is explicitly unavailable, and no current CI evidence or human acceptance approval is recorded in the governed package.
+  - FT-007 cannot be marked done from current evidence because its package remains `delivery_status: in_progress`, its implementation plan remains `status: active`, and no current external CI evidence or human acceptance approval is recorded in the governed package. Local ShellCheck and workflow checks now pass.
   - FT-008 cannot be marked done from current evidence because its package remains `delivery_status: in_progress`, its implementation plan remains `status: active`, its implementation summary says ready for human acceptance, and its lifecycle protocol explicitly gates commit/push/CI follow-up on H2 approval.
   - Current git baseline is understood: the existing homework summary modification belongs outside this operation, and the untracked `.protocols/` file is this operation's expected protocol artifact.
 - Rollback mode: source-only revert/edit before push; local commits may be reverted with non-destructive follow-up commits if already created.
@@ -407,6 +407,9 @@ If a governed document changes:
 | 2026-06-18 | routing/document worker | Evaluated FT-007 against feature-flow Done gates | Not safe to close: feature registry and `feature.md` still say `in_progress`; `implementation-plan.md` still says `status: active`; execution summary says ready for acceptance review, not accepted; local ShellCheck is unavailable; no current CI evidence is recorded |
 | 2026-06-18 | routing/document worker | Evaluated FT-008 against feature-flow Done gates and downstream PRD status | Not safe to close: feature registry and `feature.md` still say `in_progress`; `implementation-plan.md` still says `status: active`; execution summary says ready for human acceptance; FT-008 protocol is `current_phase: done` / `current_gate: H2` but still gates commit/push/CI follow-up on explicit H2 approval; PRD-003 still lists FT-008 as `in_progress` |
 | 2026-06-18 | routing/document worker | Left governed feature docs and indexes unchanged and escalated closure decision | No FT-007/FT-008 status or archive changes were made because Done-gate evidence is insufficient without human acceptance and current CI/manual-gap approval |
+| 2026-06-18 | protocol operator | Gathered current local closure evidence after escalation | `rtk .ai-setup/scripts/test-agent-workflow.sh` passed; `rtk .ai-setup/scripts/test-ci.sh` passed; `rtk npm run build`, `rtk npm test`, and `rtk npm run lint` passed under `tools/agentscope`; lint reported only the existing Biome schema-version info |
+| 2026-06-18 | protocol operator | Confirmed shell script local checks now pass | `rtk shellcheck init.sh .ai-setup/scripts/*.sh`, `rtk shfmt -d init.sh .ai-setup/scripts/*.sh`, `rtk make -C .ai-setup check-task-session`, and `rtk make -C .ai-setup check-agent-workflow` all exited 0 |
+| 2026-06-18 | protocol operator | Checked external CI availability without push or external mutation | Branch `main` is ahead of `origin/main` by 2 commits; `rtk gh run list --commit 0fb67ef --limit 5` returned no runs for the local head; recent remote `gh run list --limit 5` entries are failing CI runs |
 
 ## Decisions
 
@@ -425,17 +428,17 @@ If a governed document changes:
 | 2026-06-18 | Update `PROJECT.md` as part of the dashboard/TUI routing slice | Fix worker | The project summary is a top-level source document for `memory-bank/domain/problem.md` and must not contradict the current CLI plus local stdio MCP surface. |
 | 2026-06-18 | Hold FT-007 and FT-008 status reconciliation until after this local commit | Fix worker | The protocol should keep the current docs-only dashboard/TUI slice in verification and commit readiness rather than starting the next candidate slice prematurely. |
 | 2026-06-18 | Treat PRD-003 as the upstream owner for FT-008 secondary-surface scope | Fix worker | PRD-003 owns the persisted snapshot and secondary-surface initiative, and FT-008 is the MCP-first downstream feature that reuses FT-006's snapshot foundation while dashboard/TUI remains deferred. |
-| 2026-06-18 | Do not mark FT-007 or FT-008 done in this slice | Routing/document worker | Feature-flow Done requires acceptance, complete evidence, local and CI green checks, manual-gap approval, `delivery_status: done`, and archived implementation plans; current governed evidence still records both features as acceptance-pending or H2-gated. |
+| 2026-06-18 | Do not mark FT-007 or FT-008 done without explicit acceptance or current external CI evidence | Routing/document worker / protocol operator | Feature-flow Done requires acceptance, complete evidence, local and CI green checks, manual-gap approval, `delivery_status: done`, and archived implementation plans. Current local evidence is now green, but the local head has no external CI run because push is not approved. |
 
 ## Open Questions
 
-- `OQ-FT007-ACCEPT` Should the human owner accept FT-007 despite unavailable local ShellCheck, or should a current CI run provide that evidence first? Owner: human owner; needed before any FT-007 `delivery_status: done` or plan archive update.
-- `OQ-FT008-ACCEPT` Should the human owner accept FT-008 and approve H2 follow-up evidence for commit/CI, or keep it open for further review? Owner: human owner; needed before any FT-008 `delivery_status: done`, PRD downstream status update, or plan archive update.
+- `OQ-FT007-ACCEPT` Should the human owner accept FT-007 based on current green local checks, or should a current external CI run provide that evidence first? Owner: human owner; needed before any FT-007 `delivery_status: done` or plan archive update.
+- `OQ-FT008-ACCEPT` Should the human owner accept FT-008 based on current green local checks and approve H2 follow-up evidence for external CI, or keep it open for further review? Owner: human owner; needed before any FT-008 `delivery_status: done`, PRD downstream status update, or plan archive update.
 
 ## Next Action
 
 Actor: human owner
 
-Action: Decide FT-007 and FT-008 acceptance explicitly. If accepting either feature, provide or authorize current CI evidence and approve any manual-only gaps; then a follow-up routing/document worker may update `feature.md`, `implementation-plan.md`, `memory-bank/features/README.md`, and PRD downstream status as one scoped closure slice.
+Action: Decide FT-007 and FT-008 acceptance explicitly. If accepting either feature on local evidence, approve the external-CI gap or authorize push/CI evidence; then a follow-up routing/document worker may update `feature.md`, `implementation-plan.md`, `memory-bank/features/README.md`, and PRD downstream status as one scoped closure slice.
 
 Stop if: acceptance is not explicit, current CI evidence is unavailable, manual-only gaps are not approved, or closure would require push/merge/release/external operations outside the approved scope.
