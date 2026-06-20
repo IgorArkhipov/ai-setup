@@ -11,7 +11,7 @@ import {
   type ProviderModule,
   runDiscovery,
 } from "../core/discovery.js";
-import type { DiscoveryItem, DiscoveryResult } from "../core/models.js";
+import type { DiscoveryItem, DiscoveryProvider, DiscoveryResult } from "../core/models.js";
 import { executeTogglePlan } from "../core/mutation-engine.js";
 import type {
   BackupManifest,
@@ -30,6 +30,10 @@ import type {
   AgentScopeSelector,
   BulkApplyInput,
   BulkPlanInput,
+  DoctorInput,
+  InventorySummaryInput,
+  ListBackupsInput,
+  RestoreBackupInput,
   SingleToggleInput,
 } from "./schemas.js";
 
@@ -60,6 +64,46 @@ interface PlannedAction {
 interface BlockedAction {
   item: DiscoveryItem;
   reason: string;
+}
+
+interface ItemIdentity {
+  provider: DiscoveryItem["provider"];
+  kind: DiscoveryItem["kind"];
+  id: string;
+  layer: DiscoveryItem["layer"];
+}
+
+type ContractReasonCode =
+  | "unsupported"
+  | "read-only"
+  | "conflicting"
+  | "not-found"
+  | "control-plane-protected"
+  | "already-in-desired-state"
+  | "confirmation-required"
+  | "empty-selection"
+  | "max-items-exceeded"
+  | "plan-fingerprint-mismatch"
+  | "error";
+
+interface DoctorIssue {
+  provider: DiscoveryProvider | "core";
+  code: string;
+  message: string;
+  layer?: DiscoveryItem["layer"];
+  kind?: DiscoveryItem["kind"];
+  itemId?: string;
+}
+
+interface ProviderDoctorReport {
+  provider: DiscoveryProvider;
+  status: "ok" | "warning" | "error";
+  issues: DoctorIssue[];
+}
+
+interface PublicStatus {
+  status: string;
+  legacyStatus?: string;
 }
 
 interface BulkPlanState {
@@ -128,6 +172,161 @@ function matchesSelector(item: DiscoveryItem, selector: AgentScopeSelector): boo
     (selector.enabled === undefined || selector.enabled === item.enabled) &&
     (selector.ids === undefined || selector.ids.includes(item.id))
   );
+}
+
+function itemIdentity(item: DiscoveryItem): ItemIdentity {
+  return {
+    provider: item.provider,
+    kind: item.kind,
+    id: item.id,
+    layer: item.layer,
+  };
+}
+
+function compareIdentity(left: ItemIdentity, right: ItemIdentity): number {
+  return (
+    left.provider.localeCompare(right.provider) ||
+    left.kind.localeCompare(right.kind) ||
+    left.layer.localeCompare(right.layer) ||
+    left.id.localeCompare(right.id)
+  );
+}
+
+function sortedIdentities(items: DiscoveryItem[]): ItemIdentity[] {
+  return items.map(itemIdentity).sort(compareIdentity);
+}
+
+function sortBlockedActions(actions: BlockedAction[]): BlockedAction[] {
+  return [...actions].sort((left, right) =>
+    compareIdentity(itemIdentity(left.item), itemIdentity(right.item)),
+  );
+}
+
+function sortPlannedActions(actions: PlannedAction[]): PlannedAction[] {
+  return [...actions].sort((left, right) =>
+    compareIdentity(itemIdentity(left.item), itemIdentity(right.item)),
+  );
+}
+
+function reasonCode(reason: string): ContractReasonCode {
+  const normalized = reason.toLowerCase();
+  const prefix = normalized.includes(":") ? (normalized.split(":")[0] ?? normalized) : normalized;
+
+  if (prefix === "already-in-desired-state") {
+    return "already-in-desired-state";
+  }
+
+  if (prefix === "confirmation-required") {
+    return "confirmation-required";
+  }
+
+  if (prefix === "empty-selection") {
+    return "empty-selection";
+  }
+
+  if (prefix === "max-items-exceeded") {
+    return "max-items-exceeded";
+  }
+
+  if (prefix === "plan-fingerprint-mismatch") {
+    return "plan-fingerprint-mismatch";
+  }
+
+  if (prefix === "self-targeted-agentscope-mcp-blocked" || normalized.includes("control-plane")) {
+    return "control-plane-protected";
+  }
+
+  if (prefix === "vault-conflict" || normalized.includes("conflict")) {
+    return "conflicting";
+  }
+
+  if (
+    prefix === "not-found" ||
+    normalized.includes("not found") ||
+    normalized.includes("unknown selection") ||
+    normalized.includes("missing")
+  ) {
+    return "not-found";
+  }
+
+  if (prefix === "read-only" || normalized.includes("read-only")) {
+    return "read-only";
+  }
+
+  if (prefix === "unsupported" || normalized.includes("unsupported")) {
+    return "unsupported";
+  }
+
+  return "error";
+}
+
+function blockedItem(item: DiscoveryItem, reason: string): Record<string, unknown> {
+  return {
+    item: itemIdentity(item),
+    reasonCode: reasonCode(reason),
+    message: reason,
+  };
+}
+
+function blockedItemDigest(item: DiscoveryItem, reason: string): Record<string, unknown> {
+  return {
+    item: itemIdentity(item),
+    reasonCode: reasonCode(reason),
+  };
+}
+
+function publicStatus(status: string): PublicStatus {
+  if (status === "failed") {
+    return {
+      status: "blocked",
+      legacyStatus: status,
+    };
+  }
+
+  if (status === "no-op") {
+    return {
+      status: "noop",
+      legacyStatus: status,
+    };
+  }
+
+  return { status };
+}
+
+function selectionFromInput(input: SingleToggleInput): ItemIdentity {
+  return {
+    provider: input.provider,
+    kind: input.kind,
+    id: input.id,
+    layer: input.layer,
+  };
+}
+
+function singleBlockedResponse(
+  input: SingleToggleInput,
+  reason: string,
+  warnings: unknown[] = [],
+): Record<string, unknown> {
+  const selection = selectionFromInput(input);
+
+  return {
+    status: "blocked",
+    selection,
+    applyMode: "re-resolve-on-apply",
+    targetEnabled: input.targetEnabled,
+    operations: [],
+    affectedTargets: [],
+    affectedPaths: [],
+    blocked: {
+      item: selection,
+      reasonCode: reasonCode(reason),
+      message: reason,
+    },
+    warnings,
+    reason,
+    reasonCode: reasonCode(reason),
+    message: reason,
+  };
 }
 
 function selectedItem(input: SingleToggleInput, runtime: RuntimeContext): DiscoveryItem | string {
@@ -243,8 +442,81 @@ function normalizeValue(value: unknown): unknown {
   return value;
 }
 
+function jsonPointer(pathSegments: Array<string | number>): string {
+  return `/${pathSegments
+    .map((segment) => String(segment).replaceAll("~", "~0").replaceAll("/", "~1"))
+    .join("/")}`;
+}
+
+function operationPayload(
+  operation: MutationOperation,
+  includeLegacyFields: boolean,
+): Record<string, unknown> {
+  const legacy = normalizeValue(operation);
+  const legacyFields =
+    includeLegacyFields && typeof legacy === "object" && legacy !== null && !Array.isArray(legacy)
+      ? (legacy as Record<string, unknown>)
+      : {};
+
+  switch (operation.type) {
+    case "createFile":
+      return {
+        ...legacyFields,
+        op: operation.type,
+        path: operation.path,
+        value: normalizeValue(operation.content),
+      };
+    case "replaceJsonValue":
+      return {
+        ...legacyFields,
+        op: operation.type,
+        path: operation.path,
+        pointer: jsonPointer(operation.jsonPath),
+        value: normalizeValue(operation.value),
+      };
+    case "updateJsonObjectEntry":
+      return {
+        ...legacyFields,
+        op: operation.type,
+        path: operation.path,
+        key: operation.entryKey,
+        pointer: jsonPointer(operation.jsonPath),
+        value: normalizeValue(operation.value),
+      };
+    case "removeJsonObjectEntry":
+      return {
+        ...legacyFields,
+        op: operation.type,
+        path: operation.path,
+        key: operation.entryKey,
+        pointer: jsonPointer(operation.jsonPath),
+      };
+    case "renamePath":
+      return {
+        ...legacyFields,
+        op: operation.type,
+        from: operation.fromPath,
+        to: operation.toPath,
+      };
+    case "deletePath":
+      return {
+        ...legacyFields,
+        op: operation.type,
+        path: operation.path,
+      };
+    case "replaceSqliteItemTableValue":
+      return {
+        ...legacyFields,
+        op: operation.type,
+        path: operation.databasePath,
+        key: operation.keyValue,
+        value: normalizeValue(operation.value),
+      };
+  }
+}
+
 function operationDigest(operation: MutationOperation): unknown {
-  return normalizeValue(operation);
+  return normalizeValue(operationPayload(operation, false));
 }
 
 function targetSummary(target: MutationTarget): unknown {
@@ -252,21 +524,51 @@ function targetSummary(target: MutationTarget): unknown {
 }
 
 function operationSummaries(operations: MutationOperation[]): unknown[] {
-  return operations.map((operation) => operationDigest(operation));
+  return operations.map((operation) => operationPayload(operation, true));
 }
 
 function affectedTargetSummaries(targets: MutationTarget[]): unknown[] {
   return targets.map((target) => targetSummary(target));
 }
 
-function executionSummary(result: ToggleExecutionResult): Record<string, unknown> {
+function affectedPaths(targets: MutationTarget[]): string[] {
+  return [
+    ...new Set(
+      targets.map((target) => (target.type === "path" ? target.path : target.databasePath)),
+    ),
+  ].sort((left, right) => left.localeCompare(right));
+}
+
+function executionSummary(
+  result: ToggleExecutionResult,
+  item?: DiscoveryItem,
+  warnings: unknown[] = [],
+): Record<string, unknown> {
+  const status = publicStatus(result.status);
+  const blocked =
+    "reason" in result
+      ? {
+          item: result.selection,
+          reasonCode: reasonCode(result.reason),
+          message: result.reason,
+        }
+      : null;
+
   return {
-    status: result.status,
+    ...status,
     selection: result.selection,
+    applyMode: "re-resolve-on-apply",
+    ...(item === undefined ? {} : { item }),
     targetEnabled: result.targetEnabled,
     operations: operationSummaries(result.operations),
     affectedTargets: affectedTargetSummaries(result.affectedTargets),
+    affectedPaths: affectedPaths(result.affectedTargets),
+    blocked,
+    warnings,
     ...("reason" in result ? { reason: result.reason } : {}),
+    ...("reason" in result
+      ? { reasonCode: reasonCode(result.reason), message: result.reason }
+      : {}),
     ...("backupId" in result && result.backupId !== undefined ? { backupId: result.backupId } : {}),
     ...("rollbackFailure" in result && result.rollbackFailure !== undefined
       ? { rollbackFailure: result.rollbackFailure }
@@ -281,28 +583,55 @@ function blockedResponse(
   return {
     status: "blocked",
     reason,
+    reasonCode: reasonCode(reason),
+    message: reason,
     ...extra,
   };
 }
 
-function planSummary(decision: TogglePlanDecision): Record<string, unknown> {
+function planSummary(
+  decision: TogglePlanDecision,
+  item?: DiscoveryItem,
+  warnings: unknown[] = [],
+): Record<string, unknown> {
   if (decision.status === "blocked") {
     return {
       status: "blocked",
       selection: decision.selection,
+      applyMode: "re-resolve-on-apply",
+      ...(item === undefined ? {} : { item }),
       targetEnabled: decision.targetEnabled,
       operations: operationSummaries(decision.operations),
       affectedTargets: affectedTargetSummaries(decision.affectedTargets),
+      affectedPaths: affectedPaths(decision.affectedTargets),
+      blocked: {
+        item: decision.selection,
+        reasonCode: reasonCode(decision.reason),
+        message: decision.reason,
+      },
+      warnings,
       reason: decision.reason,
+      reasonCode: reasonCode(decision.reason),
+      message: decision.reason,
     };
   }
 
+  const status =
+    decision.plan.operations.length === 0
+      ? { status: "noop", legacyStatus: "planned" }
+      : publicStatus("planned");
+
   return {
-    status: "planned",
+    ...status,
     selection: decision.plan.selection,
+    applyMode: "re-resolve-on-apply",
+    ...(item === undefined ? {} : { item }),
     targetEnabled: decision.plan.targetEnabled,
     operations: operationSummaries(decision.plan.operations),
     affectedTargets: affectedTargetSummaries(decision.plan.affectedTargets),
+    affectedPaths: affectedPaths(decision.plan.affectedTargets),
+    blocked: null,
+    warnings,
   };
 }
 
@@ -393,11 +722,88 @@ function buildBulkPlan(
   };
 }
 
+function filterItemsForInventory(
+  discovery: DiscoveryResult,
+  input: InventorySummaryInput | undefined,
+): DiscoveryResult {
+  if (input === undefined) {
+    return discovery;
+  }
+
+  const filteredItems = discovery.items.filter((item) => {
+    return (
+      (input.providers === undefined || input.providers.includes(item.provider)) &&
+      (input.layers === undefined || input.layers.includes(item.layer))
+    );
+  });
+  const filteredWarnings = discovery.warnings.filter((warning) => {
+    return (
+      (input.providers === undefined || input.providers.includes(warning.provider)) &&
+      (input.layers === undefined ||
+        warning.layer === undefined ||
+        input.layers.includes(warning.layer))
+    );
+  });
+
+  return {
+    items: filteredItems,
+    warnings: filteredWarnings,
+  };
+}
+
+function selectedProviderIds(
+  options: AgentScopeMcpRuntimeOptions,
+  input?: DoctorInput,
+): DiscoveryProvider[] {
+  return (
+    input?.providers ?? (options.providers ?? defaultProviders()).map((provider) => provider.id)
+  );
+}
+
+function issueProvider(issue: { providerId?: DiscoveryProvider }): DiscoveryProvider | "core" {
+  return issue.providerId ?? "core";
+}
+
+function providerDoctorReports(
+  providerIds: DiscoveryProvider[],
+  issues: DoctorIssue[],
+  issueStatus: "warning" | "error",
+): ProviderDoctorReport[] {
+  return providerIds.map((provider) => {
+    const providerIssues = issues.filter(
+      (issue) => issue.provider === provider || issue.provider === "core",
+    );
+    return {
+      provider,
+      status: providerIssues.length === 0 ? "ok" : issueStatus,
+      issues: providerIssues,
+    };
+  });
+}
+
 function bulkPlanResponse(plan: BulkPlanState): Record<string, unknown> {
+  const matchedItems = sortedIdentities(plan.matched);
+  const actionableItems = sortPlannedActions(plan.actionable).map((entry) =>
+    itemIdentity(entry.item),
+  );
+  const blockedItems = sortBlockedActions(plan.blocked).map((entry) =>
+    blockedItem(entry.item, entry.reason),
+  );
+  const perItemPlans = sortPlannedActions(plan.actionable).map((entry) =>
+    planSummary(entry.decision, entry.item),
+  );
+
   if (plan.matched.length === 0 && plan.status === "blocked") {
     return blockedResponse("empty-selection", {
       selector: plan.selector,
       targetEnabled: plan.targetEnabled,
+      matchedCount: 0,
+      actionableCount: 0,
+      blockedCount: 0,
+      matchedItems: [],
+      actionableItems: [],
+      blockedItems: [],
+      perItemPlans: [],
       matched: [],
       actionable: [],
       blocked: [],
@@ -409,9 +815,17 @@ function bulkPlanResponse(plan: BulkPlanState): Record<string, unknown> {
     status: plan.status,
     selector: plan.selector,
     targetEnabled: plan.targetEnabled,
+    applyMode: "fingerprint-required",
     matched: plan.matched,
-    actionable: plan.actionable.map((entry) => planSummary(entry.decision)),
+    actionable: plan.actionable.map((entry) => planSummary(entry.decision, entry.item)),
     blocked: plan.blocked,
+    matchedCount: plan.matched.length,
+    actionableCount: plan.actionable.length,
+    blockedCount: plan.blocked.length,
+    matchedItems,
+    actionableItems,
+    blockedItems,
+    perItemPlans,
     planFingerprint: plan.planFingerprint,
   };
 }
@@ -423,83 +837,142 @@ function fingerprintBulkPlan(
   plan: Pick<BulkPlanState, "matched" | "actionable" | "blocked">,
 ): string {
   const payload = normalizeValue({
+    schemaVersion: 1,
+    tool: "agentscope_plan_toggle_items",
     projectRoot,
-    selector,
     targetEnabled,
-    matched: plan.matched,
-    actionable: plan.actionable.map((entry) => ({
-      item: entry.item,
-      plan: entry.decision.plan,
-      operationDigests: entry.decision.plan.operations.map((operation) =>
-        operationDigest(operation),
-      ),
+    selector,
+    matchedItems: sortedIdentities(plan.matched),
+    actionableItems: sortPlannedActions(plan.actionable).map((entry) => itemIdentity(entry.item)),
+    blockedItems: sortBlockedActions(plan.blocked).map((entry) =>
+      blockedItemDigest(entry.item, entry.reason),
+    ),
+    perItemOperationDigests: sortPlannedActions(plan.actionable).map((entry) => ({
+      selection: itemIdentity(entry.item),
+      operations: entry.decision.plan.operations.map((operation) => operationDigest(operation)),
     })),
-    blocked: plan.blocked,
   });
   const digest = createHash("sha256").update(JSON.stringify(payload)).digest("hex");
 
   return `sha256:${digest}`;
 }
 
-export function getInventorySummary(options: AgentScopeMcpRuntimeOptions): Record<string, unknown> {
+export function getInventorySummary(
+  options: AgentScopeMcpRuntimeOptions,
+  input?: InventorySummaryInput,
+): Record<string, unknown> {
   const runtime = context(options);
+  const filtered = filterItemsForInventory(runtime.discovery, input);
+  const summary = buildDiscoveryInventorySummary(filtered.items, filtered.warnings);
 
   return {
     status: "ok",
     projectRoot: runtime.config.projectRoot,
-    inventory: buildDiscoveryInventorySummary(runtime.discovery.items, runtime.discovery.warnings),
-    warnings: runtime.discovery.warnings,
+    inventory: {
+      providers:
+        input?.providers === undefined
+          ? summary.providers
+          : summary.providers.filter((provider) => input.providers?.includes(provider.provider)),
+    },
+    warnings: filtered.warnings,
   };
 }
 
 export function listItems(
   options: AgentScopeMcpRuntimeOptions,
   selector: AgentScopeSelector | undefined,
+  limit?: ListBackupsInput["limit"],
 ): Record<string, unknown> {
   const runtime = context(options);
   const normalizedSelector = normalizeSelector(selector);
+  const matchedItems = runtime.discovery.items.filter((item) =>
+    matchesSelector(item, normalizedSelector),
+  );
 
   return {
     status: "ok",
     selector: normalizedSelector,
-    items: runtime.discovery.items.filter((item) => matchesSelector(item, normalizedSelector)),
+    totalMatched: matchedItems.length,
+    items: limit === undefined ? matchedItems : matchedItems.slice(0, limit),
     warnings: runtime.discovery.warnings,
   };
 }
 
-export function runDoctorStructured(options: AgentScopeMcpRuntimeOptions): Record<string, unknown> {
+export function runDoctorStructured(
+  options: AgentScopeMcpRuntimeOptions,
+  input?: DoctorInput,
+): Record<string, unknown> {
+  const providerIds = selectedProviderIds(options, input);
   const matrixReport = validateCapabilityMatrix(options.fixturesRoot);
-  if (matrixReport.issues.length > 0) {
+  const selectedMatrixIssues = matrixReport.issues.filter(
+    (issue) => issue.providerId === undefined || providerIds.includes(issue.providerId),
+  );
+  if (selectedMatrixIssues.length > 0) {
+    const issues = selectedMatrixIssues.map((issue) => ({
+      provider: issueProvider(issue),
+      code: "CAPABILITY_MATRIX_INVALID",
+      message: issue.message,
+      ...(issue.field === undefined ? {} : { itemId: issue.field }),
+    }));
+
     return {
-      status: "failed",
+      status: "error",
       packageRoot: options.packageRoot,
       fixturesRoot: options.fixturesRoot,
-      capabilityMatrixIssues: matrixReport.issues,
+      capabilityMatrixIssues: selectedMatrixIssues,
       fixtureIssues: [],
+      providers: providerDoctorReports(providerIds, issues, "error"),
       warnings: [],
     };
   }
 
   const report = validateProviderFixtures(options.fixturesRoot);
-  if (report.issues.length > 0) {
+  const selectedFixtureIssues = report.issues.filter((issue) =>
+    providerIds.includes(issue.providerId),
+  );
+  if (selectedFixtureIssues.length > 0) {
+    const issues = selectedFixtureIssues.map((issue) => ({
+      provider: issue.providerId,
+      code: "PROVIDER_FIXTURE_INVALID",
+      message: issue.message,
+      itemId: issue.relativePath,
+    }));
+
     return {
-      status: "failed",
+      status: "error",
       packageRoot: options.packageRoot,
       fixturesRoot: options.fixturesRoot,
-      fixtureIssues: report.issues,
+      fixtureIssues: selectedFixtureIssues,
+      providers: providerDoctorReports(providerIds, issues, "error"),
       warnings: [],
     };
   }
 
   const runtime = context(options);
+  const providerReports = providerIds.map((provider) => {
+    const issues = runtime.discovery.warnings.filter((warning) => warning.provider === provider);
+    return {
+      provider,
+      status: issues.length === 0 ? "ok" : "warning",
+      issues,
+    };
+  });
+  const filteredWarnings = runtime.discovery.warnings.filter((warning) =>
+    providerIds.includes(warning.provider),
+  );
+  const filteredItems = runtime.discovery.items.filter((item) =>
+    providerIds.includes(item.provider),
+  );
+
   return {
-    status: runtime.discovery.warnings.length === 0 ? "ok" : "failed",
+    status: filteredWarnings.length === 0 ? "ok" : "warning",
     packageRoot: options.packageRoot,
     fixturesRoot: options.fixturesRoot,
     projectRoot: runtime.config.projectRoot,
     cursorRoot: runtime.config.cursorRoot,
-    itemsDiscovered: runtime.discovery.items.length,
-    warnings: runtime.discovery.warnings,
+    itemsDiscovered: filteredItems.length,
+    providers: providerReports,
+    warnings: filteredWarnings,
   };
 }
 
@@ -510,10 +983,14 @@ export function planSingleToggle(
   const runtime = context(options);
   const item = selectedItem(input, runtime);
   if (typeof item === "string") {
-    return blockedResponse(item);
+    return singleBlockedResponse(input, item, runtime.discovery.warnings);
   }
 
-  return planSummary(planForItem(item, input.targetEnabled, runtime));
+  return planSummary(
+    planForItem(item, input.targetEnabled, runtime),
+    item,
+    runtime.discovery.warnings,
+  );
 }
 
 export function applySingleToggle(
@@ -521,13 +998,13 @@ export function applySingleToggle(
   input: SingleToggleInput & ConfirmationInput,
 ): Record<string, unknown> {
   if (!hasConfirmed(input)) {
-    return blockedResponse("confirmation-required");
+    return singleBlockedResponse(input, "confirmation-required");
   }
 
   const runtime = context(options);
   const item = selectedItem(input, runtime);
   if (typeof item === "string") {
-    return blockedResponse(item);
+    return singleBlockedResponse(input, item, runtime.discovery.warnings);
   }
 
   return executionSummary(
@@ -536,6 +1013,8 @@ export function applySingleToggle(
       mutationOptions(options, runtime.config),
       true,
     ),
+    item,
+    runtime.discovery.warnings,
   );
 }
 
@@ -574,50 +1053,123 @@ export function applyBulkToggle(
     return blockedResponse("plan-fingerprint-mismatch", {
       expected: plan.planFingerprint,
       received: input.planFingerprint,
+      currentPlanFingerprint: plan.planFingerprint,
     });
   }
+  const executed = plan.actionable.map((entry) => ({
+    item: entry.item,
+    result: executionSummary(
+      executeTogglePlan(entry.decision, mutationOptions(options, runtime.config), true),
+      entry.item,
+      runtime.discovery.warnings,
+    ),
+  }));
+  const results = executed.map((entry) => entry.result);
+  const backupIds = [
+    ...new Set(
+      results.flatMap((result) => {
+        const backupId = result.backupId;
+        return typeof backupId === "string" ? [backupId] : [];
+      }),
+    ),
+  ];
+  const applyBlockedItems = executed
+    .filter((entry) => entry.result.status === "blocked")
+    .map((entry) => ({
+      item: itemIdentity(entry.item),
+      reasonCode:
+        typeof entry.result.reasonCode === "string" ? entry.result.reasonCode : reasonCode("error"),
+      message: typeof entry.result.message === "string" ? entry.result.message : "blocked",
+    }));
+  const planBlockedItems = sortBlockedActions(plan.blocked).map((entry) =>
+    blockedItem(entry.item, entry.reason),
+  );
+  const blockedItems = [...planBlockedItems, ...applyBlockedItems].sort((left, right) =>
+    compareIdentity(left.item as ItemIdentity, right.item as ItemIdentity),
+  );
+  const legacyBlocked = [
+    ...plan.blocked,
+    ...executed
+      .filter((entry) => entry.result.status === "blocked")
+      .map((entry) => ({
+        item: entry.item,
+        reason:
+          typeof entry.result.reason === "string"
+            ? entry.result.reason
+            : typeof entry.result.message === "string"
+              ? entry.result.message
+              : "blocked",
+      })),
+  ];
+  const appliedCount = results.filter((result) => result.status === "applied").length;
+  const noopCount = results.filter((result) => result.status === "noop").length;
+  const blockedCount = blockedItems.length;
+  const aggregateStatus =
+    appliedCount > 0 ? "applied" : blockedCount > 0 ? "blocked" : publicStatus("no-op").status;
 
   return {
-    status: plan.actionable.length === 0 ? "no-op" : "applied",
+    status: aggregateStatus,
     selector: plan.selector,
     targetEnabled: input.targetEnabled,
+    applyMode: "fingerprint-required",
     planFingerprint: plan.planFingerprint,
-    results: plan.actionable.map((entry) =>
-      executionSummary(
-        executeTogglePlan(entry.decision, mutationOptions(options, runtime.config), true),
-      ),
-    ),
-    blocked: plan.blocked,
+    matchedCount: plan.matched.length,
+    appliedCount,
+    noopCount,
+    blockedCount,
+    backupIds,
+    results,
+    matchedItems: sortedIdentities(plan.matched),
+    actionableItems: sortPlannedActions(plan.actionable).map((entry) => itemIdentity(entry.item)),
+    blocked: legacyBlocked,
+    blockedItems,
+    warnings: runtime.discovery.warnings,
   };
 }
 
-export function listBackups(options: AgentScopeMcpRuntimeOptions): Record<string, unknown> {
+export function listBackups(
+  options: AgentScopeMcpRuntimeOptions,
+  limit?: ListBackupsInput["limit"],
+): Record<string, unknown> {
   const runtime = context(options);
+  const backups = listBackupManifests(runtime.config.appStateRoot).map((manifest) =>
+    backupSummary(manifest),
+  );
 
   return {
     status: "ok",
-    backups: listBackupManifests(runtime.config.appStateRoot).map((manifest) =>
-      backupSummary(manifest),
-    ),
+    totalBackups: backups.length,
+    backups: limit === undefined ? backups : backups.slice(0, limit),
   };
 }
 
 export function restoreBackup(
   options: AgentScopeMcpRuntimeOptions,
-  backupId: string,
+  input: RestoreBackupInput,
   restore: (
     backupId: string,
     options: ReturnType<typeof mutationOptions>,
   ) => RestoreExecutionResult,
 ): Record<string, unknown> {
+  if (!hasConfirmed(input)) {
+    return blockedResponse("confirmation-required");
+  }
+
   const runtime = context(options);
-  const result = restore(backupId, mutationOptions(options, runtime.config));
+  const result = restore(input.backupId, mutationOptions(options, runtime.config));
+  const status = publicStatus(result.status);
 
   return {
-    status: result.status,
+    ...status,
     backupId: result.backupId,
     affectedTargets: affectedTargetSummaries(result.affectedTargets),
+    affectedPaths: affectedPaths(result.affectedTargets),
+    restoredPaths: affectedPaths(result.affectedTargets),
+    warnings: [],
     ...("reason" in result ? { reason: result.reason } : {}),
+    ...("reason" in result
+      ? { reasonCode: reasonCode(result.reason), message: result.reason }
+      : {}),
     ...("rollbackFailure" in result && result.rollbackFailure !== undefined
       ? { rollbackFailure: result.rollbackFailure }
       : {}),

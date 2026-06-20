@@ -15,6 +15,9 @@ import {
 import {
   bulkApplyInputSchema,
   bulkPlanInputSchema,
+  doctorInputSchema,
+  inventorySummaryInputSchema,
+  listBackupsInputSchema,
   listItemsInputSchema,
   restoreBackupInputSchema,
   singleApplyInputSchema,
@@ -41,9 +44,10 @@ export function registerAgentScopeTools(server: McpServer, options: AgentScopeMc
     {
       title: "Get AgentScope inventory summary",
       description: "Return structured provider inventory counts and discovery warnings.",
+      inputSchema: inventorySummaryInputSchema,
       annotations: { readOnlyHint: true },
     },
-    async () => structuredResult(getInventorySummary(options)),
+    async (input) => structuredResult(getInventorySummary(options, input)),
   );
 
   server.registerTool(
@@ -54,7 +58,7 @@ export function registerAgentScopeTools(server: McpServer, options: AgentScopeMc
       inputSchema: listItemsInputSchema,
       annotations: { readOnlyHint: true },
     },
-    async ({ selector }) => structuredResult(listItems(options, selector)),
+    async ({ selector, limit }) => structuredResult(listItems(options, selector, limit)),
   );
 
   server.registerTool(
@@ -112,9 +116,10 @@ export function registerAgentScopeTools(server: McpServer, options: AgentScopeMc
     {
       title: "List AgentScope backups",
       description: "List recent AgentScope mutation backups from local app state.",
+      inputSchema: listBackupsInputSchema,
       annotations: { readOnlyHint: true },
     },
-    async () => structuredResult(listBackups(options)),
+    async ({ limit }) => structuredResult(listBackups(options, limit)),
   );
 
   server.registerTool(
@@ -128,7 +133,7 @@ export function registerAgentScopeTools(server: McpServer, options: AgentScopeMc
         idempotentHint: false,
       },
     },
-    async ({ backupId }) => structuredResult(restoreBackup(options, backupId, restoreBackupById)),
+    async (input) => structuredResult(restoreBackup(options, input, restoreBackupById)),
   );
 
   server.registerTool(
@@ -136,8 +141,9 @@ export function registerAgentScopeTools(server: McpServer, options: AgentScopeMc
     {
       title: "Run AgentScope doctor",
       description: "Return structured fixture and provider discovery health output.",
+      inputSchema: doctorInputSchema,
       annotations: { readOnlyHint: true },
     },
-    async () => structuredResult(runDoctorStructured(options)),
+    async (input) => structuredResult(runDoctorStructured(options, input)),
   );
 }

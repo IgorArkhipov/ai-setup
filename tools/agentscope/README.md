@@ -55,7 +55,17 @@ Sanitized examples live under `test/fixtures/` and are intentionally narrow. The
 - `agentscope_restore_backup`
 - `agentscope_run_doctor`
 
-Read-only and plan tools do not mutate provider files. Apply tools require `requireConfirmation: true`; bulk apply also requires the reviewed `planFingerprint` and `maxItems` guard returned by `agentscope_plan_toggle_items`.
+Read-only and plan tools do not mutate provider files. Apply and restore tools require `requireConfirmation: true`; bulk apply also requires the reviewed `planFingerprint` and `maxItems` guard returned by `agentscope_plan_toggle_items`.
+
+Structured MCP responses follow the Phase 3 AgentScope contract additively. Legacy fields remain available, and clients can rely on these stable aliases:
+
+- inventory and list tools accept provider/layer filters where documented; list responses include `totalMatched`, and backup listings include `totalBackups`
+- single-item plan/apply responses include `applyMode: "re-resolve-on-apply"`, the full selected `item`, `blocked`, `warnings`, `affectedPaths`, and operation aliases such as `op`, `path`, `from`, `to`, `key`, `pointer`, and `value`
+- bulk plan/apply responses include `applyMode: "fingerprint-required"`, item-set aliases (`matchedItems`, `actionableItems`, `blockedItems`, `perItemPlans`), aggregate counts, and `backupIds`
+- blocked responses include `reasonCode`; fingerprint mismatches also include `currentPlanFingerprint` and perform no writes
+- doctor responses include provider-scoped `providers[]` status entries while preserving fixture and capability-matrix diagnostics
+
+Bulk `planFingerprint` values are deterministic `sha256:` hashes over the normalized selector, project root, target state, sorted item identities, blocked reason codes, and documented operation digests. Presentation-only fields such as display names and warning text are excluded so agents can safely compare reviewed plans to current machine state.
 
 AgentScope does not install itself into Claude Code, Codex, Cursor, or any other client. Add the local server manually using the config mechanism for the client you want to use.
 

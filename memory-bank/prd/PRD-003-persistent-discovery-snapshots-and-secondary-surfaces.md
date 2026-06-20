@@ -97,3 +97,4 @@ This initiative defines the next product layer after the verified writable-provi
 | `FT-006` | Add the persisted discovery snapshot command, schema, and bounded history contract | `done` |
 | `FT-008` | Add the local MCP control plane as the first secondary surface over existing headless AgentScope contracts | `done` |
 | `FT-012` | Revive the original plan's local dashboard and CLI filter parity as a thin terminal surface over existing discovery, mutation, and snapshot contracts after the user re-established dashboard parity as a goal | `done` |
+| `FT-014` | Align the shipped local MCP structured responses with the original Phase 3 contract using additive fields and aliases | `done` |
