@@ -10,7 +10,7 @@ derived_from:
 status: active
 audience: humans_and_agents
 protocol_version: "0.1"
-current_phase: commit_push
+current_phase: done
 current_gate: H2
 ---
 
@@ -38,7 +38,7 @@ Repository adaptation:
 - Created: 2026-06-20
 - Last updated: 2026-06-20
 - Status: active
-- Current phase: commit_push
+- Current phase: done
 - Current gate: H2
 
 ## Goal
@@ -140,3 +140,5 @@ Stop and report if:
 | 2026-06-20 | TypeScript reviewer subagent | Reviewed FT-013 diff and approved with no actionable findings | subagent `019ee5ad-58c4-7471-b738-ec07cd6fed37` |
 | 2026-06-20 | master Codex agent | Ran focused FT-013 tests | `npx vitest run test/toggle.test.ts test/cli.test.ts`: passed, 2 files / 30 tests |
 | 2026-06-20 | master Codex agent | Ran full local verification | `npm run build`: passed; `npm test`: passed, 25 files / 228 tests; `npm run coverage`: passed; `npm run lint`: passed with existing Biome schema-version info; `git diff --check`: passed |
+| 2026-06-20 | master Codex agent | Committed and pushed the FT-013 feature slice | `1e4131d feat: add explicit agentscope toggle targets` on `main` |
+| 2026-06-20 | GitHub Actions | Accepted FT-013 after push | CI run `27875862068` passed |

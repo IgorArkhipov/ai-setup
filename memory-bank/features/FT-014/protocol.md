@@ -11,7 +11,7 @@ derived_from:
 status: active
 audience: humans_and_agents
 protocol_version: "0.1"
-current_phase: local_acceptance
+current_phase: done
 current_gate: H2
 ---
 
@@ -39,7 +39,7 @@ Repository adaptation:
 - Created: 2026-06-20
 - Last updated: 2026-06-20
 - Status: active
-- Current phase: local_acceptance
+- Current phase: done
 - Current gate: H2
 
 ## Goal
@@ -128,3 +128,8 @@ Stop and report if:
 | 2026-06-20 | Huygens api-contract subagent | Re-reviewed follow-up fixes and found public noop, apply-time blocked aggregation, scoped doctor error, and missing-selection shape gaps | subagent `019ee5c1-8433-7411-832b-5f2772ebac44` |
 | 2026-06-20 | master Codex agent | Addressed re-review findings and verified focused/full local checks | `npx vitest run test/mcp-server.test.ts`, `npm run build`, `npm run lint`, `npm test`, `npm run coverage`, `git diff --check` |
 | 2026-06-20 | McClintock api-contract subagent | Final contract re-review passed with no findings, residual risks, or testing gaps | subagent `019ee5cb-cdce-7a20-b83c-f3231e559554` |
+| 2026-06-20 | master Codex agent | Committed and pushed the FT-014 feature slice | `ca827f6 feat: align agentscope mcp contract` on `main` |
+| 2026-06-20 | GitHub Actions | Reported a transient CI failure unrelated to AgentScope behavior | CI run `27876740469` failed because the actionlint release API request returned 504 while AgentScope and smoke jobs passed |
+| 2026-06-20 | master Codex agent | Hardened the actionlint download path and pushed the CI fix | `3055e9f ci: pin actionlint download` |
+| 2026-06-20 | GitHub Actions | Accepted the current `main` state after the CI hardening commit | CI run `27876840424` passed |
+| 2026-06-20 | Kepler completion-audit subagent | Found only workflow-record closure drift after code and CI completion | FT-014 implementation plan archived and protocol phase/evidence updated |

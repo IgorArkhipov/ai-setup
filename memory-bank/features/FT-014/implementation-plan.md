@@ -5,7 +5,7 @@ doc_function: derived
 purpose: "Execution plan for additive AgentScope MCP structured contract parity."
 derived_from:
   - feature.md
-status: active
+status: archived
 audience: humans_and_agents
 must_not_define:
   - ft_014_scope
@@ -72,3 +72,4 @@ Implement FT-014 by adding documented MCP request/response fields while preservi
 | Coverage | pass | `cd tools/agentscope && rtk npm run coverage` -> 25 files, 232 tests passed |
 | Whitespace | pass | `rtk git diff --check` |
 | Contract review | pass | McClintock api-contract subagent reported no findings, residual risks, or testing gaps |
+| External CI | pass | GitHub Actions run `27876840424` passed on `3055e9f` after the actionlint download hardening commit |

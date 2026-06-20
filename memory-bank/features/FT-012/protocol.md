@@ -10,7 +10,7 @@ derived_from:
 status: active
 audience: humans_and_agents
 protocol_version: "0.1"
-current_phase: commit_push
+current_phase: done
 current_gate: H2
 ---
 
@@ -40,7 +40,7 @@ Repository adaptation:
 - Created: 2026-06-20
 - Last updated: 2026-06-20
 - Status: active
-- Current phase: commit_push
+- Current phase: done
 - Current gate: H2
 
 ## Goal
@@ -166,3 +166,5 @@ Stop and report if:
 | 2026-06-20 | master Codex agent | Ran focused FT-012 tests | `npx vitest run test/dashboard-state.test.ts test/dashboard.test.ts test/list.test.ts test/cli.test.ts`: passed, 4 files / 37 tests |
 | 2026-06-20 | master Codex agent | Ran dashboard apply verification | `npx vitest run test/dashboard.test.ts test/toggle.test.ts test/snapshot.test.ts`: passed, 3 files / 26 tests |
 | 2026-06-20 | master Codex agent | Ran full local verification | `npm run build`: passed; `npm test`: passed, 25 files / 224 tests; `npm run coverage`: passed; `npm run lint`: passed with existing Biome schema-version info; `git diff --check`: passed |
+| 2026-06-20 | master Codex agent | Committed and pushed the FT-012 feature slice | `43c5329 feat: add agentscope terminal dashboard` on `main` |
+| 2026-06-20 | GitHub Actions | Accepted FT-012 after push | CI run `27875616782` passed |
