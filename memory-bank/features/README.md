@@ -46,4 +46,4 @@ The `memory-bank/features/` directory stores instantiated feature packages in th
 | `FT-013` | Toggle Target State Command Parity | `active` | `done` | [`FT-013/feature.md`](FT-013/feature.md) | [`FT-013/implementation-plan.md`](FT-013/implementation-plan.md) | `UC-002` | 2026-06-20 |
 | `FT-014` | MCP Structured Contract Parity | `active` | `done` | [`FT-014/feature.md`](FT-014/feature.md) | [`FT-014/implementation-plan.md`](FT-014/implementation-plan.md) | `none` | 2026-06-20 |
 | `FT-015` | Zed Provider Support | `active` | `done` | [`FT-015/feature.md`](FT-015/feature.md) | [`FT-015/implementation-plan.md`](FT-015/implementation-plan.md) | `none` | 2026-06-20 |
-| `FT-016` | Zed Provider Review Follow-Up | `active` | `in_progress` | [`FT-016/feature.md`](FT-016/feature.md) | [`FT-016/implementation-plan.md`](FT-016/implementation-plan.md) | `none` | 2026-06-20 |
+| `FT-016` | Zed Provider Review Follow-Up | `active` | `done` | [`FT-016/feature.md`](FT-016/feature.md) | [`FT-016/implementation-plan.md`](FT-016/implementation-plan.md) | `none` | 2026-06-20 |

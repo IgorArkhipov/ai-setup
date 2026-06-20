@@ -11,7 +11,7 @@ derived_from:
 status: active
 audience: humans_and_agents
 protocol_version: "0.1"
-current_phase: ci_pending
+current_phase: done
 current_gate: H2
 ---
 
@@ -40,7 +40,7 @@ Repository adaptation:
 - Created: 2026-06-20
 - Last updated: 2026-06-20
 - Status: active
-- Current phase: ci_pending
+- Current phase: done
 - Current gate: H2
 
 ## Goal
@@ -141,7 +141,7 @@ Stop and report if:
 | `CHK-02` | `cd tools/agentscope && npx vitest run test/toggle.test.ts` | pass: 17 tests |
 | `CHK-03` | `cd tools/agentscope && npx vitest run test/provider-discovery.test.ts test/toggle.test.ts test/provider-capabilities.test.ts` | pass: 3 files / 71 tests |
 | `CHK-04` | `cd tools/agentscope && npm run build && npm test && npm run coverage && npm run lint`; `git diff --check` | pass: build; full tests 25 files / 240 tests; coverage thresholds pass; lint pass with Biome schema info only; diff check pass |
-| `CHK-05` | GitHub Actions CI on pushed `main` | pending |
+| `CHK-05` | GitHub Actions CI on pushed `main` | pass: run `27882029094` passed on `ad7485d276210bcdeba63d3a3574a9842f5103b6` |
 
 ## Recovery
 
@@ -163,6 +163,8 @@ Stop and report if:
 | 2026-06-20 | master Codex agent | Implemented direct-child Zed skill discovery, direct symlink support, and JSONC-capable configured MCP mutation | `tools/agentscope/src/providers/zed.ts`, `tools/agentscope/src/core/mutation-io.ts` |
 | 2026-06-20 | master Codex agent | Verified focused regression tests | `test/provider-discovery.test.ts` passed 31 tests; `test/toggle.test.ts` passed 17 tests; combined provider slice passed 71 tests |
 | 2026-06-20 | master Codex agent | Verified full local gates | build pass; full tests 25 files / 240 tests; coverage pass with 82.74% statements, 72.95% branches, 93.38% functions, 82.64% lines; lint pass with Biome schema info only; `git diff --check` pass |
+| 2026-06-20 | master Codex agent | Published FT-016 feature-slice commit through GitHub API because local `.git` index writes were sandbox-blocked | `ad7485d276210bcdeba63d3a3574a9842f5103b6` |
+| 2026-06-20 | GitHub Actions | Accepted the pushed FT-016 feature slice | CI run `27882029094` passed on `ad7485d276210bcdeba63d3a3574a9842f5103b6` |
 
 ## Decisions
 
@@ -182,4 +184,4 @@ Stop and report if:
 
 ## Next Action
 
-Commit and push the FT-016 feature slice, then watch GitHub Actions CI and record `CHK-05`.
+FT-016 is complete. No further protocol action remains.

@@ -5,7 +5,7 @@ doc_function: derived
 purpose: "Execution plan for resolving FT-016 review findings without redefining canonical feature scope."
 derived_from:
   - feature.md
-status: active
+status: archived
 audience: humans_and_agents
 must_not_define:
   - ft_016_scope
@@ -130,4 +130,4 @@ The plan is exhausted when `CHK-01` through `CHK-05` pass or their concrete fail
 | `CHK-02` | pass: `test/toggle.test.ts` 17 tests |
 | `CHK-03` | pass: focused provider/toggle slice 3 files / 71 tests |
 | `CHK-04` | pass: build; full tests 25 files / 240 tests; coverage 82.74% statements, 72.95% branches, 93.38% functions, 82.64% lines; lint with Biome schema info only; `git diff --check` |
-| `CHK-05` | pending until pushed CI completes |
+| `CHK-05` | pass: GitHub Actions run `27882029094` on `ad7485d276210bcdeba63d3a3574a9842f5103b6` |
