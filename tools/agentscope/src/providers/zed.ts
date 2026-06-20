@@ -1,4 +1,4 @@
-import { type Dirent, existsSync, readdirSync, readFileSync } from "node:fs";
+import { type Dirent, existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import type { ProviderModule } from "../core/discovery.js";
 import type {
@@ -280,46 +280,51 @@ function collectSkillDirs(
     skillDir: string;
     skillFile: string;
   }> = [];
-  const stack = [rootPath];
 
-  while (stack.length > 0) {
-    const current = stack.pop();
-    if (current === undefined) {
+  let entries: Dirent[];
+  try {
+    entries = readdirSync(rootPath, { withFileTypes: true });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    pushWarning(warnings, layer, "file-unreadable", `${rootPath} could not be read: ${detail}`);
+    return [];
+  }
+
+  for (const entry of entries) {
+    const skillDir = path.join(rootPath, entry.name);
+    const isSkillDirectory =
+      entry.isDirectory() ||
+      (entry.isSymbolicLink() &&
+        (() => {
+          try {
+            return statSync(skillDir).isDirectory();
+          } catch (error) {
+            const detail = error instanceof Error ? error.message : String(error);
+            pushWarning(
+              warnings,
+              layer,
+              "file-unreadable",
+              `${skillDir} could not be read: ${detail}`,
+            );
+            return false;
+          }
+        })());
+
+    if (!isSkillDirectory) {
       continue;
     }
 
-    let entries: Dirent[];
-    try {
-      entries = readdirSync(current, { withFileTypes: true });
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
-      pushWarning(warnings, layer, "file-unreadable", `${current} could not be read: ${detail}`);
+    const skillFile = path.join(skillDir, "SKILL.md");
+    if (!existsSync(skillFile)) {
       continue;
     }
 
-    for (const entry of entries) {
-      const entryPath = path.join(current, entry.name);
-
-      if (entry.isDirectory()) {
-        stack.push(entryPath);
-        continue;
-      }
-
-      if (entry.isFile() && entry.name === "SKILL.md") {
-        const skillDir = path.dirname(entryPath);
-        const relativePath = path.relative(rootPath, skillDir).split(path.sep).join("/");
-        if (relativePath.length === 0) {
-          continue;
-        }
-
-        skills.push({
-          id: relativePath,
-          displayName: skillDisplayName(entryPath, relativePath, layer, warnings),
-          skillDir,
-          skillFile: entryPath,
-        });
-      }
-    }
+    skills.push({
+      id: entry.name,
+      displayName: skillDisplayName(skillFile, entry.name, layer, warnings),
+      skillDir,
+      skillFile,
+    });
   }
 
   return skills.sort((left, right) => left.id.localeCompare(right.id));
@@ -882,30 +887,16 @@ function parseLiveSettingsForPlan(
     return { status: "missing" };
   }
 
-  let parsed: unknown;
   try {
-    parsed = JSON.parse(raw);
+    const parsed = parseZedJson(raw);
+    if (!isRecord(parsed)) {
+      return { status: "error", reason: `${filePath} must be a JSON object` };
+    }
+    return { status: "ok", doc: parsed };
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-
-    try {
-      parseZedJson(raw);
-      return {
-        status: "error",
-        reason: `unsupported-jsonc-settings: ${filePath} must be strict JSON before AgentScope can write context_servers`,
-      };
-    } catch {
-      // Use the strict parser error because the mutation engine also uses strict JSON.
-    }
-
-    return { status: "error", reason: `${filePath} is not valid JSON: ${detail}` };
+    return { status: "error", reason: `${filePath} is not valid JSON or JSONC: ${detail}` };
   }
-
-  if (!isRecord(parsed)) {
-    return { status: "error", reason: `${filePath} must be a JSON object` };
-  }
-
-  return { status: "ok", doc: parsed };
 }
 
 function planConfiguredMcpToggle(input: TogglePlanInput): TogglePlanDecision {

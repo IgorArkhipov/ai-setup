@@ -367,14 +367,14 @@ describe("runToggle", () => {
     expect(existsSync(descriptor.rootPath)).toBe(false);
   });
 
-  it("discovers Zed JSONC settings but blocks writes before strict JSON mutation", () => {
+  it("applies and restores Zed configured MCP toggles from JSONC settings", () => {
     const sandbox = createMutationSandbox();
     sandboxes.push(sandbox);
 
     const settingsPath = path.join(sandbox.homeDir, ".config", "zed", "settings.json");
     const settingsContent = [
       "{",
-      "  // AgentScope can read this, but the mutation engine writes strict JSON.",
+      "  // Zed settings may contain comments and trailing commas.",
       '  "context_servers": {',
       '    "github": {',
       '      "command": "npx",',
@@ -407,12 +407,45 @@ describe("runToggle", () => {
       disable: true,
       apply: true,
       now: () => new Date("2026-06-20T10:00:00.000Z"),
-      generateBackupId: () => "zed-jsonc-blocked",
+      generateBackupId: () => "zed-jsonc-disable",
     });
 
-    expect(result.exitCode).toBe(1);
-    expect(result.output).toContain("unsupported-jsonc-settings");
-    expect(readFileSync(settingsPath, "utf8")).toBe(settingsContent);
+    expect(result.exitCode).toBe(0);
+    expect(result.output).toContain("status: applied");
+    expect(JSON.parse(readFileSync(settingsPath, "utf8"))).toEqual({
+      context_servers: {},
+    });
+    expect(JSON.parse(readFileSync(descriptor.payloadPath, "utf8"))).toEqual({
+      command: "npx",
+      args: ["-y", "@modelcontextprotocol/server-github"],
+    });
+
+    const restore = runToggle({
+      cwd: sandbox.projectRoot,
+      homeDir: sandbox.homeDir,
+      projectRoot: sandbox.projectRoot,
+      appStateRoot: sandbox.appStateRoot,
+      cursorRoot: sandbox.cursorRoot,
+      provider: "zed",
+      kind: "mcp",
+      layer: "global",
+      id: itemId,
+      enable: true,
+      apply: true,
+      now: () => new Date("2026-06-20T10:01:00.000Z"),
+      generateBackupId: () => "zed-jsonc-restore",
+    });
+
+    expect(restore.exitCode).toBe(0);
+    expect(restore.output).toContain("status: applied");
+    expect(JSON.parse(readFileSync(settingsPath, "utf8"))).toEqual({
+      context_servers: {
+        github: {
+          command: "npx",
+          args: ["-y", "@modelcontextprotocol/server-github"],
+        },
+      },
+    });
     expect(existsSync(descriptor.rootPath)).toBe(false);
   });
 

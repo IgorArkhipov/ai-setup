@@ -44,6 +44,106 @@ function deterministicJson(value: unknown): string {
   return `${JSON.stringify(value, null, 2)}\n`;
 }
 
+function stripJsonCommentsAndTrailingCommas(contents: string): string {
+  let withoutComments = "";
+  let inString = false;
+  let escaped = false;
+  let index = 0;
+
+  while (index < contents.length) {
+    const char = contents[index];
+    const next = contents[index + 1];
+
+    if (char === undefined) {
+      break;
+    }
+
+    if (inString) {
+      withoutComments += char;
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === '"') {
+        inString = false;
+      }
+      index += 1;
+      continue;
+    }
+
+    if (char === '"') {
+      inString = true;
+      withoutComments += char;
+      index += 1;
+      continue;
+    }
+
+    if (char === "/" && next === "/") {
+      index += 2;
+      while (index < contents.length && contents[index] !== "\n") {
+        index += 1;
+      }
+      continue;
+    }
+
+    if (char === "/" && next === "*") {
+      index += 2;
+      while (index < contents.length && !(contents[index] === "*" && contents[index + 1] === "/")) {
+        index += 1;
+      }
+      index += 2;
+      continue;
+    }
+
+    withoutComments += char;
+    index += 1;
+  }
+
+  let result = "";
+  inString = false;
+  escaped = false;
+
+  for (let cursor = 0; cursor < withoutComments.length; cursor += 1) {
+    const char = withoutComments[cursor];
+    if (char === undefined) {
+      break;
+    }
+
+    if (inString) {
+      result += char;
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      inString = true;
+      result += char;
+      continue;
+    }
+
+    if (char === ",") {
+      let lookahead = cursor + 1;
+      while (lookahead < withoutComments.length && /\s/.test(withoutComments[lookahead] ?? "")) {
+        lookahead += 1;
+      }
+      const next = withoutComments[lookahead];
+      if (next === "}" || next === "]") {
+        continue;
+      }
+    }
+
+    result += char;
+  }
+
+  return result;
+}
+
 function ensureParentDirectory(filePath: string): void {
   mkdirSync(path.dirname(filePath), { recursive: true });
 }
@@ -63,7 +163,11 @@ function writeFileAtomic(targetPath: string, content: Uint8Array): void {
 
 function readJsonDocument(filePath: string): unknown {
   const raw = readFileSync(filePath, "utf8");
-  return JSON.parse(raw);
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return JSON.parse(stripJsonCommentsAndTrailingCommas(raw));
+  }
 }
 
 function assertObjectTarget(

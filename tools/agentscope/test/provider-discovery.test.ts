@@ -1,4 +1,4 @@
-import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -542,6 +542,27 @@ describe("provider discovery", () => {
     );
     copyFixture("zed/global/AGENTS.md", path.join(sandbox.homeDir, ".config", "zed", "AGENTS.md"));
     copyFixture("zed/global/skills", path.join(sandbox.homeDir, ".agents", "skills"));
+    const nestedSkillDir = path.join(sandbox.homeDir, ".agents", "skills", "group", "nested-skill");
+    mkdirSync(nestedSkillDir, { recursive: true });
+    writeFileSync(
+      path.join(nestedSkillDir, "SKILL.md"),
+      ["---", "name: nested-skill", "description: Nested skill", "---", "", "Nested."].join("\n"),
+      "utf8",
+    );
+    const linkedSkillTarget = path.join(sandbox.homeDir, "linked-zed-skill-target");
+    mkdirSync(linkedSkillTarget, { recursive: true });
+    writeFileSync(
+      path.join(linkedSkillTarget, "SKILL.md"),
+      ["---", "name: linked-zed-skill", "description: Linked skill", "---", "", "Linked."].join(
+        "\n",
+      ),
+      "utf8",
+    );
+    symlinkSync(
+      linkedSkillTarget,
+      path.join(sandbox.homeDir, ".agents", "skills", "linked-zed-skill"),
+      "dir",
+    );
     copyFixture(
       "zed/project/.zed/settings.json",
       path.join(sandbox.projectRoot, ".zed", "settings.json"),
@@ -561,13 +582,17 @@ describe("provider discovery", () => {
         "zed:global:setting:agents-md:true:read-only",
         "zed:global:setting:config-settings:true:read-only",
         "zed:global:configured-mcp:config-settings:github:true:read-write",
+        "zed:global:skill:linked-zed-skill:true:read-write",
         "zed:project:skill:example-project-zed-skill:true:read-write",
         "zed:project:setting:agents-md:true:read-only",
         "zed:project:setting:project-settings:true:read-only",
         "zed:project:configured-mcp:project-settings:filesystem:true:read-write",
       ]),
     );
-    expect(result.items).toHaveLength(8);
+    expect(result.items.map((item) => item.id)).not.toContain(
+      "zed:global:skill:group/nested-skill",
+    );
+    expect(result.items).toHaveLength(9);
     expect(result.items).toContainEqual(
       expect.objectContaining({
         id: "zed:global:skill:example-zed-skill",
@@ -579,6 +604,13 @@ describe("provider discovery", () => {
           "SKILL.md",
         ),
         statePath: path.join(sandbox.homeDir, ".agents", "skills", "example-zed-skill"),
+      }),
+    );
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "zed:global:skill:linked-zed-skill",
+        sourcePath: path.join(sandbox.homeDir, ".agents", "skills", "linked-zed-skill", "SKILL.md"),
+        statePath: path.join(sandbox.homeDir, ".agents", "skills", "linked-zed-skill"),
       }),
     );
 
