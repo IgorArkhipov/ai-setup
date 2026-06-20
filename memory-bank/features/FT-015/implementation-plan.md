@@ -5,7 +5,7 @@ doc_function: derived
 purpose: "Execution plan for adding Zed provider support without redefining canonical FT-015 scope."
 derived_from:
   - feature.md
-status: active
+status: archived
 audience: humans_and_agents
 must_not_define:
   - ft_015_scope
@@ -69,4 +69,4 @@ Implement FT-015 by adding Zed provider discovery and safe toggles for Zed skill
 | `CHK-01` | `cd tools/agentscope && npx vitest run test/provider-capabilities.test.ts test/provider-discovery.test.ts test/toggle.test.ts test/list.test.ts` | pass: 4 files, 82 tests |
 | `CHK-02` | `cd tools/agentscope && npx vitest run test/mcp-server.test.ts test/cli.test.ts` | pass: 2 files, 28 tests |
 | `CHK-03` | `cd tools/agentscope && npm run build && npm test && npm run coverage && npm run lint`; `git diff --check` | pass: build, lint, diff check; full tests 25 files / 240 tests; coverage 82.77% statements, 73.03% branches, 93.37% functions, 82.67% lines |
-| `CHK-04` | GitHub Actions CI on pushed `main` | pending |
+| `CHK-04` | GitHub Actions CI on pushed `main` | pass: run `27878041589` passed on `cdfce2b` |

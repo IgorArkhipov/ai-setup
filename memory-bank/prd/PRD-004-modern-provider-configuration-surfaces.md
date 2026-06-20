@@ -94,4 +94,4 @@ This initiative narrows that product gap without weakening AgentScope's safety m
 | `FT-009` | Add first-class read-only discovery for modern provider surfaces and update the normalized taxonomy | `done` |
 | `FT-010` | Add verified safe toggles for modern surfaces where provider docs and tests prove reversible mutability | `done` |
 | `FT-011` | Add provider drift and compatibility reporting for the committed capability matrix and documented support boundary; automated local-example or changelog drift belongs to later matrix updates or feature slices | `done` |
-| `FT-015` | Add Zed as a first-class provider with verified skill and configured MCP discovery/toggles plus read-only instruction/settings inventory | `in_progress` |
+| `FT-015` | Add Zed as a first-class provider with verified skill and configured MCP discovery/toggles plus read-only instruction/settings inventory | `done` |

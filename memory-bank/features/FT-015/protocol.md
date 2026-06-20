@@ -10,7 +10,7 @@ derived_from:
 status: active
 audience: humans_and_agents
 protocol_version: "0.1"
-current_phase: commit_push
+current_phase: done
 current_gate: H2
 ---
 
@@ -40,7 +40,7 @@ Repository adaptation:
 - Created: 2026-06-20
 - Last updated: 2026-06-20
 - Status: active
-- Current phase: commit_push
+- Current phase: done
 - Current gate: H2
 
 ## Goal
@@ -119,3 +119,5 @@ Stop and report if:
 | 2026-06-20 | master Codex agent | Resolved bulk MCP compatibility by normalizing omitted bulk mutation provider selectors to the legacy writable set and requiring explicit Zed provider selection | `tools/agentscope/src/mcp/helpers.ts`, `tools/agentscope/test/mcp-server.test.ts`, `tools/agentscope/README.md` |
 | 2026-06-20 | Averroes api-contract subagent | Re-reviewed the bulk MCP compatibility fix and reported no remaining findings | subagent `019ee5f6-df99-7831-b0ef-8a7caa3477fd` |
 | 2026-06-20 | master Codex agent | Verified local gates before feature-slice commit | `CHK-01` 4 files / 82 tests; `CHK-02` 2 files / 28 tests; build pass; lint pass with Biome schema info only; `git diff --check` pass; full tests 25 files / 240 tests; coverage pass |
+| 2026-06-20 | master Codex agent | Committed and pushed the FT-015 feature slice | `cdfce2b feat: add agentscope zed provider` on `main` |
+| 2026-06-20 | GitHub Actions | Accepted the pushed FT-015 feature slice | CI run `27878041589` passed on `cdfce2b` |
