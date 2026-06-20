@@ -156,6 +156,82 @@ describe("cli", () => {
     expect(stdout).toHaveBeenCalledWith(expect.stringContaining("status: dry-run"));
   });
 
+  it("routes positional toggle selectors and explicit target flags", () => {
+    const stdout = vi.fn<(message: string) => void>();
+    const stderr = vi.fn<(message: string) => void>();
+
+    const exitCode = runCli(
+      [
+        "toggle",
+        "claude",
+        "skill",
+        "claude:project:skill:example-claude-skill",
+        "--layer",
+        "project",
+        "--disable",
+        "--json",
+        "--project-root",
+        path.join(runtimeRoot, "project"),
+        "--app-state-root",
+        path.join(runtimeRoot, "app-state"),
+        "--cursor-root",
+        path.join(runtimeRoot, "cursor", "User"),
+      ],
+      {
+        packageRoot,
+        stdout,
+        stderr,
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).not.toHaveBeenCalled();
+    expect(JSON.parse(stdout.mock.calls[0]?.[0] ?? "")).toMatchObject({
+      status: "dry-run",
+      targetEnabled: false,
+    });
+  });
+
+  it("returns non-zero for conflicting toggle target flags", () => {
+    const stdout = vi.fn<(message: string) => void>();
+    const stderr = vi.fn<(message: string) => void>();
+
+    const exitCode = runCli(
+      [
+        "toggle",
+        "--provider",
+        "claude",
+        "--kind",
+        "skill",
+        "--id",
+        "claude:project:skill:example-claude-skill",
+        "--layer",
+        "project",
+        "--enable",
+        "--disable",
+        "--json",
+        "--project-root",
+        path.join(runtimeRoot, "project"),
+        "--app-state-root",
+        path.join(runtimeRoot, "app-state"),
+        "--cursor-root",
+        path.join(runtimeRoot, "cursor", "User"),
+      ],
+      {
+        packageRoot,
+        stdout,
+        stderr,
+      },
+    );
+
+    expect(exitCode).toBe(1);
+    expect(stderr).not.toHaveBeenCalled();
+    expect(JSON.parse(stdout.mock.calls[0]?.[0] ?? "")).toEqual({
+      status: "failed",
+      reason: "cannot use --enable and --disable together",
+    });
+  });
+
   it("routes restore to the registered command handler", () => {
     const stdout = vi.fn<(message: string) => void>();
     const stderr = vi.fn<(message: string) => void>();

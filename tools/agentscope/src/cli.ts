@@ -173,23 +173,27 @@ function createCli(packageRoot: string, io: CliIo) {
     });
 
   cli
-    .command("toggle", "Plan or apply a toggle for one discovered item")
+    .command("toggle [provider] [kind] [id]", "Plan or apply a toggle for one discovered item")
     .option("--provider <id>", "Provider id")
     .option("--kind <kind>", "Discovery kind")
     .option("--id <id>", "Normalized discovery id")
     .option("--layer <layer>", "Discovery layer")
+    .option("--enable", "Target enabled state")
+    .option("--disable", "Target disabled state")
     .option("--apply", "Apply writes instead of dry-run")
     .option("--json", "Render JSON output")
     .option("--project-root <path>", "Override the project root")
     .option("--app-state-root <path>", "Override the app state root")
     .option("--cursor-root <path>", "Override the Cursor root")
-    .action((options) => {
+    .action((provider, kind, id, options) => {
       runHandled(() =>
         runToggle({
-          provider: options.provider,
-          kind: options.kind,
-          id: options.id,
+          provider: options.provider ?? provider,
+          kind: options.kind ?? kind,
+          id: options.id ?? id,
           layer: options.layer,
+          enable: options.enable,
+          disable: options.disable,
           apply: options.apply,
           json: options.json,
           projectRoot: options.projectRoot,

@@ -26,7 +26,8 @@ Sanitized examples live under `test/fixtures/` and are intentionally narrow. The
 - `node dist/cli.js snapshot [--json] --project-root <path> --app-state-root <path> --cursor-root <path>`
 - `node dist/cli.js list [--json] [--provider <id>] [--layer <global|project|all>] [--kind <kind>] [--category <category>] --project-root <path> --app-state-root <path> --cursor-root <path>`
 - `node dist/cli.js dashboard [--json] [--provider <id>] [--layer <global|project|all>] [--kind <kind>] [--category <category>] [--search <query>] [--select <id>] [--stage <provider|kind|layer|id|targetEnabled>] [--apply --confirm] --project-root <path> --app-state-root <path> --cursor-root <path>`
-- `node dist/cli.js toggle --provider <id> --kind <kind> --id <id> --layer <layer> [--json] [--apply] --project-root <path> --app-state-root <path> --cursor-root <path>`
+- `node dist/cli.js toggle <provider> <kind> <id> --layer <layer> [--enable|--disable] [--json] [--apply] --project-root <path> --app-state-root <path> --cursor-root <path>`
+- `node dist/cli.js toggle --provider <id> --kind <kind> --id <id> --layer <layer> [--enable|--disable] [--json] [--apply] --project-root <path> --app-state-root <path> --cursor-root <path>`
 - `node dist/cli.js restore <backup-id> [--json] --project-root <path> --app-state-root <path> --cursor-root <path>`
 - `node dist/cli.js mcp --project-root <path> --app-state-root <path> --cursor-root <path>`
 
@@ -36,7 +37,7 @@ Sanitized examples live under `test/fixtures/` and are intentionally narrow. The
 
 `dashboard` renders a deterministic terminal inventory surface over the same live discovery flow as `list`. It supports provider, layer, kind, category, search, and selected-item filters, shows selected-item paths and dry-run toggle preview, and can stage exact item changes with `--stage provider|kind|layer|id|targetEnabled`. Dashboard writes require both `--apply` and `--confirm`; confirmed staged changes run through the existing mutation engine and successful apply refreshes the project snapshot. The dashboard is not an Ink/React TUI and does not add a second provider write path.
 
-`toggle` is dry-run by default. It prints the selected item, target enabled state, planned operations, affected paths or stores, and an explicit line stating that no writes were performed. Add `--apply` to route the plan through the guarded mutation engine.
+`toggle` is dry-run by default. It accepts either positional selectors (`toggle <provider> <kind> <id> --layer <layer>`) or selector flags, prints the selected item, target enabled state, planned operations, affected paths or stores, and an explicit line stating that no writes were performed. Add `--enable` or `--disable` to request an explicit target state; omit both to flip the currently discovered state for backward compatibility. Add `--apply` to route the plan through the guarded mutation engine.
 
 `restore` replays one saved backup by id through the same lock and low-level IO layer used by apply.
 

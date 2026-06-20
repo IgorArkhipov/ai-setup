@@ -14,6 +14,9 @@ export interface ToggleCommandOptions extends AgentScopeConfigOverrides {
   kind?: string;
   id?: string;
   layer?: string;
+  targetEnabled?: boolean;
+  enable?: boolean;
+  disable?: boolean;
   apply?: boolean;
   json?: boolean;
   providers?: ProviderModule[];
@@ -67,6 +70,26 @@ function missingSelectorMessage(options: ToggleCommandOptions): string | null {
   return null;
 }
 
+function targetEnabledFromOptions(options: ToggleCommandOptions): boolean | string | undefined {
+  if (options.enable === true && options.disable === true) {
+    return "cannot use --enable and --disable together";
+  }
+
+  if (options.targetEnabled !== undefined) {
+    return options.targetEnabled;
+  }
+
+  if (options.enable === true) {
+    return true;
+  }
+
+  if (options.disable === true) {
+    return false;
+  }
+
+  return undefined;
+}
+
 function defaultProviders(): ProviderModule[] {
   return [claudeProvider, codexProvider, cursorProvider];
 }
@@ -77,6 +100,14 @@ export function runToggle(options: ToggleCommandOptions): ToggleCommandResult {
     return {
       exitCode: 1,
       output: commandErrorOutput(options.json, "failed", missingSelector),
+    };
+  }
+
+  const targetEnabled = targetEnabledFromOptions(options);
+  if (typeof targetEnabled === "string") {
+    return {
+      exitCode: 1,
+      output: commandErrorOutput(options.json, "failed", targetEnabled),
     };
   }
 
@@ -137,7 +168,7 @@ export function runToggle(options: ToggleCommandOptions): ToggleCommandResult {
       config,
       homeDir,
       item: selected,
-      targetEnabled: !selected.enabled,
+      targetEnabled: targetEnabled ?? !selected.enabled,
     }),
     {
       appStateRoot: config.appStateRoot,

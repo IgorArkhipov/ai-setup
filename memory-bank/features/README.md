@@ -43,3 +43,4 @@ The `memory-bank/features/` directory stores instantiated feature packages in th
 | `FT-010` | Verified Modern Surface Toggles | `active` | `done` | [`FT-010/feature.md`](FT-010/feature.md) | [`FT-010/implementation-plan.md`](FT-010/implementation-plan.md) | `none` | 2026-06-18 |
 | `FT-011` | Provider Drift And Compatibility Reporting | `active` | `done` | [`FT-011/feature.md`](FT-011/feature.md) | [`FT-011/implementation-plan.md`](FT-011/implementation-plan.md) | `none` | 2026-06-18 |
 | `FT-012` | Terminal Dashboard And CLI Filter Parity | `active` | `done` | [`FT-012/feature.md`](FT-012/feature.md) | [`FT-012/implementation-plan.md`](FT-012/implementation-plan.md) | `none` | 2026-06-20 |
+| `FT-013` | Toggle Target State Command Parity | `active` | `done` | [`FT-013/feature.md`](FT-013/feature.md) | [`FT-013/implementation-plan.md`](FT-013/implementation-plan.md) | `UC-002` | 2026-06-20 |

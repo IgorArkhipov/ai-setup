@@ -44,7 +44,7 @@ The current interaction model is subcommand-oriented:
 - `snapshot` persists the current normalized discovery inventory into project-scoped app-state history
 - `list` returns normalized discovery inventory
 - `dashboard` renders filtered inventory, selected-item details, toggle preview, exact staged changes, and confirmation-gated apply with snapshot refresh
-- `toggle` plans by default and applies only with `--apply`
+- `toggle` plans by default, accepts positional or flag selectors, supports explicit `--enable` / `--disable` target state, and applies only with `--apply`
 - `restore` restores one saved backup by id
 - `mcp` exposes local stdio MCP tools for inventory, listing, planning, applying, backup listing, restore, and doctor workflows
 

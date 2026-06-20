@@ -307,6 +307,7 @@ describe("runToggle", () => {
       kind: "agent",
       layer: scenario.layer,
       id: scenario.id,
+      disable: true,
       apply: true,
       now: () => new Date("2026-06-18T10:00:00.000Z"),
       generateBackupId: () => `${scenario.provider}-agent-disable`,
@@ -335,6 +336,7 @@ describe("runToggle", () => {
       kind: "agent",
       layer: scenario.layer,
       id: scenario.id,
+      enable: true,
       apply: true,
       now: () => new Date("2026-06-18T10:01:00.000Z"),
       generateBackupId: () => `${scenario.provider}-agent-restore`,
@@ -413,6 +415,64 @@ describe("runToggle", () => {
     });
     expect(JSON.parse(json.output)).toMatchObject({
       status: "dry-run",
+    });
+  });
+
+  it("honors explicit enable and disable target states", () => {
+    const sandbox = createMutationSandbox();
+    sandboxes.push(sandbox);
+
+    const enable = runToggle({
+      ...fakeOptions(sandbox),
+      json: true,
+      enable: true,
+    });
+    expect(JSON.parse(enable.output)).toMatchObject({
+      status: "dry-run",
+      targetEnabled: true,
+    });
+
+    const disable = runToggle({
+      ...fakeOptions(sandbox),
+      json: true,
+      disable: true,
+    });
+    expect(JSON.parse(disable.output)).toMatchObject({
+      status: "dry-run",
+      targetEnabled: false,
+    });
+  });
+
+  it("rejects conflicting explicit target state flags without writing", () => {
+    const sandbox = createMutationSandbox();
+    sandboxes.push(sandbox);
+
+    const result = runToggle({
+      ...fakeOptions(sandbox),
+      apply: true,
+      enable: true,
+      disable: true,
+    });
+
+    expect(result).toEqual({
+      exitCode: 1,
+      output: "cannot use --enable and --disable together",
+    });
+    expect(sandbox.listBackupIds()).toEqual([]);
+    expect(sandbox.readAuditLog()).toEqual([]);
+
+    expect(
+      JSON.parse(
+        runToggle({
+          ...fakeOptions(sandbox),
+          json: true,
+          enable: true,
+          disable: true,
+        }).output,
+      ),
+    ).toEqual({
+      status: "failed",
+      reason: "cannot use --enable and --disable together",
     });
   });
 });

@@ -88,3 +88,4 @@ This initiative defines the first delivered AgentScope foundation at the capabil
 | `FT-001` | Establish the trusted multi-provider discovery foundation, config/path resolution, and deterministic CLI discovery surface | `done` |
 | `FT-002` | Add the shared guarded mutation engine, dry-run/apply workflow, backup state, audit history, and restore semantics | `done` |
 | `FT-003` | Validate the first real writable provider integration with Claude across discovery, toggle, apply, restore, and vault-backed skill flows | `done` |
+| `FT-013` | Close the original toggle command-surface gap with positional selectors and explicit enable/disable target-state flags while preserving the guarded mutation path | `done` |
