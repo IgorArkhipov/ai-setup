@@ -178,6 +178,31 @@ describe("runList", () => {
     expect(parsed.warnings).toEqual([]);
   });
 
+  it("filters items by kind and category before rendering", () => {
+    const result = runList({
+      ...runtimeOptions(),
+      kind: "skill",
+      category: "skill",
+      json: true,
+    });
+    const parsed = JSON.parse(result.output) as {
+      items: Array<{ kind: string; category: string; id: string }>;
+      warnings: unknown[];
+    };
+
+    expect(result.exitCode).toBe(0);
+    expect(parsed.items).not.toHaveLength(0);
+    expect(parsed.items.every((item) => item.kind === "skill")).toBe(true);
+    expect(parsed.items.every((item) => item.category === "skill")).toBe(true);
+    expect(parsed.items.map((item) => item.id)).toContain(
+      "claude:project:skill:example-claude-skill",
+    );
+    expect(parsed.items.map((item) => item.id)).not.toContain(
+      "claude:project:configured-mcp:github",
+    );
+    expect(parsed.warnings).toEqual([]);
+  });
+
   it("rejects an invalid layer filter", () => {
     const result = runList({
       ...runtimeOptions(),
@@ -187,6 +212,32 @@ describe("runList", () => {
     expect(result).toEqual({
       exitCode: 1,
       output: "invalid layer: expected global, project, or all",
+    });
+  });
+
+  it("rejects invalid kind and category filters", () => {
+    expect(
+      runList({
+        ...runtimeOptions(),
+        kind: "extension",
+      }),
+    ).toEqual({
+      exitCode: 1,
+      output: "invalid kind: expected skill, mcp, plugin, agent, hook, or setting",
+    });
+
+    expect(
+      JSON.parse(
+        runList({
+          ...runtimeOptions(),
+          category: "extension",
+          json: true,
+        }).output,
+      ),
+    ).toEqual({
+      status: "failed",
+      reason:
+        "invalid category: expected skill, configured-mcp, tool, agent, hook, provider-setting, plugin-config, or plugin-manifest",
     });
   });
 });

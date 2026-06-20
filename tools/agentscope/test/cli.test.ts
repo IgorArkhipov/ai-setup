@@ -194,6 +194,10 @@ describe("cli", () => {
         "claude",
         "--layer",
         "project",
+        "--kind",
+        "mcp",
+        "--category",
+        "configured-mcp",
         "--json",
         "--project-root",
         path.join(runtimeRoot, "project"),
@@ -216,10 +220,80 @@ describe("cli", () => {
         expect.objectContaining({
           provider: "claude",
           layer: "project",
+          kind: "mcp",
+          category: "configured-mcp",
         }),
       ]),
       warnings: [],
     });
+  });
+
+  it("routes dashboard through the registered command handler", () => {
+    const stdout = vi.fn<(message: string) => void>();
+    const stderr = vi.fn<(message: string) => void>();
+
+    const exitCode = runCli(
+      [
+        "dashboard",
+        "--provider",
+        "claude",
+        "--category",
+        "skill",
+        "--select",
+        "claude:project:skill:example-claude-skill",
+        "--project-root",
+        path.join(runtimeRoot, "project"),
+        "--app-state-root",
+        path.join(runtimeRoot, "app-state"),
+        "--cursor-root",
+        path.join(runtimeRoot, "cursor", "User"),
+      ],
+      {
+        packageRoot,
+        stdout,
+        stderr,
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).not.toHaveBeenCalled();
+    expect(stdout).toHaveBeenCalledWith(expect.stringContaining("AgentScope Dashboard"));
+    expect(stdout).toHaveBeenCalledWith(expect.stringContaining("Selected item"));
+  });
+
+  it("passes repeated dashboard stage options to the command handler", () => {
+    const stdout = vi.fn<(message: string) => void>();
+    const stderr = vi.fn<(message: string) => void>();
+
+    const exitCode = runCli(
+      [
+        "dashboard",
+        "--stage",
+        "claude|skill|project|claude:project:skill:example-claude-skill|false",
+        "--stage",
+        "claude|mcp|project|claude:project:configured-mcp:github|false",
+        "--project-root",
+        path.join(runtimeRoot, "project"),
+        "--app-state-root",
+        path.join(runtimeRoot, "app-state"),
+        "--cursor-root",
+        path.join(runtimeRoot, "cursor", "User"),
+      ],
+      {
+        packageRoot,
+        stdout,
+        stderr,
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(stderr).not.toHaveBeenCalled();
+    expect(stdout).toHaveBeenCalledWith(
+      expect.stringContaining("claude:project:skill:example-claude-skill"),
+    );
+    expect(stdout).toHaveBeenCalledWith(
+      expect.stringContaining("claude:project:configured-mcp:github"),
+    );
   });
 
   it("routes snapshot through the registered command handler", () => {

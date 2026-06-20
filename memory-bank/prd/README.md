@@ -45,7 +45,7 @@ A PRD is needed when the work lives at the level of a product initiative or capa
 | --- | --- | --- | --- | --- |
 | [`PRD-001`](PRD-001-local-discovery-and-safe-mutation-foundation.md) | Local Discovery And Safe Mutation Foundation | `active` | `FT-001`, `FT-002`, `FT-003` | 2026-04-12 |
 | [`PRD-002`](PRD-002-incremental-writable-provider-expansion.md) | Incremental Writable Provider Expansion | `active` | `FT-004`, `FT-005` | 2026-04-13 |
-| [`PRD-003`](PRD-003-persistent-discovery-snapshots-and-secondary-surfaces.md) | Persistent Discovery Snapshots And Secondary Surfaces | `active` | `FT-006`, `FT-008` | 2026-06-18 |
+| [`PRD-003`](PRD-003-persistent-discovery-snapshots-and-secondary-surfaces.md) | Persistent Discovery Snapshots And Secondary Surfaces | `active` | `FT-006`, `FT-008`, `FT-012` | 2026-06-20 |
 | [`PRD-004`](PRD-004-modern-provider-configuration-surfaces.md) | Modern Provider Configuration Surfaces | `active` | `FT-009`, `FT-010`, `FT-011` | 2026-06-18 |
 
 ## Template

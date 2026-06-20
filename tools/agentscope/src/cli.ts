@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { cac } from "cac";
+import { runDashboard } from "./commands/dashboard.js";
 import { runDoctor } from "./commands/doctor.js";
 import { runList } from "./commands/list.js";
 import { renderProviders } from "./commands/providers.js";
@@ -116,6 +117,8 @@ function createCli(packageRoot: string, io: CliIo) {
     .option("--json", "Render JSON output")
     .option("--provider <id>", "Filter to one provider")
     .option("--layer <layer>", "Filter to global, project, or all")
+    .option("--kind <kind>", "Filter to one discovery kind")
+    .option("--category <category>", "Filter to one discovery category")
     .option("--project-root <path>", "Override the project root")
     .option("--app-state-root <path>", "Override the app state root")
     .option("--cursor-root <path>", "Override the Cursor root")
@@ -125,6 +128,43 @@ function createCli(packageRoot: string, io: CliIo) {
           json: options.json,
           provider: options.provider,
           layer: options.layer,
+          kind: options.kind,
+          category: options.category,
+          projectRoot: options.projectRoot,
+          appStateRoot: options.appStateRoot,
+          cursorRoot: options.cursorRoot,
+        }),
+      );
+    });
+
+  cli
+    .command("dashboard", "Render the local AgentScope terminal dashboard")
+    .option("--json", "Render JSON output")
+    .option("--provider <id>", "Filter to one provider")
+    .option("--layer <layer>", "Filter to global, project, or all")
+    .option("--kind <kind>", "Filter to one discovery kind")
+    .option("--category <category>", "Filter to one discovery category")
+    .option("--search <query>", "Filter by id, display name, provider, kind, or category")
+    .option("--select <id>", "Select one item id for details and preview")
+    .option("--stage <spec>", "Stage a change as provider|kind|layer|id|targetEnabled")
+    .option("--apply", "Apply staged changes")
+    .option("--confirm", "Confirm staged dashboard writes")
+    .option("--project-root <path>", "Override the project root")
+    .option("--app-state-root <path>", "Override the app state root")
+    .option("--cursor-root <path>", "Override the Cursor root")
+    .action((options) => {
+      runHandled(() =>
+        runDashboard({
+          json: options.json,
+          provider: options.provider,
+          layer: options.layer,
+          kind: options.kind,
+          category: options.category,
+          search: options.search,
+          select: options.select,
+          stage: options.stage,
+          apply: options.apply,
+          confirm: options.confirm,
           projectRoot: options.projectRoot,
           appStateRoot: options.appStateRoot,
           cursorRoot: options.cursorRoot,

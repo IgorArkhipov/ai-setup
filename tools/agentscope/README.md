@@ -24,7 +24,8 @@ Sanitized examples live under `test/fixtures/` and are intentionally narrow. The
 - `node dist/cli.js providers`
 - `node dist/cli.js doctor --project-root <path> --app-state-root <path> --cursor-root <path>`
 - `node dist/cli.js snapshot [--json] --project-root <path> --app-state-root <path> --cursor-root <path>`
-- `node dist/cli.js list [--json] [--provider <id>] [--layer <global|project|all>] --project-root <path> --app-state-root <path> --cursor-root <path>`
+- `node dist/cli.js list [--json] [--provider <id>] [--layer <global|project|all>] [--kind <kind>] [--category <category>] --project-root <path> --app-state-root <path> --cursor-root <path>`
+- `node dist/cli.js dashboard [--json] [--provider <id>] [--layer <global|project|all>] [--kind <kind>] [--category <category>] [--search <query>] [--select <id>] [--stage <provider|kind|layer|id|targetEnabled>] [--apply --confirm] --project-root <path> --app-state-root <path> --cursor-root <path>`
 - `node dist/cli.js toggle --provider <id> --kind <kind> --id <id> --layer <layer> [--json] [--apply] --project-root <path> --app-state-root <path> --cursor-root <path>`
 - `node dist/cli.js restore <backup-id> [--json] --project-root <path> --app-state-root <path> --cursor-root <path>`
 - `node dist/cli.js mcp --project-root <path> --app-state-root <path> --cursor-root <path>`
@@ -32,6 +33,8 @@ Sanitized examples live under `test/fixtures/` and are intentionally narrow. The
 `doctor` treats committed capability-matrix drift and fixture drift as fatal. CLI output reports matrix validation failures under `capability matrix validation failed`; MCP doctor output returns `capabilityMatrixIssues` for agent clients. Provider-local read and parse problems are reported separately so discovery can stay visible in `list`.
 
 `snapshot` captures the current normalized discovery result into a project-scoped `latest.json` plus bounded history under `appStateRoot/snapshots/`. It persists provider warnings alongside the discovered items and returns a non-zero exit code when warnings are present, but it does not mutate any provider-managed files. If existing snapshot history for a project is malformed, AgentScope fails fast before writing a new snapshot; remove the malformed history file manually before retrying.
+
+`dashboard` renders a deterministic terminal inventory surface over the same live discovery flow as `list`. It supports provider, layer, kind, category, search, and selected-item filters, shows selected-item paths and dry-run toggle preview, and can stage exact item changes with `--stage provider|kind|layer|id|targetEnabled`. Dashboard writes require both `--apply` and `--confirm`; confirmed staged changes run through the existing mutation engine and successful apply refreshes the project snapshot. The dashboard is not an Ink/React TUI and does not add a second provider write path.
 
 `toggle` is dry-run by default. It prints the selected item, target enabled state, planned operations, affected paths or stores, and an explicit line stating that no writes were performed. Add `--apply` to route the plan through the guarded mutation engine.
 

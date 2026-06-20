@@ -15,16 +15,17 @@ canonical_for:
 
 # Command Surface
 
-`tools/agentscope` does not currently ship a separate web, mobile, desktop, dashboard, or TUI frontend. The implemented presentation layers today are the command-line interface, its human-readable and JSON renderers, and the local stdio MCP server.
+`tools/agentscope` does not currently ship a separate web, mobile, desktop, or Ink/React TUI frontend. The implemented presentation layers today are the command-line interface, its human-readable and JSON renderers, the deterministic terminal dashboard, and the local stdio MCP server.
 
 ## UI Surfaces
 
 - CLI entrypoint in [`../../tools/agentscope/src/cli.ts`](../../tools/agentscope/src/cli.ts) using `cac`
 - Human-readable renderers in [`../../tools/agentscope/src/core/output.ts`](../../tools/agentscope/src/core/output.ts) and [`../../tools/agentscope/src/core/mutation-output.ts`](../../tools/agentscope/src/core/mutation-output.ts)
-- Machine-readable JSON output from the same command flows for `snapshot`, `list`, `toggle`, and `restore`
+- Deterministic terminal dashboard command in [`../../tools/agentscope/src/commands/dashboard.ts`](../../tools/agentscope/src/commands/dashboard.ts), with state and rendering in [`../../tools/agentscope/src/ui/`](../../tools/agentscope/src/ui/)
+- Machine-readable JSON output from the same command flows for `snapshot`, `list`, `toggle`, `dashboard`, and `restore`
 - Local stdio MCP server in [`../../tools/agentscope/src/mcp/server.ts`](../../tools/agentscope/src/mcp/server.ts) exposed through `agentscope mcp`
 
-There is no separate dashboard code in `tools/agentscope` today. The local MCP server is the first secondary surface and remains a thin adapter over the same discovery, mutation, backup, restore, and doctor core. If a dashboard or TUI is added later, it should follow the same rule instead of becoming a second implementation path.
+The terminal dashboard is a local command surface, not a separate persistence or mutation subsystem. It remains a thin adapter over the same discovery, mutation, backup, restore, snapshot, and doctor core. If a richer TUI is added later, it should follow the same rule instead of becoming a second implementation path.
 
 ## Component And Presentation Rules
 
@@ -32,7 +33,7 @@ There is no separate dashboard code in `tools/agentscope` today. The local MCP s
 - Human-readable output must stay deterministic, line-oriented, and easy to scan in a terminal.
 - JSON output is part of the public automation surface and must describe the same state as the human output.
 - Presentation logic belongs in renderer modules, not in provider adapters or low-level mutation code.
-- Avoid ANSI-heavy formatting or TUI-specific assumptions until the project actually ships a terminal dashboard.
+- Avoid ANSI-heavy formatting or TUI-specific assumptions in the terminal dashboard; deterministic line-oriented output is the current contract.
 
 ## Interaction Patterns
 
@@ -42,6 +43,7 @@ The current interaction model is subcommand-oriented:
 - `doctor` validates committed fixture assumptions and live provider inputs
 - `snapshot` persists the current normalized discovery inventory into project-scoped app-state history
 - `list` returns normalized discovery inventory
+- `dashboard` renders filtered inventory, selected-item details, toggle preview, exact staged changes, and confirmation-gated apply with snapshot refresh
 - `toggle` plans by default and applies only with `--apply`
 - `restore` restores one saved backup by id
 - `mcp` exposes local stdio MCP tools for inventory, listing, planning, applying, backup listing, restore, and doctor workflows
