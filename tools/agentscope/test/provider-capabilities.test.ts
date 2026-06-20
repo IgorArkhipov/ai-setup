@@ -48,7 +48,7 @@ describe("provider-capabilities", () => {
     const matrix = loadCapabilityMatrix(fixturesRoot);
 
     expect(matrix.version).toBe(1);
-    expect(Object.keys(matrix.providers)).toEqual(["claude", "codex", "cursor"]);
+    expect(Object.keys(matrix.providers)).toEqual(["claude", "codex", "cursor", "zed"]);
     expect(matrix.providers).toEqual({
       claude: {
         skills: "verified",
@@ -81,6 +81,17 @@ describe("provider-capabilities", () => {
         providerSettings: "read-only",
         pluginConfigs: "unsupported",
         pluginManifests: "read-only",
+        extensions: "unsupported",
+      },
+      zed: {
+        skills: "verified",
+        configuredMcps: "verified",
+        tools: "unsupported",
+        agents: "unsupported",
+        hooks: "unsupported",
+        providerSettings: "read-only",
+        pluginConfigs: "unsupported",
+        pluginManifests: "unsupported",
         extensions: "unsupported",
       },
     });
@@ -237,6 +248,12 @@ describe("provider-capabilities", () => {
       "cursor/global/skills-cursor/example-cursor-skill/SKILL.md",
       "cursor/global/mcp.json",
       "cursor/root/profiles/default/extensions.json",
+      "zed/global/settings.json",
+      "zed/global/skills/example-zed-skill/SKILL.md",
+      "zed/global/AGENTS.md",
+      "zed/project/.zed/settings.json",
+      "zed/project/.agents/skills/example-project-zed-skill/SKILL.md",
+      "zed/project/AGENTS.md",
     ]);
     expect(report.issues).toEqual([]);
   });
@@ -490,6 +507,21 @@ describe("provider-capabilities", () => {
       providerId: "cursor",
       relativePath: "cursor/root/profiles/default/extensions.json",
       message: expect.stringContaining("Cursor extensions.json must be valid JSON"),
+    });
+  });
+
+  it("rejects Zed settings fixtures without an object context_servers registry", () => {
+    const tempRoot = copyFixtures();
+    writeFileSync(
+      path.join(tempRoot, "zed", "global", "settings.json"),
+      JSON.stringify({ context_servers: [] }, null, 2),
+      "utf8",
+    );
+
+    expect(validateProviderFixtures(tempRoot).issues).toContainEqual({
+      providerId: "zed",
+      relativePath: "zed/global/settings.json",
+      message: "context_servers must be an object",
     });
   });
 });

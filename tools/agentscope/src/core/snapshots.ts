@@ -25,6 +25,7 @@ import {
   type DiscoveryWarning,
   kindOrder,
   layerOrder,
+  type ProviderInventorySummary,
   providerOrder,
 } from "./models.js";
 import { getLatestSnapshotPath, getSnapshotHistoryDir } from "./paths.js";
@@ -215,6 +216,69 @@ function parseSnapshotWarning(value: unknown): DiscoveryWarning {
   };
 }
 
+function providerSummaryIsEmpty(summary: ProviderInventorySummary): boolean {
+  return (
+    summary.totalAvailable === 0 &&
+    summary.totalActive === 0 &&
+    summary.warningCount === 0 &&
+    Object.values(summary.kinds).every((bucket) => bucket.available === 0 && bucket.active === 0) &&
+    Object.values(summary.categories).every(
+      (bucket) => bucket.available === 0 && bucket.active === 0,
+    ) &&
+    Object.values(summary.layers).every((bucket) => bucket.available === 0 && bucket.active === 0)
+  );
+}
+
+function normalizeSnapshotInventoryForCompatibility(
+  parsedInventory: Record<string, unknown>,
+  expectedInventory: DiscoveryInventorySummary,
+): unknown {
+  if (!Array.isArray(parsedInventory.providers) || parsedInventory.providers.length === 0) {
+    return parsedInventory;
+  }
+
+  const parsedProviders = parsedInventory.providers;
+  const parsedProviderIds = new Set<string>();
+
+  for (const providerSummary of parsedProviders) {
+    if (!isRecord(providerSummary) || typeof providerSummary.provider !== "string") {
+      return parsedInventory;
+    }
+
+    parsedProviderIds.add(providerSummary.provider);
+  }
+
+  const missingProviders = expectedInventory.providers.filter(
+    (summary) => !parsedProviderIds.has(summary.provider),
+  );
+
+  if (missingProviders.length === 0) {
+    return parsedInventory;
+  }
+
+  if (parsedProviderIds.size + missingProviders.length !== expectedInventory.providers.length) {
+    return parsedInventory;
+  }
+
+  if (missingProviders.some((summary) => !providerSummaryIsEmpty(summary))) {
+    return parsedInventory;
+  }
+
+  return {
+    ...parsedInventory,
+    providers: [...parsedProviders, ...missingProviders].sort((left, right) => {
+      if (!isRecord(left) || !isRecord(right)) {
+        return 0;
+      }
+
+      return (
+        providerOrder.indexOf(left.provider as DiscoveryItem["provider"]) -
+        providerOrder.indexOf(right.provider as DiscoveryItem["provider"])
+      );
+    }),
+  };
+}
+
 function parseSnapshot(raw: string): DiscoverySnapshotV1 {
   const parsed = JSON.parse(raw) as unknown;
   if (!isRecord(parsed)) {
@@ -236,8 +300,9 @@ function parseSnapshot(raw: string): DiscoverySnapshotV1 {
   const items = sortDiscoveryItems(parsed.items.map(parseSnapshotItem));
   const warnings = sortDiscoveryWarnings(parsed.warnings.map(parseSnapshotWarning));
   const inventory = buildDiscoveryInventorySummary(items, warnings);
+  const parsedInventory = normalizeSnapshotInventoryForCompatibility(parsed.inventory, inventory);
 
-  if (!isDeepStrictEqual(parsed.inventory, inventory)) {
+  if (!isDeepStrictEqual(parsedInventory, inventory)) {
     throw new Error("snapshot inventory does not match items and warnings");
   }
 

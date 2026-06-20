@@ -6,6 +6,7 @@ import { writeDiscoverySnapshot } from "../core/snapshots.js";
 import { claudeProvider } from "../providers/claude.js";
 import { codexProvider } from "../providers/codex.js";
 import { cursorProvider } from "../providers/cursor.js";
+import { zedProvider } from "../providers/zed.js";
 
 export interface SnapshotCommandOptions extends AgentScopeConfigOverrides {
   cwd?: string;
@@ -36,7 +37,7 @@ export function runSnapshot(options: SnapshotCommandOptions = {}): SnapshotComma
     homeDir,
     overrides: definedOverrides(options),
   });
-  const discovery = runDiscovery([claudeProvider, codexProvider, cursorProvider], {
+  const discovery = runDiscovery([claudeProvider, codexProvider, cursorProvider, zedProvider], {
     config,
     homeDir,
   });

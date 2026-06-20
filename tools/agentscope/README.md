@@ -14,6 +14,7 @@ This directory is an isolated TypeScript sub-project.
 | Claude Code | read-write | read-write | agent files read-write; hooks/settings read-only | read-write | unsupported | Verified end-to-end against fixture sandboxes for project skills, project `.mcp.json` approvals, settings-file tools, and agent file vault/restore. Hooks and settings files are discovered as read-only inventory. |
 | Codex | read-write | read-write | agent files read-write; hooks/config read-only; plugin config declarations read-only | unsupported | unsupported | Verified end-to-end against fixture sandboxes for global and project skills, global `config.toml` `mcp_servers` sections, and agent file vault/restore. Hooks, config files, and plugin declarations are discovered as read-only inventory. |
 | Cursor | read-write | read-write | agent files read-write; hooks/permissions/sandbox/CLI config read-only; plugin manifests read-only | unsupported | unsupported | Verified end-to-end against fixture sandboxes for global `skills-cursor` skills, global `mcp.json` servers with optional workspace disabled-server reconciliation, and agent file vault/restore. Hooks, permissions/sandbox/CLI config, and local plugin manifests are discovered as read-only inventory. Extensions remain visible but unsupported. |
+| Zed | read-write | read-write | Zed instructions and settings read-only | unsupported | unsupported | Verified end-to-end against fixture sandboxes for global and project `.agents/skills/*/SKILL.md` skills plus `context_servers` entries in global and project Zed settings. Personal/project instructions such as `AGENTS.md` and settings files are discovered as read-only inventory. |
 
 ## Fixtures
 
@@ -55,7 +56,7 @@ Sanitized examples live under `test/fixtures/` and are intentionally narrow. The
 - `agentscope_restore_backup`
 - `agentscope_run_doctor`
 
-Read-only and plan tools do not mutate provider files. Apply and restore tools require `requireConfirmation: true`; bulk apply also requires the reviewed `planFingerprint` and `maxItems` guard returned by `agentscope_plan_toggle_items`.
+Read-only and plan tools do not mutate provider files. Apply and restore tools require `requireConfirmation: true`; bulk apply also requires the reviewed `planFingerprint` and `maxItems` guard returned by `agentscope_plan_toggle_items`. For compatibility, bulk mutation selectors that omit `providers` are normalized to the legacy writable provider set (`claude`, `codex`, `cursor`); include `providers: ["zed"]` or a multi-provider list explicitly to bulk-toggle Zed items.
 
 Structured MCP responses follow the Phase 3 AgentScope contract additively. Legacy fields remain available, and clients can rely on these stable aliases:
 
@@ -130,6 +131,28 @@ Cursor example:
 }
 ```
 
+Zed example:
+
+```json
+{
+  "context_servers": {
+    "agentscope": {
+      "command": "node",
+      "args": [
+        "/absolute/path/to/tools/agentscope/dist/cli.js",
+        "mcp",
+        "--project-root",
+        "/absolute/path/to/project",
+        "--app-state-root",
+        "/absolute/path/to/agentscope-state",
+        "--cursor-root",
+        "/absolute/path/to/Cursor/User"
+      ]
+    }
+  }
+}
+```
+
 Useful natural-language workflows:
 
 - "Ask AgentScope for an inventory summary and list all project skills."
@@ -158,13 +181,15 @@ Successful apply writes create a backup manifest and append an audit event. Rest
 - Minimum supported Node runtime: `>=25.9.0`
 - SQLite-backed mutations use the built-in `node:sqlite` module
 
-Claude, Codex, and Cursor have real dry-run, apply, and restore coverage for their supported writable slices. Agent files are writable through AgentScope-managed file-vault toggles: disabling moves the agent file into the AgentScope vault, and re-enabling restores it to its original provider path. Hooks, provider settings/config files, documented plugin manifests, and plugin config declarations remain visible as read-only inventory; toggle planning blocks them with no writes until provider-specific write planning is implemented safely. Cursor extensions remain visible but explicitly unsupported inventory.
+Claude, Codex, Cursor, and Zed have real dry-run, apply, and restore coverage for their supported writable slices. Agent files and Zed skills are writable through AgentScope-managed file-vault toggles: disabling moves the file or skill folder into the AgentScope vault, and re-enabling restores it to its original provider path. Zed configured MCPs are writable through the documented `context_servers` key in Zed settings JSON. Hooks, provider settings/config files, Zed instruction files, documented plugin manifests, and plugin config declarations remain visible as read-only inventory; toggle planning blocks them with no writes until provider-specific write planning is implemented safely. Cursor extensions remain visible but explicitly unsupported inventory.
 
 AgentScope never follows provider `envFile` or `.env*` references during discovery. Those paths may appear as opaque provider configuration values, but the files are not read by AgentScope.
 
 For Cursor configured MCPs, AgentScope accepts the observed `mcp.json` trailing-comma JSON shape during discovery and toggle planning, then rewrites the managed document as deterministic JSON on apply. When a matching Cursor workspace database exists for the selected project, AgentScope also reconciles the `cursor/disabledMcpServers` `ItemTable` key so the visible MCP state stays aligned with `mcp.json`.
 
 For Codex configured MCPs, re-enable restores the disabled section content into the current `config.toml`, appending it at end-of-file when needed. AgentScope only re-enables Codex MCP sections that it previously disabled into the vault; a live `[mcp_servers.*]` section with `enabled = false` remains a discovered Codex state and is reported as blocked instead of being rewritten implicitly. Use `restore` when exact byte-for-byte recovery of the original file layout matters.
+
+For Zed configured MCPs, AgentScope discovers `context_servers` from `~/.config/zed/settings.json`, `~/.zed/settings.json`, and project `.zed/settings.json` when those files exist. Disabling a server stores the exact server object in the AgentScope vault and removes only that `context_servers` entry; re-enabling restores the vaulted object and fails closed if a live entry with the same server id already exists.
 
 ## Baseline Verification
 

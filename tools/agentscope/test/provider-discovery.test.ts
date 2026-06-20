@@ -11,6 +11,7 @@ import { serializeVaultEntry, vaultDescriptor } from "../src/core/mutation-vault
 import { claudeProvider } from "../src/providers/claude.js";
 import { codexProvider } from "../src/providers/codex.js";
 import { cursorProvider } from "../src/providers/cursor.js";
+import { zedProvider } from "../src/providers/zed.js";
 
 const tempRoots: string[] = [];
 const fixturesRoot = path.resolve(import.meta.dirname, "fixtures");
@@ -530,6 +531,102 @@ describe("provider discovery", () => {
       "codex:global:configured-mcp:config:github:read-write",
       "codex:global:plugin-config:config:safe-shell:read-only",
     ]);
+  });
+
+  it("discovers Zed skills, configured MCPs, instructions, and settings", () => {
+    const sandbox = createSandbox();
+
+    copyFixture(
+      "zed/global/settings.json",
+      path.join(sandbox.homeDir, ".config", "zed", "settings.json"),
+    );
+    copyFixture("zed/global/AGENTS.md", path.join(sandbox.homeDir, ".config", "zed", "AGENTS.md"));
+    copyFixture("zed/global/skills", path.join(sandbox.homeDir, ".agents", "skills"));
+    copyFixture(
+      "zed/project/.zed/settings.json",
+      path.join(sandbox.projectRoot, ".zed", "settings.json"),
+    );
+    copyFixture("zed/project/.agents/skills", path.join(sandbox.projectRoot, ".agents", "skills"));
+    copyFixture("zed/project/AGENTS.md", path.join(sandbox.projectRoot, "AGENTS.md"));
+
+    const result = zedProvider.discover({
+      config: sandbox.config,
+      homeDir: sandbox.homeDir,
+    });
+
+    expect(result.warnings).toEqual([]);
+    expect(result.items.map((item) => `${item.id}:${item.enabled}:${item.mutability}`)).toEqual(
+      expect.arrayContaining([
+        "zed:global:skill:example-zed-skill:true:read-write",
+        "zed:global:setting:agents-md:true:read-only",
+        "zed:global:setting:config-settings:true:read-only",
+        "zed:global:configured-mcp:config-settings:github:true:read-write",
+        "zed:project:skill:example-project-zed-skill:true:read-write",
+        "zed:project:setting:agents-md:true:read-only",
+        "zed:project:setting:project-settings:true:read-only",
+        "zed:project:configured-mcp:project-settings:filesystem:true:read-write",
+      ]),
+    );
+    expect(result.items).toHaveLength(8);
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "zed:global:skill:example-zed-skill",
+        sourcePath: path.join(
+          sandbox.homeDir,
+          ".agents",
+          "skills",
+          "example-zed-skill",
+          "SKILL.md",
+        ),
+        statePath: path.join(sandbox.homeDir, ".agents", "skills", "example-zed-skill"),
+      }),
+    );
+
+    const instruction = result.items.find((item) => item.id === "zed:project:setting:agents-md");
+    expect(instruction).toMatchObject({
+      kind: "setting",
+      category: "provider-setting",
+      mutability: "read-only",
+      sourcePath: path.join(sandbox.projectRoot, "AGENTS.md"),
+    });
+    expect(
+      zedProvider.planToggle?.({
+        config: sandbox.config,
+        homeDir: sandbox.homeDir,
+        item: instruction as DiscoveryItem,
+        targetEnabled: false,
+      }),
+    ).toMatchObject({
+      status: "blocked",
+      reason: expect.stringContaining("read-only"),
+      operations: [],
+    });
+  });
+
+  it("marks only the first present Zed project instruction file as active", () => {
+    const sandbox = createSandbox();
+
+    writeFileSync(path.join(sandbox.projectRoot, "AGENTS.md"), "# Project agents\n", "utf8");
+    writeFileSync(path.join(sandbox.projectRoot, "CLAUDE.md"), "# Claude fallback\n", "utf8");
+
+    const result = zedProvider.discover({
+      config: sandbox.config,
+      homeDir: sandbox.homeDir,
+    });
+
+    expect(result.warnings).toEqual([]);
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "zed:project:setting:agents-md",
+        enabled: true,
+      }),
+    );
+    expect(result.items).toContainEqual(
+      expect.objectContaining({
+        id: "zed:project:setting:claude-md",
+        enabled: false,
+      }),
+    );
   });
 
   it("discovers Codex agents, hooks, and settings as read-only modern surfaces", () => {

@@ -1,6 +1,6 @@
 import * as z from "zod/v4";
 
-export const providerSchema = z.enum(["claude", "codex", "cursor"]);
+export const providerSchema = z.enum(["claude", "codex", "cursor", "zed"]);
 export const kindSchema = z.enum(["skill", "mcp", "plugin", "agent", "hook", "setting"]);
 export const categorySchema = z.enum([
   "skill",

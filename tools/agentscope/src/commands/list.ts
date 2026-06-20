@@ -11,6 +11,7 @@ import { renderListHuman, renderListJson } from "../core/output.js";
 import { claudeProvider } from "../providers/claude.js";
 import { codexProvider } from "../providers/codex.js";
 import { cursorProvider } from "../providers/cursor.js";
+import { zedProvider } from "../providers/zed.js";
 
 export interface ListCommandOptions extends AgentScopeConfigOverrides {
   cwd?: string;
@@ -89,7 +90,10 @@ export function runList(options: ListCommandOptions = {}): ListCommandResult {
     homeDir,
     overrides: definedOverrides(options),
   });
-  const result = runDiscovery([claudeProvider, codexProvider, cursorProvider], { config, homeDir });
+  const result = runDiscovery([claudeProvider, codexProvider, cursorProvider, zedProvider], {
+    config,
+    homeDir,
+  });
   const filtered = {
     items: result.items.filter((item) => {
       return (

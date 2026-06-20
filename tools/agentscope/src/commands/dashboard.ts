@@ -18,6 +18,7 @@ import { writeDiscoverySnapshot } from "../core/snapshots.js";
 import { claudeProvider } from "../providers/claude.js";
 import { codexProvider } from "../providers/codex.js";
 import { cursorProvider } from "../providers/cursor.js";
+import { zedProvider } from "../providers/zed.js";
 import { previewFromToggleResult, renderDashboard } from "../ui/render.js";
 import {
   createDashboardState,
@@ -85,7 +86,7 @@ function definedOverrides(
 }
 
 function defaultProviders(): ProviderModule[] {
-  return [claudeProvider, codexProvider, cursorProvider];
+  return [claudeProvider, codexProvider, cursorProvider, zedProvider];
 }
 
 function runtime(options: DashboardCommandOptions): Runtime {

@@ -6,6 +6,7 @@ import { renderToggleResultHuman, renderToggleResultJson } from "../core/mutatio
 import { claudeProvider } from "../providers/claude.js";
 import { codexProvider } from "../providers/codex.js";
 import { cursorProvider } from "../providers/cursor.js";
+import { zedProvider } from "../providers/zed.js";
 
 export interface ToggleCommandOptions extends AgentScopeConfigOverrides {
   cwd?: string;
@@ -91,7 +92,7 @@ function targetEnabledFromOptions(options: ToggleCommandOptions): boolean | stri
 }
 
 function defaultProviders(): ProviderModule[] {
-  return [claudeProvider, codexProvider, cursorProvider];
+  return [claudeProvider, codexProvider, cursorProvider, zedProvider];
 }
 
 export function runToggle(options: ToggleCommandOptions): ToggleCommandResult {

@@ -401,6 +401,7 @@ describe("agentscope MCP server", () => {
           }),
           expect.objectContaining({ provider: "codex", status: "ok", issues: [] }),
           expect.objectContaining({ provider: "cursor", status: "ok", issues: [] }),
+          expect.objectContaining({ provider: "zed", status: "ok", issues: [] }),
         ],
         capabilityMatrixIssues: [
           {
@@ -447,6 +448,54 @@ describe("agentscope MCP server", () => {
           kind: "agent",
           category: "agent",
           id: "claude:global:agent:reviewer",
+        }),
+      ]);
+    } finally {
+      await session.close();
+    }
+  });
+
+  it("keeps unfiltered MCP bulk mutations on the legacy provider set unless Zed is explicit", async () => {
+    const session = await connectMcp();
+
+    try {
+      const legacyDefault = await callStructured<{
+        status: string;
+        selector: { providers?: string[] };
+        matchedItems: Array<{ provider: string; id: string }>;
+      }>(session.client, "agentscope_plan_toggle_items", {
+        selector: {
+          categories: ["skill"],
+          layers: ["global"],
+          enabled: true,
+        },
+        targetEnabled: false,
+      });
+
+      expect(legacyDefault.status).toBe("planned");
+      expect(legacyDefault.selector.providers).toEqual(["claude", "codex", "cursor"]);
+      expect(legacyDefault.matchedItems.some((item) => item.provider === "zed")).toBe(false);
+
+      const explicitZed = await callStructured<{
+        status: string;
+        selector: { providers?: string[] };
+        matchedItems: Array<{ provider: string; id: string }>;
+      }>(session.client, "agentscope_plan_toggle_items", {
+        selector: {
+          providers: ["zed"],
+          categories: ["skill"],
+          layers: ["global"],
+          enabled: true,
+        },
+        targetEnabled: false,
+      });
+
+      expect(explicitZed.status).toBe("planned");
+      expect(explicitZed.selector.providers).toEqual(["zed"]);
+      expect(explicitZed.matchedItems).toEqual([
+        expect.objectContaining({
+          provider: "zed",
+          id: "zed:global:skill:example-zed-skill",
         }),
       ]);
     } finally {

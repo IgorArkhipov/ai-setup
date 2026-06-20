@@ -17,7 +17,7 @@ must_not_define:
 
 ## Problem
 
-Claude Code, Codex, and Cursor have expanded their local configuration surfaces beyond skills and configured MCP servers. Current provider documentation and local installations now expose agent or subagent files, hooks, plugin manifests or enabled-plugin state, provider settings, permissions, sandbox files, and cloud/runtime environment descriptors. AgentScope still presents the older narrow model, so users and agent clients cannot reliably inspect the modern operational state that affects what an AI coding agent can do.
+Claude Code, Codex, Cursor, and Zed have expanded their local configuration surfaces beyond skills and configured MCP servers. Current provider documentation and local installations now expose agent or subagent files, reusable skill folders, hooks, plugin manifests or enabled-plugin state, provider settings, permissions, sandbox files, instructions, and cloud/runtime environment descriptors. AgentScope still presents older provider-specific assumptions unless each new surface is modeled explicitly, so users and agent clients cannot reliably inspect the modern operational state that affects what an AI coding agent can do.
 
 This initiative narrows that product gap without weakening AgentScope's safety model. Discovery should become broader first. Mutation should only expand after each provider's storage and toggle semantics are verified through official documentation, fixture-backed tests, and reversible implementation paths.
 
@@ -25,7 +25,7 @@ This initiative narrows that product gap without weakening AgentScope's safety m
 
 | User / Segment | Job To Be Done | Current Pain |
 | --- | --- | --- |
-| `developer-operator` | Understand which local agent capabilities are installed, active, blocked, or provider-managed across Claude Code, Codex, and Cursor | They must inspect many provider-specific files and settings UIs manually |
+| `developer-operator` | Understand which local agent capabilities are installed, active, blocked, or provider-managed across Claude Code, Codex, Cursor, and Zed | They must inspect many provider-specific files and settings UIs manually |
 | `agent-client` | Ask AgentScope for a structured inventory before planning changes or delegating subagents | The MCP and CLI surfaces do not include agents, hooks, settings, or plugin manifests as first-class items |
 | `workflow-maintainer` | Keep the memory-bank and implementation model aligned with changing provider surfaces | Provider docs and changelogs evolve faster than the current AgentScope capability matrix |
 
@@ -49,6 +49,7 @@ This initiative narrows that product gap without weakening AgentScope's safety m
 ### In Scope
 
 - Discover agent and subagent file surfaces documented by Claude Code, Codex, and Cursor.
+- Discover Zed skills from the documented `.agents/skills/*/SKILL.md` roots and Zed configured MCP servers from `context_servers` in settings JSON.
 - Discover hook configuration surfaces documented by Claude Code, Codex, and Cursor.
 - Discover plugin manifests, enabled-plugin declarations, and plugin-provided component roots where the provider documents them as user-visible configuration.
 - Discover provider settings, permission, sandbox, and config files as read-only configuration items when those files are documented or present in verified local examples.
@@ -93,3 +94,4 @@ This initiative narrows that product gap without weakening AgentScope's safety m
 | `FT-009` | Add first-class read-only discovery for modern provider surfaces and update the normalized taxonomy | `done` |
 | `FT-010` | Add verified safe toggles for modern surfaces where provider docs and tests prove reversible mutability | `done` |
 | `FT-011` | Add provider drift and compatibility reporting for the committed capability matrix and documented support boundary; automated local-example or changelog drift belongs to later matrix updates or feature slices | `done` |
+| `FT-015` | Add Zed as a first-class provider with verified skill and configured MCP discovery/toggles plus read-only instruction/settings inventory | `in_progress` |

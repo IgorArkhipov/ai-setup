@@ -58,7 +58,7 @@ export interface DiscoveryInventorySummary {
   providers: ProviderInventorySummary[];
 }
 
-export const providerOrder: DiscoveryProvider[] = ["claude", "codex", "cursor"];
+export const providerOrder: DiscoveryProvider[] = ["claude", "codex", "cursor", "zed"];
 export const kindOrder: DiscoveryKind[] = ["skill", "mcp", "plugin", "agent", "hook", "setting"];
 export const layerOrder: DiscoveryLayer[] = ["global", "project"];
 export const categoryOrder: DiscoveryCategory[] = [

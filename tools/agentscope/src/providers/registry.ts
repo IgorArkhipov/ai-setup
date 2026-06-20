@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-export type ProviderId = "claude" | "codex" | "cursor";
+export type ProviderId = "claude" | "codex" | "cursor" | "zed";
 export type CapabilityStatus = "verified" | "read-only" | "unsupported" | "needs-verification";
 export const capabilityFields = [
   "skills",
@@ -148,6 +148,64 @@ function stripTrailingCommas(contents: string): string {
   return result;
 }
 
+function stripJsonComments(contents: string): string {
+  let result = "";
+  let inString = false;
+  let escaped = false;
+  let index = 0;
+
+  while (index < contents.length) {
+    const char = contents[index];
+    const next = contents[index + 1];
+
+    if (char === undefined) {
+      break;
+    }
+
+    if (inString) {
+      result += char;
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === '"') {
+        inString = false;
+      }
+      index += 1;
+      continue;
+    }
+
+    if (char === '"') {
+      inString = true;
+      result += char;
+      index += 1;
+      continue;
+    }
+
+    if (char === "/" && next === "/") {
+      index += 2;
+      while (index < contents.length && contents[index] !== "\n") {
+        index += 1;
+      }
+      continue;
+    }
+
+    if (char === "/" && next === "*") {
+      index += 2;
+      while (index < contents.length && !(contents[index] === "*" && contents[index + 1] === "/")) {
+        index += 1;
+      }
+      index += 2;
+      continue;
+    }
+
+    result += char;
+    index += 1;
+  }
+
+  return result;
+}
+
 function validateClaudeSettings(raw: string, label: string): string[] {
   const doc = parseJsonObject(raw, label);
   const issues: string[] = [];
@@ -275,6 +333,16 @@ function validateCursorExtensions(raw: string): string[] {
   return issues;
 }
 
+function validateZedSettings(raw: string, label: string): string[] {
+  const doc = parseJsonObject(stripTrailingCommas(stripJsonComments(raw)), label);
+
+  if (doc.context_servers !== undefined && !isRecord(doc.context_servers)) {
+    return ["context_servers must be an object"];
+  }
+
+  return [];
+}
+
 export const providerRegistry: ProviderDescriptor[] = [
   {
     id: "claude",
@@ -351,6 +419,42 @@ export const providerRegistry: ProviderDescriptor[] = [
         relativePath: "cursor/root/profiles/default/extensions.json",
         description: "Cursor extension fixture",
         validate: validateCursorExtensions,
+      },
+    ],
+  },
+  {
+    id: "zed",
+    name: "Zed",
+    fixtures: [
+      {
+        relativePath: "zed/global/settings.json",
+        description: "Zed global settings",
+        validate: (raw) => validateZedSettings(raw, "Zed global settings"),
+      },
+      {
+        relativePath: "zed/global/skills/example-zed-skill/SKILL.md",
+        description: "Zed global skill fixture",
+        validate: validateSkillMarkdown,
+      },
+      {
+        relativePath: "zed/global/AGENTS.md",
+        description: "Zed global instruction fixture",
+        validate: validateSkillMarkdown,
+      },
+      {
+        relativePath: "zed/project/.zed/settings.json",
+        description: "Zed project settings",
+        validate: (raw) => validateZedSettings(raw, "Zed project settings"),
+      },
+      {
+        relativePath: "zed/project/.agents/skills/example-project-zed-skill/SKILL.md",
+        description: "Zed project skill fixture",
+        validate: validateSkillMarkdown,
+      },
+      {
+        relativePath: "zed/project/AGENTS.md",
+        description: "Zed project instruction fixture",
+        validate: validateSkillMarkdown,
       },
     ],
   },

@@ -6,6 +6,7 @@ import { loadConfig } from "../src/core/config.js";
 import { runDiscovery } from "../src/core/discovery.js";
 import { getLatestSnapshotPath, getSnapshotHistoryDir } from "../src/core/paths.js";
 import {
+  buildDiscoverySnapshot,
   listSnapshotHistory,
   loadLatestDiscoverySnapshot,
   writeDiscoverySnapshot,
@@ -13,6 +14,7 @@ import {
 import { claudeProvider } from "../src/providers/claude.js";
 import { codexProvider } from "../src/providers/codex.js";
 import { cursorProvider } from "../src/providers/cursor.js";
+import { zedProvider } from "../src/providers/zed.js";
 
 const runtimeRoot = path.resolve(import.meta.dirname, "fixtures", "runtime");
 const tempRoots: string[] = [];
@@ -38,7 +40,7 @@ function runtimeDiscovery(appStateRoot: string) {
   return {
     config,
     homeDir,
-    discovery: runDiscovery([claudeProvider, codexProvider, cursorProvider], {
+    discovery: runDiscovery([claudeProvider, codexProvider, cursorProvider, zedProvider], {
       config,
       homeDir,
     }),
@@ -86,6 +88,12 @@ describe("snapshots", () => {
         provider: "cursor",
         totalAvailable: discovery.items.filter((item) => item.provider === "cursor").length,
         totalActive: discovery.items.filter((item) => item.provider === "cursor" && item.enabled)
+          .length,
+      }),
+      expect.objectContaining({
+        provider: "zed",
+        totalAvailable: discovery.items.filter((item) => item.provider === "zed").length,
+        totalActive: discovery.items.filter((item) => item.provider === "zed" && item.enabled)
           .length,
       }),
     ]);
@@ -172,6 +180,54 @@ describe("snapshots", () => {
         projectRoot,
       }),
     ).toThrow("snapshot inventory does not match items and warnings");
+  });
+
+  it("loads legacy snapshots that predate zero-count Zed inventory rows", () => {
+    const appStateRoot = createTempRoot();
+    const { config, discovery } = runtimeDiscovery(appStateRoot);
+    const legacyItems = discovery.items.filter((item) => item.provider !== "zed");
+    const legacyWarnings = discovery.warnings.filter((warning) => warning.provider !== "zed");
+    const latestPath = getLatestSnapshotPath(appStateRoot, config.projectRoot);
+    const snapshot = buildDiscoverySnapshot({
+      projectRoot: config.projectRoot,
+      items: legacyItems,
+      warnings: legacyWarnings,
+      capturedAt: "2026-04-13T12:00:00.000Z",
+      id: "snap-legacy",
+    });
+
+    mkdirSync(path.dirname(latestPath), { recursive: true });
+    writeFileSync(
+      latestPath,
+      JSON.stringify(
+        {
+          ...snapshot,
+          inventory: {
+            providers: snapshot.inventory.providers.filter(
+              (provider) => provider.provider !== "zed",
+            ),
+          },
+        },
+        null,
+        2,
+      ),
+      "utf8",
+    );
+
+    const latest = loadLatestDiscoverySnapshot({
+      appStateRoot,
+      projectRoot: config.projectRoot,
+    });
+
+    expect(latest?.items.some((item) => item.provider === "zed")).toBe(false);
+    expect(latest?.inventory.providers).toContainEqual(
+      expect.objectContaining({
+        provider: "zed",
+        totalAvailable: 0,
+        totalActive: 0,
+        warningCount: 0,
+      }),
+    );
   });
 
   it("fails before writing when existing history is malformed", () => {

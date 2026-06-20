@@ -194,6 +194,27 @@ describe("runToggle", () => {
     expect(result.output).toContain("/vault/cursor/global/skill/");
   });
 
+  it("supports real Zed dry-run planning for global skills", () => {
+    const result = runToggle({
+      cwd: runtimeRoot,
+      homeDir: path.join(runtimeRoot, "home"),
+      projectRoot: path.join(runtimeRoot, "project"),
+      appStateRoot: path.join(runtimeRoot, "app-state"),
+      cursorRoot: path.join(runtimeRoot, "cursor", "User"),
+      provider: "zed",
+      kind: "skill",
+      layer: "global",
+      id: "zed:global:skill:example-zed-skill",
+      disable: true,
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.output).toContain("status: dry-run");
+    expect(result.output).toContain("rename path");
+    expect(result.output).toContain(".agents/skills/example-zed-skill");
+    expect(result.output).toContain("/vault/zed/global/skill/");
+  });
+
   it("supports real Cursor dry-run planning for live disabled configured MCPs", () => {
     const sandbox = createCursorSandbox();
     cursorSandboxes.push(sandbox);
@@ -251,6 +272,148 @@ describe("runToggle", () => {
     expect(result.exitCode).toBe(1);
     expect(result.output).toContain("status: blocked");
     expect(result.output).toContain("read-only:");
+  });
+
+  it("applies and restores real Zed configured MCP toggles", () => {
+    const sandbox = createMutationSandbox();
+    sandboxes.push(sandbox);
+
+    const settingsPath = path.join(sandbox.homeDir, ".config", "zed", "settings.json");
+    writeTextFile(
+      settingsPath,
+      JSON.stringify(
+        {
+          context_servers: {
+            github: {
+              command: "npx",
+              args: ["-y", "@modelcontextprotocol/server-github"],
+            },
+          },
+        },
+        null,
+        2,
+      ),
+    );
+    const itemId = "zed:global:configured-mcp:config-settings:github";
+    const descriptor = vaultDescriptor({
+      appStateRoot: sandbox.appStateRoot,
+      provider: "zed",
+      layer: "global",
+      kind: "configured-mcp",
+      itemId,
+    });
+
+    const disable = runToggle({
+      cwd: sandbox.projectRoot,
+      homeDir: sandbox.homeDir,
+      projectRoot: sandbox.projectRoot,
+      appStateRoot: sandbox.appStateRoot,
+      cursorRoot: sandbox.cursorRoot,
+      provider: "zed",
+      kind: "mcp",
+      layer: "global",
+      id: itemId,
+      disable: true,
+      apply: true,
+      now: () => new Date("2026-06-20T10:00:00.000Z"),
+      generateBackupId: () => "zed-mcp-disable",
+    });
+
+    expect(disable.exitCode).toBe(0);
+    expect(disable.output).toContain("status: applied");
+    expect(JSON.parse(readFileSync(settingsPath, "utf8"))).toEqual({
+      context_servers: {},
+    });
+    expect(JSON.parse(readFileSync(descriptor.payloadPath, "utf8"))).toEqual({
+      command: "npx",
+      args: ["-y", "@modelcontextprotocol/server-github"],
+    });
+    expect(JSON.parse(readFileSync(descriptor.entryPath, "utf8"))).toMatchObject({
+      provider: "zed",
+      kind: "configured-mcp",
+      itemId,
+      displayName: "github",
+      originalPath: settingsPath,
+      vaultedPath: descriptor.payloadPath,
+      payloadKind: "json-payload",
+    });
+
+    const restore = runToggle({
+      cwd: sandbox.projectRoot,
+      homeDir: sandbox.homeDir,
+      projectRoot: sandbox.projectRoot,
+      appStateRoot: sandbox.appStateRoot,
+      cursorRoot: sandbox.cursorRoot,
+      provider: "zed",
+      kind: "mcp",
+      layer: "global",
+      id: itemId,
+      enable: true,
+      apply: true,
+      now: () => new Date("2026-06-20T10:01:00.000Z"),
+      generateBackupId: () => "zed-mcp-restore",
+    });
+
+    expect(restore.exitCode).toBe(0);
+    expect(restore.output).toContain("status: applied");
+    expect(JSON.parse(readFileSync(settingsPath, "utf8"))).toEqual({
+      context_servers: {
+        github: {
+          command: "npx",
+          args: ["-y", "@modelcontextprotocol/server-github"],
+        },
+      },
+    });
+    expect(existsSync(descriptor.rootPath)).toBe(false);
+  });
+
+  it("discovers Zed JSONC settings but blocks writes before strict JSON mutation", () => {
+    const sandbox = createMutationSandbox();
+    sandboxes.push(sandbox);
+
+    const settingsPath = path.join(sandbox.homeDir, ".config", "zed", "settings.json");
+    const settingsContent = [
+      "{",
+      "  // AgentScope can read this, but the mutation engine writes strict JSON.",
+      '  "context_servers": {',
+      '    "github": {',
+      '      "command": "npx",',
+      '      "args": ["-y", "@modelcontextprotocol/server-github"],',
+      "    },",
+      "  },",
+      "}",
+      "",
+    ].join("\n");
+    writeTextFile(settingsPath, settingsContent);
+    const itemId = "zed:global:configured-mcp:config-settings:github";
+    const descriptor = vaultDescriptor({
+      appStateRoot: sandbox.appStateRoot,
+      provider: "zed",
+      layer: "global",
+      kind: "configured-mcp",
+      itemId,
+    });
+
+    const result = runToggle({
+      cwd: sandbox.projectRoot,
+      homeDir: sandbox.homeDir,
+      projectRoot: sandbox.projectRoot,
+      appStateRoot: sandbox.appStateRoot,
+      cursorRoot: sandbox.cursorRoot,
+      provider: "zed",
+      kind: "mcp",
+      layer: "global",
+      id: itemId,
+      disable: true,
+      apply: true,
+      now: () => new Date("2026-06-20T10:00:00.000Z"),
+      generateBackupId: () => "zed-jsonc-blocked",
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.output).toContain("unsupported-jsonc-settings");
+    expect(readFileSync(settingsPath, "utf8")).toBe(settingsContent);
+    expect(existsSync(descriptor.rootPath)).toBe(false);
   });
 
   it.each([

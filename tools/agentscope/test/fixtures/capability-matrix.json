@@ -33,11 +33,23 @@
       "pluginConfigs": "unsupported",
       "pluginManifests": "read-only",
       "extensions": "unsupported"
+    },
+    "zed": {
+      "skills": "verified",
+      "configuredMcps": "verified",
+      "tools": "unsupported",
+      "agents": "unsupported",
+      "hooks": "unsupported",
+      "providerSettings": "read-only",
+      "pluginConfigs": "unsupported",
+      "pluginManifests": "unsupported",
+      "extensions": "unsupported"
     }
   },
   "notes": {
     "claude": "Verified Claude toggles cover project skills, project .mcp.json approvals, and settings-file tools.",
     "codex": "Verified Codex toggles cover global and project skills plus global config.toml mcp_servers sections; plugins remain unsupported.",
-    "cursor": "Verified Cursor toggles cover global skills plus global mcp.json configured MCP entries, including optional workspace disabled-server reconciliation; extensions remain unsupported."
+    "cursor": "Verified Cursor toggles cover global skills plus global mcp.json configured MCP entries, including optional workspace disabled-server reconciliation; extensions remain unsupported.",
+    "zed": "Verified Zed toggles cover global and project .agents skills plus context_servers entries in Zed settings; instructions and settings remain read-only."
   }
 }

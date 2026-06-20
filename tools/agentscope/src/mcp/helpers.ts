@@ -26,6 +26,7 @@ import { claudeProvider } from "../providers/claude.js";
 import { codexProvider } from "../providers/codex.js";
 import { cursorProvider } from "../providers/cursor.js";
 import { validateCapabilityMatrix, validateProviderFixtures } from "../providers/registry.js";
+import { zedProvider } from "../providers/zed.js";
 import type {
   AgentScopeSelector,
   BulkApplyInput,
@@ -116,6 +117,8 @@ interface BulkPlanState {
   planFingerprint: string;
 }
 
+const legacyBulkMutationProviders: DiscoveryProvider[] = ["claude", "codex", "cursor"];
+
 function definedOverrides(
   options: Pick<AgentScopeConfigOverrides, "projectRoot" | "appStateRoot" | "cursorRoot">,
 ): AgentScopeConfigOverrides {
@@ -127,7 +130,7 @@ function definedOverrides(
 }
 
 function defaultProviders(): ProviderModule[] {
-  return [claudeProvider, codexProvider, cursorProvider];
+  return [claudeProvider, codexProvider, cursorProvider, zedProvider];
 }
 
 function context(options: AgentScopeMcpRuntimeOptions): RuntimeContext {
@@ -160,6 +163,21 @@ function normalizeSelector(selector: AgentScopeSelector | undefined): AgentScope
     ...(selector.layers === undefined ? {} : { layers: [...selector.layers].sort() }),
     ...(selector.enabled === undefined ? {} : { enabled: selector.enabled }),
     ...(selector.ids === undefined ? {} : { ids: [...selector.ids].sort() }),
+  };
+}
+
+function normalizeBulkMutationSelector(
+  selector: AgentScopeSelector | undefined,
+): AgentScopeSelector {
+  const normalized = normalizeSelector(selector);
+
+  if (normalized.providers !== undefined) {
+    return normalized;
+  }
+
+  return {
+    ...normalized,
+    providers: [...legacyBulkMutationProviders],
   };
 }
 
@@ -661,7 +679,7 @@ function buildBulkPlan(
   runtime: RuntimeContext,
   allowEmptySelection: boolean,
 ): BulkPlanState {
-  const selector = normalizeSelector(input.selector);
+  const selector = normalizeBulkMutationSelector(input.selector);
   const matched = runtime.discovery.items.filter((item) => matchesSelector(item, selector));
   const actionable: PlannedAction[] = [];
   const blocked: BlockedAction[] = [];

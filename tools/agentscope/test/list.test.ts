@@ -28,6 +28,9 @@ describe("runList", () => {
     expect(result.output.indexOf("codex global skill example-skill")).toBeLessThan(
       result.output.indexOf("cursor global skill example-cursor-skill"),
     );
+    expect(result.output.indexOf("cursor global skill example-cursor-skill")).toBeLessThan(
+      result.output.indexOf("zed global skill example-zed-skill"),
+    );
   });
 
   it("renders JSON output with separate items and warnings arrays", () => {
@@ -54,7 +57,7 @@ describe("runList", () => {
       sourcePath: expect.stringContaining(".claude/settings.local.json"),
       statePath: expect.stringContaining(".claude/settings.local.json"),
     });
-    expect(parsed.items.at(-1)?.id).toBe("cursor:global:tool:extension:cursor.example-extension");
+    expect(parsed.items.at(-1)?.id).toBe("zed:project:setting:project-settings");
   });
 
   it("prints an explicit empty result when no items exist", () => {
